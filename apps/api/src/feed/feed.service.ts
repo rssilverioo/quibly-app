@@ -1,0 +1,298 @@
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+@Injectable()
+export class FeedService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
+  async getLeagueFeed(
+    leagueId: string,
+    userId: string,
+    page: number,
+    limit: number,
+  ) {
+    const membership = await this.prisma.leagueMember.findUnique({
+      where: { leagueId_userId: { leagueId, userId } },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this league');
+    }
+
+    const offset = (page - 1) * limit;
+
+    const [posts, total, members] = await Promise.all([
+      this.prisma.feedPost.findMany({
+        where: { leagueId },
+        include: {
+          user: {
+            select: { username: true, handle: true, avatarUrl: true },
+          },
+          session: {
+            select: {
+              totalDurationMinutes: true,
+              pointsEarned: true,
+              isVerified: true,
+              proofMode: true,
+            },
+          },
+          reactions: true,
+          comments: {
+            include: {
+              user: {
+                select: { username: true, handle: true, avatarUrl: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' as const },
+            take: 3,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.feedPost.count({ where: { leagueId } }),
+      this.prisma.leagueMember.findMany({
+        where: { leagueId },
+        select: { userId: true, displayName: true },
+      }),
+    ]);
+
+    const displayNameMap = new Map(
+      members.map((m) => [m.userId, m.displayName]),
+    );
+
+    const enrichedPosts = posts.map((post) => {
+      const reactionCounts: Record<string, number> = {};
+      const userReactionEmojis: string[] = [];
+
+      for (const reaction of post.reactions) {
+        reactionCounts[reaction.emoji] =
+          (reactionCounts[reaction.emoji] || 0) + 1;
+        if (reaction.userId === userId) {
+          userReactionEmojis.push(reaction.emoji);
+        }
+      }
+
+      const { reactions, ...postWithoutReactions } = post;
+      return {
+        ...postWithoutReactions,
+        user: {
+          ...post.user,
+          username: displayNameMap.get(post.userId) ?? post.user.username,
+        },
+        reactions: reactionCounts,
+        user_reactions: userReactionEmojis,
+        latest_comments: post.comments.map((comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            username:
+              displayNameMap.get(comment.userId) ?? comment.user.username,
+          },
+        })),
+      };
+    });
+
+    return { posts: enrichedPosts, total, page, limit };
+  }
+
+  async toggleReaction(userId: string, postId: string, emoji: string) {
+    const existing = await this.prisma.feedReaction.findUnique({
+      where: { postId_userId_emoji: { postId, userId, emoji } },
+    });
+
+    if (existing) {
+      await this.prisma.feedReaction.delete({ where: { id: existing.id } });
+    } else {
+      await this.prisma.feedReaction.create({
+        data: { userId, postId, emoji },
+      });
+
+      // Send push notification for new reaction
+      const post = await this.prisma.feedPost.findUnique({
+        where: { id: postId },
+        select: { userId: true },
+      });
+      if (post) {
+        const reactor = await this.prisma.profile.findUnique({
+          where: { id: userId },
+          select: { username: true },
+        });
+        this.notificationsService
+          .notifyFeedReaction(
+            post.userId,
+            userId,
+            reactor?.username ?? 'Someone',
+            emoji,
+          )
+          .catch(() => {});
+      }
+    }
+
+    const allReactions = await this.prisma.feedReaction.findMany({
+      where: { postId },
+    });
+
+    const reactionCounts: Record<string, number> = {};
+    const userReactionEmojis: string[] = [];
+
+    for (const reaction of allReactions) {
+      reactionCounts[reaction.emoji] =
+        (reactionCounts[reaction.emoji] || 0) + 1;
+      if (reaction.userId === userId) {
+        userReactionEmojis.push(reaction.emoji);
+      }
+    }
+
+    return { reactions: reactionCounts, user_reactions: userReactionEmojis };
+  }
+
+  async addComment(userId: string, postId: string, content: string) {
+    const post = await this.prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { leagueId: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const membership = await this.prisma.leagueMember.findUnique({
+      where: { leagueId_userId: { leagueId: post.leagueId, userId } },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this league');
+    }
+
+    const comment = await this.prisma.feedComment.create({
+      data: { userId, postId, content },
+      include: {
+        user: {
+          select: { username: true, handle: true, avatarUrl: true },
+        },
+      },
+    });
+
+    // Send push notification for new comment
+    const postData = await this.prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { userId: true },
+    });
+    if (postData) {
+      this.notificationsService
+        .notifyFeedComment(
+          postData.userId,
+          userId,
+          membership.displayName,
+          content,
+        )
+        .catch(() => {});
+    }
+
+    return {
+      ...comment,
+      user: {
+        ...comment.user,
+        username: membership.displayName,
+      },
+    };
+  }
+
+  async deleteComment(userId: string, commentId: string) {
+    const comment = await this.prisma.feedComment.findUnique({
+      where: { id: commentId },
+      select: { id: true, userId: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.userId !== userId) {
+      throw new ForbiddenException('You can only delete your own comments');
+    }
+
+    await this.prisma.feedComment.delete({ where: { id: commentId } });
+
+    return { deleted: true };
+  }
+
+  async getPostComments(postId: string, page: number, limit: number) {
+    const post = await this.prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { leagueId: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const offset = (page - 1) * limit;
+
+    const [comments, total, members] = await Promise.all([
+      this.prisma.feedComment.findMany({
+        where: { postId },
+        include: {
+          user: {
+            select: { username: true, handle: true, avatarUrl: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.feedComment.count({ where: { postId } }),
+      this.prisma.leagueMember.findMany({
+        where: { leagueId: post.leagueId },
+        select: { userId: true, displayName: true },
+      }),
+    ]);
+
+    const displayNameMap = new Map(
+      members.map((m) => [m.userId, m.displayName]),
+    );
+
+    return {
+      comments: comments.map((c) => ({
+        ...c,
+        user: {
+          ...c.user,
+          username: displayNameMap.get(c.userId) ?? c.user.username,
+        },
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async toggleProofPhotoVisibility(userId: string, postId: string) {
+    const post = await this.prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true, showProofPhoto: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    if (post.userId !== userId) {
+      throw new ForbiddenException('You can only modify your own posts');
+    }
+
+    return this.prisma.feedPost.update({
+      where: { id: postId },
+      data: { showProofPhoto: !post.showProofPhoto },
+    });
+  }
+}

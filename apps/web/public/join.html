@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join League - Quibly</title>
+  <meta property="og:title" content="Join a Study League on Quibly" />
+  <meta property="og:description" content="Tap to open the Quibly app and join this league." />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, #0A0A0F 0%, #141420 100%);
+      color: #FFFFFF;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #141420;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      border: 1px solid #2A2A3E;
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: #7C5CFC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 32px;
+      font-weight: 800;
+    }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { font-size: 16px; color: #9CA3AF; margin-bottom: 24px; }
+    .code-box {
+      background: #1E1E2E;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(124, 92, 252, 0.27);
+    }
+    .code-label {
+      font-size: 11px;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .code-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #9B7FFF;
+      letter-spacing: 4px;
+    }
+    .button {
+      display: block;
+      background: #7C5CFC;
+      color: #FFFFFF;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-bottom: 20px;
+    }
+    .button:hover { background: #6B4DE6; }
+    .hint { font-size: 13px; color: #6B7280; line-height: 1.5; }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #2A2A3E;
+      border-top-color: #7C5CFC;
+      border-radius: 50%;
+      margin: 0 auto;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">Q</div>
+    <h1>Quibly</h1>
+
+    <!-- Loading state (shown initially) -->
+    <div id="loading">
+      <p class="subtitle">Opening Quibly...</p>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Fallback (shown if app doesn't open) -->
+    <div id="fallback" class="hidden">
+      <p class="subtitle">You've been invited to join a league!</p>
+      <div class="code-box">
+        <p class="code-label">Invite Code</p>
+        <p class="code-value" id="code-display"></p>
+      </div>
+      <a id="open-link" href="#" class="button">Open in Quibly</a>
+      <p class="hint">
+        Don't have the app? Download Quibly from the App Store or Google Play,
+        then open this link again.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var parts = window.location.pathname.split('/');
+      var code = parts[parts.length - 1] || parts[parts.length - 2];
+      var deepLink = 'quibly://league/join/' + encodeURIComponent(code);
+
+      document.getElementById('code-display').textContent = code;
+      document.getElementById('open-link').href = deepLink;
+
+      // Try to open the app
+      window.location.href = deepLink;
+
+      // If app doesn't open within 1.5s, show fallback
+      setTimeout(function() {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('fallback').classList.remove('hidden');
+      }, 1500);
+    })();
+  </script>
+</body>
+</html>

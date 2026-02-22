@@ -1,0 +1,16 @@
+{
+  "phaseEnd": {
+    "workDoneTitle": "Fase de trabalho completa!",
+    "workDoneBody": "Hora de uma pausa. Voce mereceu!",
+    "breakDoneTitle": "Pausa acabou!",
+    "breakDoneBody": "Hora de voltar ao trabalho."
+  },
+  "proofCheck": {
+    "title": "Verificacao!",
+    "body": "Tire uma foto do seu local de estudo agora."
+  },
+  "sessionComplete": {
+    "title": "Sessao Completa!",
+    "body": "Otimo trabalho! Todos os ciclos foram concluidos."
+  }
+}

@@ -1,0 +1,359 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───
+
+enum TimerMode {
+  pomodoro
+  deep_focus
+  custom
+
+  @@map("timer_mode")
+}
+
+enum SessionStatus {
+  active
+  paused
+  completed
+  abandoned
+
+  @@map("session_status")
+}
+
+enum ProofCheckStatus {
+  pending
+  passed
+  failed
+  missed
+
+  @@map("proof_check_status")
+}
+
+enum LeaguePrivacy {
+  public
+  private
+
+  @@map("league_privacy")
+}
+
+enum LeagueMode {
+  easy
+  competitive
+  hardcore
+
+  @@map("league_mode")
+}
+
+enum LeagueStatus {
+  upcoming
+  active
+  completed
+
+  @@map("league_status")
+}
+
+enum MemberRole {
+  owner
+  admin
+  member
+
+  @@map("member_role")
+}
+
+enum ChatMessageType {
+  text
+  system
+
+  @@map("chat_message_type")
+}
+
+// ─── MODELS ───
+
+model Profile {
+  id                String    @id // Firebase UID
+  email             String    @unique
+  username          String
+  handle            String    @unique
+  avatarUrl         String?   @map("avatar_url")
+  bio               String?
+  totalXp           Int       @default(0) @map("total_xp")
+  level             Int       @default(1)
+  lockInScore       Int       @default(0) @map("lock_in_score")
+  verifiedHours     Decimal   @default(0) @map("verified_hours") @db.Decimal(10, 2)
+  currentStreak     Int       @default(0) @map("current_streak")
+  longestStreak     Int       @default(0) @map("longest_streak")
+  totalStudyMinutes Int       @default(0) @map("total_study_minutes")
+  lastStudyDate     DateTime? @map("last_study_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  subjects          Subject[]
+  studySessions     StudySession[]
+  proofChecks       ProofCheck[]
+  ownedLeagues      League[]         @relation("LeagueOwner")
+  leagueMemberships LeagueMember[]
+  feedPosts         FeedPost[]
+  feedReactions     FeedReaction[]
+  feedComments      FeedComment[]
+  chatMessages      ChatMessage[]
+  chatReactions     ChatReaction[]
+  userAchievements  UserAchievement[]
+  pushTokens        PushToken[]
+
+  @@index([level(sort: Desc)])
+  @@index([totalXp(sort: Desc)])
+  @@map("profiles")
+}
+
+model Subject {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id")
+  name      String
+  color     String   @default("#7C5CFC")
+  icon      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user     Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions StudySession[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("subjects")
+}
+
+model StudySession {
+  id                      String        @id @default(uuid()) @db.Uuid
+  userId                  String        @map("user_id")
+  subjectId               String        @map("subject_id") @db.Uuid
+  leagueId                String?       @map("league_id") @db.Uuid
+  timerMode               TimerMode     @default(pomodoro) @map("timer_mode")
+  workDuration            Int           @default(25) @map("work_duration")
+  breakDuration           Int           @default(5) @map("break_duration")
+  proofMode               Boolean       @default(false) @map("proof_mode")
+  status                  SessionStatus @default(active)
+  isVerified              Boolean       @default(false) @map("is_verified")
+  startedAt               DateTime      @default(now()) @map("started_at") @db.Timestamptz()
+  endedAt                 DateTime?     @map("ended_at") @db.Timestamptz()
+  totalDurationMinutes    Decimal       @default(0) @map("total_duration_minutes") @db.Decimal(10, 2)
+  pomodoroCyclesCompleted Int           @default(0) @map("pomodoro_cycles_completed")
+  pointsEarned            Int           @default(0) @map("points_earned")
+  xpEarned                Int           @default(0) @map("xp_earned")
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  user        Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  league      League?      @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  proofChecks ProofCheck[]
+  feedPosts   FeedPost[]
+
+  @@index([userId])
+  @@index([userId, startedAt(sort: Desc)])
+  @@index([leagueId])
+  @@index([status])
+  @@map("study_sessions")
+}
+
+model ProofCheck {
+  id          String           @id @default(uuid()) @db.Uuid
+  sessionId   String           @map("session_id") @db.Uuid
+  userId      String           @map("user_id")
+  triggeredAt DateTime         @default(now()) @map("triggered_at") @db.Timestamptz()
+  respondedAt DateTime?        @map("responded_at") @db.Timestamptz()
+  photoUrl    String?          @map("photo_url")
+  status      ProofCheckStatus @default(pending)
+  deadlineAt  DateTime         @map("deadline_at") @db.Timestamptz()
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  session StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([status])
+  @@map("proof_checks")
+}
+
+model League {
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  ownerId     String        @map("owner_id")
+  startDate   DateTime      @map("start_date") @db.Date
+  endDate     DateTime      @map("end_date") @db.Date
+  privacy     LeaguePrivacy @default(private)
+  mode        LeagueMode    @default(competitive)
+  status      LeagueStatus  @default(upcoming)
+  inviteCode  String        @unique @map("invite_code")
+  maxMembers  Int           @default(50) @map("max_members")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  owner        Profile        @relation("LeagueOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members      LeagueMember[]
+  sessions     StudySession[]
+  feedPosts    FeedPost[]
+  chatMessages ChatMessage[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@map("leagues")
+}
+
+model LeagueMember {
+  id            String     @id @default(uuid()) @db.Uuid
+  leagueId      String     @map("league_id") @db.Uuid
+  userId        String     @map("user_id")
+  role          MemberRole @default(member)
+  displayName   String     @map("display_name") @db.VarChar(30)
+  totalSp       Int        @default(0) @map("total_sp")
+  weeklySp      Int        @default(0) @map("weekly_sp")
+  monthlySp     Int        @default(0) @map("monthly_sp")
+  verifiedHours Decimal    @default(0) @map("verified_hours") @db.Decimal(10, 2)
+  joinedAt      DateTime   @default(now()) @map("joined_at") @db.Timestamptz()
+
+  league League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, userId])
+  @@index([leagueId])
+  @@index([userId])
+  @@index([leagueId, totalSp(sort: Desc)])
+  @@map("league_members")
+}
+
+model FeedPost {
+  id             String   @id @default(uuid()) @db.Uuid
+  leagueId       String   @map("league_id") @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  userId         String   @map("user_id")
+  showProofPhoto Boolean  @default(false) @map("show_proof_photo")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  league    League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  session   StudySession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions FeedReaction[]
+  comments  FeedComment[]
+
+  @@index([leagueId, createdAt(sort: Desc)])
+  @@map("feed_posts")
+}
+
+model FeedReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  post FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
+  @@map("feed_reactions")
+}
+
+model FeedComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  post FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("feed_comments")
+}
+
+model ChatMessage {
+  id          String          @id @default(uuid()) @db.Uuid
+  leagueId    String          @map("league_id") @db.Uuid
+  userId      String?         @map("user_id")
+  content     String
+  messageType ChatMessageType @default(text) @map("message_type")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  league    League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user      Profile?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reactions ChatReaction[]
+
+  @@index([leagueId, createdAt(sort: Desc)])
+  @@map("chat_messages")
+}
+
+model ChatReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("chat_reactions")
+}
+
+enum AchievementCategory {
+  streak
+  volume
+  sessions
+  proof
+  social
+  level
+
+  @@map("achievement_category")
+}
+
+model Achievement {
+  id          String              @id
+  name        String
+  description String
+  icon        String
+  category    AchievementCategory
+  threshold   Int
+  sortOrder   Int                 @default(0) @map("sort_order")
+
+  userAchievements UserAchievement[]
+
+  @@index([category])
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id")
+  achievementId String   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at") @db.Timestamptz()
+
+  user        Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievements")
+}
+
+model PushToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id")
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
+}

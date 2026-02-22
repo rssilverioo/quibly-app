@@ -1,0 +1,113 @@
+{
+  "title": "Ligas",
+  "createLeague": "Criar Liga",
+  "joinLeague": "Entrar na Liga",
+  "noLeaguesTitle": "Nenhuma liga ainda",
+  "noLeaguesSubtitle": "Crie ou entre em uma!",
+  "joinModal": {
+    "title": "Entrar na Liga",
+    "subtitle": "Digite o código de convite e seu nome de exibição",
+    "inviteCodePlaceholder": "Código de convite",
+    "displayNamePlaceholder": "Nome de exibição",
+    "joinButton": "Entrar",
+    "joinedTitle": "Entrou!",
+    "joinedMessage": "Você entrou em \"{{name}}\".",
+    "error": "Não foi possível entrar na liga."
+  },
+  "modes": {
+    "easy": "Fácil",
+    "easyDescription": "Apenas minutos contam",
+    "competitive": "Competitivo",
+    "competitiveDescription": "Sessões com prova ganham bônus forte",
+    "hardcore": "Hardcore",
+    "hardcoreDescription": "Sair cedo reduz pontos"
+  },
+  "create": {
+    "title": "Criar Liga",
+    "leagueName": "Nome da Liga",
+    "leagueNamePlaceholder": "ex: Grupo de Estudos",
+    "displayName": "Seu Nome de Exibição",
+    "displayNamePlaceholder": "Como outros vão te ver",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Sobre o que é essa liga?",
+    "startDate": "Data de Início",
+    "endDate": "Data de Término",
+    "datePlaceholder": "AAAA-MM-DD",
+    "quickDuration": {
+      "7days": "7 dias",
+      "30days": "30 dias",
+      "90days": "90 dias",
+      "1year": "1 ano"
+    },
+    "mode": "Modo",
+    "privacy": "Privacidade",
+    "maxMembers": "Máx. Membros",
+    "createButton": "Criar Liga",
+    "nameRequired": "Por favor, insira o nome da liga.",
+    "displayNameRequired": "Por favor, insira seu nome de exibição para esta liga.",
+    "datesRequired": "Por favor, defina as datas de início e término.",
+    "loginRequired": "Você precisa estar logado para criar uma liga.",
+    "createError": "Falha ao criar liga.",
+    "shareMessage": "Entre na minha liga Quibly \"{{name}}\"! Toque para entrar: {{url}}"
+  },
+  "created": {
+    "title": "Liga Criada!",
+    "subtitle": "Compartilhe o código de convite com seus amigos",
+    "inviteCode": "Código de Convite",
+    "copyCode": "Copiar Código",
+    "share": "Compartilhar",
+    "goToLeague": "Ir para a Liga"
+  },
+  "detail": {
+    "tabs": {
+      "leaderboard": "Ranking",
+      "feed": "Feed",
+      "info": "Info"
+    },
+    "periods": {
+      "weekly": "Semanal",
+      "monthly": "Mensal",
+      "allTime": "Geral"
+    },
+    "noRankings": "Sem ranking ainda. Comece a estudar!",
+    "leagueEnded": "Liga Encerrada",
+    "youSuffix": " (Você)",
+    "hoursLevel": "{{hours}}h | Nv.{{level}}",
+    "about": "Sobre",
+    "name": "Nome",
+    "description": "Descrição",
+    "mode": "Modo",
+    "privacy": "Privacidade",
+    "dates": "Datas",
+    "maxMembers": "Máx. Membros",
+    "invite": "Convite",
+    "copy": "Copiar",
+    "share": "Compartilhar",
+    "membersCount": "Membros ({{count}})",
+    "rematch": "Revanche",
+    "leaveLeague": "Sair da Liga",
+    "leaveConfirmTitle": "Sair da Liga",
+    "leaveConfirmMessage": "Tem certeza que deseja sair desta liga?",
+    "leave": "Sair",
+    "leaveError": "Falha ao sair da liga.",
+    "loadError": "Falha ao carregar liga."
+  },
+  "join": {
+    "title": "Entrar na Liga",
+    "displayName": "Seu Nome de Exibição",
+    "displayNamePlaceholder": "Como outros vão te ver",
+    "joinButton": "Entrar na Liga",
+    "invalidInvite": "Convite Inválido",
+    "leagueNotFound": "Liga não encontrada.",
+    "invalidOrExpired": "Este link de convite é inválido ou expirou.",
+    "alreadyMember": "Já é Membro",
+    "alreadyInLeague": "Você já está em \"{{name}}\"!",
+    "goToLeague": "Ir para a Liga",
+    "leagueEnded": "Esta liga já encerrou.",
+    "leagueFull": "Esta liga está cheia.",
+    "joinError": "Não foi possível entrar na liga.",
+    "joinedTitle": "Entrou!",
+    "joinedMessage": "Você entrou em \"{{name}}\".",
+    "membersCount": "{{current}}/{{max}} membros"
+  }
+}

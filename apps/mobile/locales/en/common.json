@@ -1,0 +1,32 @@
+{
+  "back": "Back",
+  "cancel": "Cancel",
+  "save": "Save",
+  "loading": "Loading...",
+  "ok": "OK",
+  "done": "Done",
+  "error": "Error",
+  "send": "Send",
+  "share": "Share",
+  "copy": "Copy",
+  "create": "Create",
+  "delete": "Delete",
+  "areYouSure": "Are you sure?",
+  "goBack": "Go Back",
+  "public": "Public",
+  "private": "Private",
+  "tabs": {
+    "home": "Home",
+    "leagues": "Leagues",
+    "study": "Study",
+    "profile": "Profile"
+  },
+  "members": "Members",
+  "members_one": "{{count}} member",
+  "members_other": "{{count}} members",
+  "sp": "SP",
+  "xp": "XP",
+  "unknown": "Unknown",
+  "optional": "(optional)",
+  "verified": "Verified"
+}

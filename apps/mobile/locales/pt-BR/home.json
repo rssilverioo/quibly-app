@@ -1,0 +1,26 @@
+{
+  "greeting": "Olá, {{name}}",
+  "defaultName": "Estudante",
+  "dayStreak": "{{count}} dias seguidos",
+  "totalHours": "Horas Totais",
+  "level": "Nível",
+  "lockIn": "Lock-In",
+  "xpLabel": "XP",
+  "levelProgress": "Nível {{current}} → Nível {{next}}",
+  "xpProgress": "{{current}} / {{total}} XP",
+  "sessionPaused": "Sessão pausada",
+  "resume": "Retomar",
+  "startStudying": "Começar a Estudar",
+  "startStudyingSubtitle": "Iniciar uma nova sessão de estudo",
+  "myLeagues": "Minhas Ligas",
+  "seeAll": "Ver Todas",
+  "noLeaguesCta": "Entre ou crie uma liga para competir!",
+  "exploreLeagues": "Explorar Ligas",
+  "streakCalendar": {
+    "title": "Streak de Estudo",
+    "current": "Atual",
+    "longest": "Recorde",
+    "daysStudied": "Dias estudados",
+    "totalTime": "Tempo total"
+  }
+}

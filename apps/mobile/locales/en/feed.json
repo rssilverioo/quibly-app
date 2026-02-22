@@ -1,0 +1,25 @@
+{
+  "emptyTitle": "No posts yet",
+  "emptySubtitle": "Start a study session to post to the league feed!",
+  "studiedFor": "Studied for ",
+  "minute_one": "{{count}} minute",
+  "minute_other": "{{count}} minutes",
+  "proofSubmitted": "Proof submitted",
+  "addComment": "Add a comment...",
+  "comment_one": "1 comment",
+  "comment_other": "{{count}} comments",
+  "commentPlaceholder": "Write a comment...",
+  "timeAgo": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "levelUp": {
+    "label": "LEVEL UP",
+    "tapToContinue": "Tap to continue"
+  },
+  "podium": {
+    "noRankings": "No rankings yet"
+  }
+}

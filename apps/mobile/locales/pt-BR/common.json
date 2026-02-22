@@ -1,0 +1,32 @@
+{
+  "back": "Voltar",
+  "cancel": "Cancelar",
+  "save": "Salvar",
+  "loading": "Carregando...",
+  "ok": "OK",
+  "done": "Concluído",
+  "error": "Erro",
+  "send": "Enviar",
+  "share": "Compartilhar",
+  "copy": "Copiar",
+  "create": "Criar",
+  "delete": "Excluir",
+  "areYouSure": "Tem certeza?",
+  "goBack": "Voltar",
+  "public": "Pública",
+  "private": "Privada",
+  "tabs": {
+    "home": "Início",
+    "leagues": "Ligas",
+    "study": "Estudar",
+    "profile": "Perfil"
+  },
+  "members": "Membros",
+  "members_one": "{{count}} membro",
+  "members_other": "{{count}} membros",
+  "sp": "SP",
+  "xp": "XP",
+  "unknown": "Desconhecido",
+  "optional": "(opcional)",
+  "verified": "Verificado"
+}

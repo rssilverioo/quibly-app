@@ -1,0 +1,113 @@
+{
+  "title": "Leagues",
+  "createLeague": "Create League",
+  "joinLeague": "Join League",
+  "noLeaguesTitle": "No leagues yet",
+  "noLeaguesSubtitle": "Create or join one!",
+  "joinModal": {
+    "title": "Join League",
+    "subtitle": "Enter the invite code and your display name",
+    "inviteCodePlaceholder": "Invite code",
+    "displayNamePlaceholder": "Display name",
+    "joinButton": "Join",
+    "joinedTitle": "Joined!",
+    "joinedMessage": "You joined \"{{name}}\".",
+    "error": "Could not join league."
+  },
+  "modes": {
+    "easy": "Easy",
+    "easyDescription": "Only minutes count",
+    "competitive": "Competitive",
+    "competitiveDescription": "Proof sessions get strong bonus",
+    "hardcore": "Hardcore",
+    "hardcoreDescription": "Leaving early reduces points"
+  },
+  "create": {
+    "title": "Create League",
+    "leagueName": "League Name",
+    "leagueNamePlaceholder": "e.g. Study Squad",
+    "displayName": "Your Display Name",
+    "displayNamePlaceholder": "How others will see you",
+    "description": "Description",
+    "descriptionPlaceholder": "What's this league about?",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "datePlaceholder": "YYYY-MM-DD",
+    "quickDuration": {
+      "7days": "7 days",
+      "30days": "30 days",
+      "90days": "90 days",
+      "1year": "1 year"
+    },
+    "mode": "Mode",
+    "privacy": "Privacy",
+    "maxMembers": "Max Members",
+    "createButton": "Create League",
+    "nameRequired": "Please enter a league name.",
+    "displayNameRequired": "Please enter your display name for this league.",
+    "datesRequired": "Please set start and end dates.",
+    "loginRequired": "You must be logged in to create a league.",
+    "createError": "Failed to create league.",
+    "shareMessage": "Join my Quibly league \"{{name}}\"! Tap to join: {{url}}"
+  },
+  "created": {
+    "title": "League Created!",
+    "subtitle": "Share the invite code with your friends",
+    "inviteCode": "Invite Code",
+    "copyCode": "Copy Code",
+    "share": "Share",
+    "goToLeague": "Go to League"
+  },
+  "detail": {
+    "tabs": {
+      "leaderboard": "Leaderboard",
+      "feed": "Feed",
+      "info": "Info"
+    },
+    "periods": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "allTime": "All-Time"
+    },
+    "noRankings": "No rankings yet. Start studying!",
+    "leagueEnded": "League Ended",
+    "youSuffix": " (You)",
+    "hoursLevel": "{{hours}}h | Lv.{{level}}",
+    "about": "About",
+    "name": "Name",
+    "description": "Description",
+    "mode": "Mode",
+    "privacy": "Privacy",
+    "dates": "Dates",
+    "maxMembers": "Max Members",
+    "invite": "Invite",
+    "copy": "Copy",
+    "share": "Share",
+    "membersCount": "Members ({{count}})",
+    "rematch": "Rematch",
+    "leaveLeague": "Leave League",
+    "leaveConfirmTitle": "Leave League",
+    "leaveConfirmMessage": "Are you sure you want to leave this league?",
+    "leave": "Leave",
+    "leaveError": "Failed to leave league.",
+    "loadError": "Failed to load league."
+  },
+  "join": {
+    "title": "Join League",
+    "displayName": "Your Display Name",
+    "displayNamePlaceholder": "How others will see you",
+    "joinButton": "Join League",
+    "invalidInvite": "Invalid Invite",
+    "leagueNotFound": "League not found.",
+    "invalidOrExpired": "This invite link is invalid or has expired.",
+    "alreadyMember": "Already a Member",
+    "alreadyInLeague": "You're already in \"{{name}}\"!",
+    "goToLeague": "Go to League",
+    "leagueEnded": "This league has already ended.",
+    "leagueFull": "This league is full.",
+    "joinError": "Could not join league.",
+    "joinedTitle": "Joined!",
+    "joinedMessage": "You joined \"{{name}}\".",
+    "membersCount": "{{current}}/{{max}} members"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "greeting": "Hey, {{name}}",
+  "defaultName": "Student",
+  "dayStreak": "{{count}} day streak",
+  "totalHours": "Total Hours",
+  "level": "Level",
+  "lockIn": "Lock-In",
+  "xpLabel": "XP",
+  "levelProgress": "Level {{current}} → Level {{next}}",
+  "xpProgress": "{{current}} / {{total}} XP",
+  "sessionPaused": "Session paused",
+  "resume": "Resume",
+  "startStudying": "Start Studying",
+  "startStudyingSubtitle": "Begin a new study session",
+  "myLeagues": "My Leagues",
+  "seeAll": "See All",
+  "noLeaguesCta": "Join or create a league to compete!",
+  "exploreLeagues": "Explore Leagues",
+  "streakCalendar": {
+    "title": "Study Streak",
+    "current": "Current",
+    "longest": "Longest",
+    "daysStudied": "Days studied",
+    "totalTime": "Total time"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "phaseEnd": {
+    "workDoneTitle": "Work phase complete!",
+    "workDoneBody": "Time for a break. You earned it!",
+    "breakDoneTitle": "Break is over!",
+    "breakDoneBody": "Time to get back to work."
+  },
+  "proofCheck": {
+    "title": "Proof Check!",
+    "body": "Take a photo of your study setup now."
+  },
+  "sessionComplete": {
+    "title": "Session Complete!",
+    "body": "Great work! All cycles finished."
+  }
+}

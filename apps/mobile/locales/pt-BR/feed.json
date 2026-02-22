@@ -1,0 +1,25 @@
+{
+  "emptyTitle": "Nenhuma publicação ainda",
+  "emptySubtitle": "Comece uma sessão de estudo para publicar no feed da liga!",
+  "studiedFor": "Estudou por ",
+  "minute_one": "{{count}} minuto",
+  "minute_other": "{{count}} minutos",
+  "proofSubmitted": "Prova enviada",
+  "addComment": "Adicionar comentário...",
+  "comment_one": "1 comentário",
+  "comment_other": "{{count}} comentários",
+  "commentPlaceholder": "Escreva um comentário...",
+  "timeAgo": {
+    "justNow": "agora mesmo",
+    "minutesAgo": "{{count}}min atrás",
+    "hoursAgo": "{{count}}h atrás",
+    "daysAgo": "{{count}}d atrás"
+  },
+  "levelUp": {
+    "label": "SUBIU DE NÍVEL",
+    "tapToContinue": "Toque para continuar"
+  },
+  "podium": {
+    "noRankings": "Sem ranking ainda"
+  }
+}
