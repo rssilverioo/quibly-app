@@ -7,7 +7,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/shared/package.json packages/shared/
-RUN npm ci --ignore-scripts
+RUN npm ci
 
 # ── Build shared package ──
 FROM deps AS build-shared
@@ -33,7 +33,7 @@ COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/packages/shared/package.json packages/shared/
 COPY --from=build /app/apps/api/package.json apps/api/
 
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci --omit=dev
 
 COPY --from=build /app/packages/shared/dist/ packages/shared/dist/
 COPY --from=build /app/apps/api/dist/ apps/api/dist/
