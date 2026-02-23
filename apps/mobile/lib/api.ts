@@ -1,6 +1,6 @@
 import { auth } from './firebase';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = auth.currentUser;

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "419383312629",
+    "project_id": "quibly-70e89",
+    "storage_bucket": "quibly-70e89.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:419383312629:android:658abf10c11ed2fd07c5bc",
+        "android_client_info": {
+          "package_name": "com.quibly.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "419383312629-3fr563skaegadfr4ms15lrklrchpbtj1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC13E6cMTldpkTJqNRX6GJvTDimB-6eIGo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "419383312629-3fr563skaegadfr4ms15lrklrchpbtj1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "419383312629-hl004370ib4ea9ni56daf3vu1k3g5ns2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.quibly.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

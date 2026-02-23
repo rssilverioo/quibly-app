@@ -35,7 +35,9 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "NOTIFICATIONS"
+        "NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -71,6 +73,14 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "19f5183b-183b-41f8-a257-4f920b433e40"
+      },
+      "router": {}
+    },
+    "owner": "rodrigosilverio",
+    "runtimeVersion": "1.0.0"
   }
 }
