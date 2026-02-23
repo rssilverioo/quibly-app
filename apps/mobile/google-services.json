@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "419383312629-hbdah2tc7j00h871sjjeqdqg9tpp5c8j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quibly.app",
+            "certificate_hash": "1ade1fb74203878b36ea8665bdee74571e30c45c"
+          }
+        },
+        {
           "client_id": "419383312629-3fr563skaegadfr4ms15lrklrchpbtj1.apps.googleusercontent.com",
           "client_type": 3
         }
