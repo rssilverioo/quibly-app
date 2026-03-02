@@ -4,6 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -73,6 +74,18 @@ export class StorageService implements OnModuleInit {
       'https://fly.storage.tigris.dev',
     );
     return `${endpoint}/${this.bucket}/${filePath}`;
+  }
+
+  /**
+   * Delete a file from S3
+   */
+  async deleteObject(key: string): Promise<void> {
+    await this.s3.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
   }
 
   /**

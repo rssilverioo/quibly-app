@@ -9,6 +9,13 @@ datasource db {
 
 // ─── ENUMS ───
 
+enum Plan {
+  FREE
+  PRO
+
+  @@map("plan")
+}
+
 enum TimerMode {
   pomodoro
   deep_focus
@@ -76,22 +83,28 @@ enum ChatMessageType {
 // ─── MODELS ───
 
 model Profile {
-  id                String    @id // Firebase UID
-  email             String    @unique
-  username          String
-  handle            String    @unique
-  avatarUrl         String?   @map("avatar_url")
-  bio               String?
-  totalXp           Int       @default(0) @map("total_xp")
-  level             Int       @default(1)
-  lockInScore       Int       @default(0) @map("lock_in_score")
-  verifiedHours     Decimal   @default(0) @map("verified_hours") @db.Decimal(10, 2)
-  currentStreak     Int       @default(0) @map("current_streak")
-  longestStreak     Int       @default(0) @map("longest_streak")
-  totalStudyMinutes Int       @default(0) @map("total_study_minutes")
-  lastStudyDate     DateTime? @map("last_study_date") @db.Date
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  id                     String    @id // Firebase UID
+  email                  String    @unique
+  username               String
+  handle                 String    @unique
+  avatarUrl              String?   @map("avatar_url")
+  bio                    String?
+  totalXp                Int       @default(0) @map("total_xp")
+  level                  Int       @default(1)
+  lockInScore            Int       @default(0) @map("lock_in_score")
+  verifiedHours          Decimal   @default(0) @map("verified_hours") @db.Decimal(10, 2)
+  currentStreak          Int       @default(0) @map("current_streak")
+  longestStreak          Int       @default(0) @map("longest_streak")
+  totalStudyMinutes      Int       @default(0) @map("total_study_minutes")
+  lastStudyDate          DateTime? @map("last_study_date") @db.Date
+  plan                   Plan      @default(FREE)
+  stripeCustomerId       String?   @unique @map("stripe_customer_id")
+  stripeSubscriptionId   String?   @unique @map("stripe_subscription_id")
+  stripePriceId          String?   @map("stripe_price_id")
+  subscriptionStatus     String?   @map("subscription_status")
+  currentPeriodEnd       DateTime? @map("current_period_end") @db.Timestamptz()
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   subjects          Subject[]
   studySessions     StudySession[]
@@ -105,6 +118,10 @@ model Profile {
   chatReactions     ChatReaction[]
   userAchievements  UserAchievement[]
   pushTokens        PushToken[]
+  documents         Document[]
+  flashcardSets     FlashcardSet[]
+  quizzes           Quiz[]
+  dailyUsage        DailyUsage[]
 
   @@index([level(sort: Desc)])
   @@index([totalXp(sort: Desc)])
@@ -356,4 +373,107 @@ model PushToken {
 
   @@index([userId])
   @@map("push_tokens")
+}
+
+// ─── Documents & AI Content ───
+
+model Document {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id")
+  title         String
+  subject       String?
+  s3Key         String   @map("s3_key")
+  originalName  String   @map("original_name")
+  mimeType      String   @map("mime_type")
+  sizeBytes     Int      @map("size_bytes")
+  extractedText String?  @map("extracted_text") @db.Text
+  pageCount     Int?     @map("page_count")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcardSets FlashcardSet[]
+  quizzes       Quiz[]
+
+  @@index([userId])
+  @@map("documents")
+}
+
+model FlashcardSet {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id")
+  documentId String?  @map("document_id") @db.Uuid
+  title      String
+  language   String   @default("en")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user       Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  flashcards Flashcard[]
+
+  @@index([userId])
+  @@index([documentId])
+  @@map("flashcard_sets")
+}
+
+model Flashcard {
+  id         String  @id @default(uuid()) @db.Uuid
+  setId      String  @map("set_id") @db.Uuid
+  front      String  @db.Text
+  back       String  @db.Text
+  explain    String? @db.Text
+  imageUrl   String? @map("image_url")
+  sortOrder  Int     @default(0) @map("sort_order")
+
+  set FlashcardSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@index([setId])
+  @@map("flashcards")
+}
+
+model Quiz {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id")
+  documentId String?  @map("document_id") @db.Uuid
+  title      String
+  language   String   @default("en")
+  score      Int?
+  totalQ     Int      @default(0) @map("total_q")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document  Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  questions Question[]
+
+  @@index([userId])
+  @@index([documentId])
+  @@map("quizzes")
+}
+
+model Question {
+  id           String @id @default(uuid()) @db.Uuid
+  quizId       String @map("quiz_id") @db.Uuid
+  question     String @db.Text
+  options      Json   // string[4]
+  correctIndex Int    @map("correct_index")
+  imageUrl     String? @map("image_url")
+  sortOrder    Int    @default(0) @map("sort_order")
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@map("questions")
+}
+
+model DailyUsage {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id")
+  date           DateTime @db.Date
+  flashcardSets  Int      @default(0) @map("flashcard_sets")
+  quizzes        Int      @default(0)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("daily_usage")
 }

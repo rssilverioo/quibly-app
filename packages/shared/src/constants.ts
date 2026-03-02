@@ -62,6 +62,21 @@ export function levelFromXp(totalXp: number): number {
   return level;
 }
 
+// ─── Usage Limits ───
+
+export const USAGE_LIMITS = {
+  FREE: { flashcard_sets: 3, quizzes: 3 },
+  PRO: { flashcard_sets: Infinity, quizzes: Infinity },
+} as const;
+
+// ─── XP Rewards (AI Content) ───
+
+export const XP_REWARDS = {
+  flashcard_review: 10,
+  quiz_correct: 20,
+  quiz_wrong: 5,
+} as const;
+
 // ─── Timer Presets ───
 
 export const TIMER_PRESETS = {
@@ -141,7 +156,7 @@ export const LEAGUE_DEFAULTS = {
 
 export const APP_URLS = {
   /** Base URL for invite links (update after deploying web app) */
-  WEB_BASE: "https://quibly.vercel.app",
+  WEB_BASE: "https://tryquibly.com",
   /** Deep link scheme */
   DEEP_LINK_SCHEME: "quibly",
 } as const;

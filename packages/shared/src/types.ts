@@ -14,6 +14,12 @@ export interface Profile {
   current_streak: number;
   longest_streak: number;
   total_study_minutes: number;
+  plan: Plan;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_price_id: string | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -156,6 +162,78 @@ export interface ChatReaction {
   user_id: string;
   emoji: string;
   created_at: string;
+}
+
+// ─── Plan & AI Content Types ───
+
+export type Plan = 'FREE' | 'PRO';
+
+export interface Document {
+  id: string;
+  user_id: string;
+  title: string;
+  subject: string | null;
+  s3_key: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+  extracted_text: string | null;
+  page_count: number | null;
+  created_at: string;
+}
+
+export interface FlashcardSet {
+  id: string;
+  user_id: string;
+  document_id: string | null;
+  title: string;
+  language: string;
+  created_at: string;
+  // Joined
+  flashcards?: Flashcard[];
+  _count?: { flashcards: number };
+}
+
+export interface Flashcard {
+  id: string;
+  set_id: string;
+  front: string;
+  back: string;
+  explain: string | null;
+  image_url: string | null;
+  sort_order: number;
+}
+
+export interface Quiz {
+  id: string;
+  user_id: string;
+  document_id: string | null;
+  title: string;
+  language: string;
+  score: number | null;
+  total_q: number;
+  created_at: string;
+  // Joined
+  questions?: Question[];
+  _count?: { questions: number };
+}
+
+export interface Question {
+  id: string;
+  quiz_id: string;
+  question: string;
+  options: string[];
+  correct_index: number;
+  image_url: string | null;
+  sort_order: number;
+}
+
+export interface DailyUsage {
+  id: string;
+  user_id: string;
+  date: string;
+  flashcard_sets: number;
+  quizzes: number;
 }
 
 // ─── API Request/Response Types ───
