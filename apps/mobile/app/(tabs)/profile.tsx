@@ -242,45 +242,62 @@ export default function ProfileScreen() {
         )}
 
         <Text style={styles.sectionTitle}>{t('settings')}</Text>
+
+        {/* Account */}
         <View style={styles.settingsContainer}>
           <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/pricing')} activeOpacity={0.7}>
-            <Crown size={18} color={COLORS.gold} style={{ width: 28 }} />
-            <Text style={[styles.settingsLabel, { color: COLORS.text }]}>{t('pricing:myPlan')}</Text>
-            <ChevronRight size={18} color={COLORS.textMuted} />
+            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.gold + '18' }]}>
+              <Crown size={17} color={COLORS.gold} />
+            </View>
+            <Text style={styles.settingsLabel}>{t('pricing:myPlan')}</Text>
+            <ChevronRight size={17} color={COLORS.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
-            <Pencil size={18} color={COLORS.primaryLight} style={{ width: 28 }} />
-            <Text style={[styles.settingsLabel, { color: COLORS.text }]}>{t('editProfile')}</Text>
-            <ChevronRight size={18} color={COLORS.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingsRow, styles.settingsRowBorder]}
-            onPress={() => {
-              Alert.alert(
-                t('language'),
-                undefined,
-                [
-                  { text: 'English', onPress: () => i18n.changeLanguage('en') },
-                  { text: 'Portugues (BR)', onPress: () => i18n.changeLanguage('pt-BR') },
-                  { text: t('common:cancel'), style: 'cancel' },
-                ],
-              );
-            }}
-            activeOpacity={0.7}
-          >
-            <Globe size={18} color={COLORS.primaryLight} style={{ width: 28 }} />
-            <Text style={[styles.settingsLabel, { color: COLORS.text }]}>{t('language')}</Text>
-            <Text style={{ color: COLORS.textMuted, fontSize: 14, fontWeight: '500', marginRight: 8 }}>
-              {i18n.language === 'pt-BR' ? 'Portugues (BR)' : 'English'}
-            </Text>
-            <ChevronRight size={18} color={COLORS.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsRow} onPress={handleLogout} activeOpacity={0.7}>
-            <LogOut size={18} color={COLORS.error} style={{ width: 28 }} />
-            <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('logOut')}</Text>
-            <ChevronRight size={18} color={COLORS.error} />
+          <TouchableOpacity style={styles.settingsRow} onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.primaryLight + '18' }]}>
+              <Pencil size={17} color={COLORS.primaryLight} />
+            </View>
+            <Text style={styles.settingsLabel}>{t('editProfile')}</Text>
+            <ChevronRight size={17} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
+
+        {/* Language */}
+        <View style={[styles.settingsContainer, { marginTop: 12 }]}>
+          <View style={styles.settingsRow}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.primaryLight + '18' }]}>
+              <Globe size={17} color={COLORS.primaryLight} />
+            </View>
+            <Text style={styles.settingsLabel}>{t('language')}</Text>
+          </View>
+          <View style={styles.langToggleContainer}>
+            <TouchableOpacity
+              style={[styles.langOption, i18n.language === 'en' && styles.langOptionActive]}
+              onPress={() => i18n.changeLanguage('en')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.langOptionText, i18n.language === 'en' && styles.langOptionTextActive]}>
+                English
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.langOption, i18n.language === 'pt-BR' && styles.langOptionActive]}
+              onPress={() => i18n.changeLanguage('pt-BR')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.langOptionText, i18n.language === 'pt-BR' && styles.langOptionTextActive]}>
+                Português (BR)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Log Out */}
+        <TouchableOpacity style={[styles.settingsContainer, styles.logoutRow, { marginTop: 12 }]} onPress={handleLogout} activeOpacity={0.7}>
+          <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.error + '15' }]}>
+            <LogOut size={17} color={COLORS.error} />
+          </View>
+          <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('logOut')}</Text>
+        </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -340,10 +357,15 @@ const styles = StyleSheet.create({
   achievementNameLocked: { color: COLORS.textMuted },
   achievementDesc: { color: COLORS.textMuted, fontSize: 9, textAlign: 'center', lineHeight: 12 },
   // Settings
-  settingsContainer: { backgroundColor: COLORS.surface, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', marginBottom: 24 },
-  settingsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16 },
-  settingsRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border + '55' },
-  settingsIcon: { fontSize: 16, fontWeight: '700', width: 28 },
-  settingsLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
-  settingsChevron: { fontSize: 16, fontWeight: '600' },
+  settingsContainer: { backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  settingsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  settingsRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border + '40' },
+  settingsIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  settingsLabel: { flex: 1, fontSize: 15, fontFamily: FONTS.medium, color: COLORS.text },
+  logoutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  langToggleContainer: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 14, backgroundColor: COLORS.surfaceLight, borderRadius: 12, padding: 4 },
+  langOption: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  langOptionActive: { backgroundColor: COLORS.primary },
+  langOptionText: { fontSize: 14, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
+  langOptionTextActive: { color: COLORS.text },
 });
