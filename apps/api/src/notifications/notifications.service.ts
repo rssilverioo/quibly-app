@@ -63,16 +63,23 @@ export class NotificationsService {
           },
         })
         .catch((err) => {
-          // If token is invalid, remove it
-          if (
-            err?.code === 'messaging/registration-token-not-registered' ||
-            err?.code === 'messaging/invalid-registration-token'
-          ) {
+          const code = err?.code || err?.errorInfo?.code || '';
+          const msg = err?.message || '';
+          const isInvalid =
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token' ||
+            code === 'messaging/invalid-argument' ||
+            msg.includes('not a valid FCM registration token') ||
+            msg.includes('not registered');
+
+          if (isInvalid) {
+            this.logger.log(`Removing invalid push token: ${token.slice(0, 20)}...`);
             this.prisma.pushToken
               .deleteMany({ where: { token } })
               .catch(() => {});
+          } else {
+            this.logger.warn(`Push send failed (code=${code}): ${msg}`);
           }
-          this.logger.warn(`Push send failed for token: ${err?.message}`);
         }),
     );
 
