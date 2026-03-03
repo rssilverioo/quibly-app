@@ -19,37 +19,14 @@ export class GamificationService {
     const previousLevel = profile.level;
     const newLevel = levelFromXp(newTotalXp);
 
-    // Update streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const lastStudy = profile.lastStudyDate
-      ? new Date(profile.lastStudyDate)
-      : null;
-
-    let newStreak = profile.currentStreak;
-    if (lastStudy) {
-      lastStudy.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor(
-        (today.getTime() - lastStudy.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      if (diffDays === 1) {
-        newStreak += 1;
-      } else if (diffDays > 1) {
-        newStreak = 1;
-      }
-    } else {
-      newStreak = 1;
-    }
+    // Streak is managed exclusively by sessions.service.ts:updateUserStreak()
+    // which validates minimum daily study minutes before counting a day.
 
     const updatedProfile = await this.prisma.profile.update({
       where: { id: userId },
       data: {
         totalXp: newTotalXp,
         level: newLevel,
-        currentStreak: newStreak,
-        longestStreak: Math.max(profile.longestStreak, newStreak),
-        lastStudyDate: today,
       },
     });
 
@@ -59,7 +36,7 @@ export class GamificationService {
       previous_level: previousLevel,
       new_level: newLevel,
       level_up: newLevel > previousLevel,
-      current_streak: updatedProfile.currentStreak,
+      current_streak: profile.currentStreak,
     };
   }
 }

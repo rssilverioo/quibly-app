@@ -179,7 +179,7 @@ export default function RootLayout() {
   const stripeKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
   return (
-    <StripeProvider publishableKey={stripeKey}>
+    <StripeProvider publishableKey={stripeKey} merchantIdentifier="merchant.com.quibly.app">
       <AuthProvider>
         <StatusBar style="light" />
         <RootLayoutNav />

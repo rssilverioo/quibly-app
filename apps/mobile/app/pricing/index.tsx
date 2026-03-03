@@ -10,7 +10,7 @@ import { usePaymentSheet } from '@stripe/stripe-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@quibly/shared/constants';
 import { ArrowLeft, Check, Crown } from 'lucide-react-native';
-import { createMobileCheckout, cancelSubscription } from '../../services/stripe';
+import { createMobileCheckout, activateSubscription, cancelSubscription } from '../../services/stripe';
 import { useUsage } from '../../hooks/useUsage';
 import i18n from '../../lib/i18n';
 
@@ -39,32 +39,55 @@ export default function PricingScreen() {
 
   const handleSubscribe = async () => {
     setProcessing(true);
+    const selectedPrice = prices[billing];
+
     try {
       // 1. Get payment sheet params from backend
-      const { paymentIntent, ephemeralKey, customer } =
-        await createMobileCheckout(prices[billing]);
+      const response = await createMobileCheckout(selectedPrice);
+      console.log('[Pricing] checkout response keys:', Object.keys(response));
 
-      // 2. Initialize the payment sheet
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: paymentIntent,
+      const ephemeralKey = response.ephemeralKey || (response as any).ephemeral_key;
+      const customer = response.customer;
+      const setupSecret = response.setupIntent || (response as any).setup_intent;
+      const paymentSecret = response.paymentIntent || (response as any).payment_intent;
+      const isSetupIntent = !!setupSecret;
+      const clientSecret = setupSecret || paymentSecret;
+
+      if (!clientSecret) {
+        throw new Error(`No clientSecret in response: ${JSON.stringify(response)}`);
+      }
+
+      // 2. Initialize payment sheet (SetupIntent or PaymentIntent)
+      const sheetParams: Parameters<typeof initPaymentSheet>[0] = {
         customerEphemeralKeySecret: ephemeralKey,
         customerId: customer,
         merchantDisplayName: 'Quibly',
-        allowsDelayedPaymentMethods: false,
-        style: 'alwaysDark',
-      });
+        returnURL: 'quibly://stripe-redirect',
+        style: 'alwaysDark' as const,
+        applePay: { merchantCountryCode: isBrl ? 'BR' : 'US' },
+        googlePay: { merchantCountryCode: isBrl ? 'BR' : 'US', testEnv: __DEV__ },
+      };
+
+      if (isSetupIntent) {
+        sheetParams.setupIntentClientSecret = clientSecret;
+      } else {
+        sheetParams.paymentIntentClientSecret = clientSecret;
+      }
+
+      console.log('[Pricing] initPaymentSheet — isSetupIntent:', isSetupIntent);
+      const { error: initError } = await initPaymentSheet(sheetParams);
 
       if (initError) {
+        console.error('[Pricing] initPaymentSheet error:', initError.code, initError.message);
         Alert.alert(t('common:error'), initError.message);
         setProcessing(false);
         return;
       }
 
-      // 3. Present the payment sheet to the user
+      // 3. Present the payment sheet
       const { error: presentError } = await presentPaymentSheet();
 
       if (presentError) {
-        // User cancelled or payment failed
         if (presentError.code !== 'Canceled') {
           Alert.alert(t('common:error'), presentError.message);
         }
@@ -72,11 +95,17 @@ export default function PricingScreen() {
         return;
       }
 
-      // 4. Payment succeeded — webhook will update the plan on the backend
+      // 4. If SetupIntent flow, activate subscription now (payment method was just saved)
+      if (isSetupIntent) {
+        console.log('[Pricing] Activating subscription...');
+        await activateSubscription(selectedPrice);
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('common:done'), t('subscribed'));
       refreshUsage();
     } catch (err: any) {
+      console.error('[Pricing] error:', err?.message ?? err);
       Alert.alert(t('common:error'), err?.message ?? 'Payment failed');
     } finally {
       setProcessing(false);
@@ -148,7 +177,7 @@ export default function PricingScreen() {
               onPress={() => setBilling('yearly')}
             >
               <Text style={[styles.billingText, billing === 'yearly' && styles.billingTextActive]}>{t('yearly')}</Text>
-              <Text style={styles.saveTag}>{t('savePercent', { percent: isBrl ? 16 : 17 })}</Text>
+              {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: isBrl ? 16 : 17 })}</Text>}
             </TouchableOpacity>
           </View>
         )}
@@ -227,12 +256,12 @@ const styles = StyleSheet.create({
   usageCard: { backgroundColor: COLORS.surface, borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: COLORS.border },
   usageTitle: { fontSize: 14, fontFamily: FONTS.semiBold, color: COLORS.textSecondary, marginBottom: 8 },
   usageRow: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.text, marginBottom: 4 },
-  billingToggle: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  billingBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
-  billingActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  billingToggle: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: 12, padding: 4, marginBottom: 20 },
+  billingBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  billingActive: { backgroundColor: COLORS.primary },
   billingText: { fontSize: 14, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
   billingTextActive: { color: COLORS.text },
-  saveTag: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.success, marginTop: 2 },
+  saveTag: { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.success, marginTop: 1 },
   planCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
   proPlanCard: { borderColor: COLORS.gold + '40' },
   proHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },

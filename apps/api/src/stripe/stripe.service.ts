@@ -66,10 +66,16 @@ export class StripeService {
     return { clientSecret: session.client_secret };
   }
 
+  /**
+   * Step 1: Create SetupIntent + ephemeral key for mobile Payment Sheet.
+   * Collects payment method without charging yet.
+   */
   async createMobileCheckout(
     userId: string,
     price: 'brl_monthly' | 'brl_yearly' | 'usd_monthly' | 'usd_yearly',
   ) {
+    this.logger.log(`[mobile-checkout] START userId=${userId} price=${price}`);
+
     const profile = await this.prisma.profile.findUnique({
       where: { id: userId },
     });
@@ -82,6 +88,7 @@ export class StripeService {
     let customerId = profile.stripeCustomerId;
 
     if (!customerId) {
+      this.logger.log(`[mobile-checkout] Creating Stripe customer for email=${profile.email}`);
       const customer = await this.stripe.customers.create({
         email: profile.email,
         metadata: { userId },
@@ -93,22 +100,14 @@ export class StripeService {
       });
     }
 
-    // Create subscription with incomplete status so we get a PaymentIntent
-    const subscription = await this.stripe.subscriptions.create({
+    // Create SetupIntent to collect payment method
+    const setupIntent = await this.stripe.setupIntents.create({
       customer: customerId,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice'],
-      metadata: { userId },
+      automatic_payment_methods: { enabled: true },
+      metadata: { userId, price },
     });
 
-    const invoice = subscription.latest_invoice as Stripe.Invoice;
-    const clientSecret = invoice.confirmation_secret?.client_secret;
-
-    if (!clientSecret) {
-      throw new BadRequestException('Could not create payment intent');
-    }
+    this.logger.log(`[mobile-checkout] SetupIntent=${setupIntent.id} customer=${customerId}`);
 
     // Create ephemeral key so the mobile SDK can access the customer
     const ephemeralKey = await this.stripe.ephemeralKeys.create(
@@ -116,12 +115,56 @@ export class StripeService {
       { apiVersion: '2025-10-29.clover' },
     );
 
+    this.logger.log(`[mobile-checkout] SUCCESS`);
+
     return {
-      paymentIntent: clientSecret,
+      setupIntent: setupIntent.client_secret,
       ephemeralKey: ephemeralKey.secret,
       customer: customerId,
-      subscriptionId: subscription.id,
     };
+  }
+
+  /**
+   * Step 2: After Payment Sheet succeeds, create subscription.
+   * Customer now has a saved payment method, so it charges immediately.
+   */
+  async activateSubscription(
+    userId: string,
+    price: 'brl_monthly' | 'brl_yearly' | 'usd_monthly' | 'usd_yearly',
+  ) {
+    this.logger.log(`[activate-subscription] START userId=${userId} price=${price}`);
+
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: userId },
+    });
+
+    if (!profile?.stripeCustomerId) {
+      throw new BadRequestException('No Stripe customer found');
+    }
+
+    const priceId = this.priceIds[price];
+    if (!priceId) throw new BadRequestException('Invalid price');
+
+    const subscription = await this.stripe.subscriptions.create({
+      customer: profile.stripeCustomerId,
+      items: [{ price: priceId }],
+      default_payment_method: await this.getDefaultPaymentMethod(profile.stripeCustomerId),
+      metadata: { userId },
+    });
+
+    this.logger.log(`[activate-subscription] subscription=${subscription.id} status=${subscription.status}`);
+
+    return { subscriptionId: subscription.id, status: subscription.status };
+  }
+
+  private async getDefaultPaymentMethod(customerId: string): Promise<string> {
+    const methods = await this.stripe.paymentMethods.list({
+      customer: customerId,
+      limit: 1,
+    });
+    const pm = methods.data[0];
+    if (!pm) throw new BadRequestException('No payment method found');
+    return pm.id;
   }
 
   async cancelSubscription(userId: string) {

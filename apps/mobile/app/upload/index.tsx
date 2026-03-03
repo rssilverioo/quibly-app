@@ -4,23 +4,26 @@ import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@quibly/shared/constants';
-import { ArrowLeft, Upload, FileText, Check } from 'lucide-react-native';
+import { ArrowLeft, Upload, FileText, Check, BookOpen, HelpCircle } from 'lucide-react-native';
 import { uploadDocument } from '../../services/documents';
 
 type UploadState = 'idle' | 'selected' | 'uploading' | 'success';
+type GenType = 'flashcards' | 'quiz';
 
 export default function UploadScreen() {
   const router = useRouter();
+  const { type } = useLocalSearchParams<{ type?: string }>();
   const { t } = useTranslation('documents');
   const [state, setState] = useState<UploadState>('idle');
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<GenType>(type === 'quiz' ? 'quiz' : 'flashcards');
 
   const handlePickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -50,10 +53,37 @@ export default function UploadScreen() {
     }
   };
 
-  const handleGenerate = (type: 'flashcards' | 'quiz') => {
+  const handleGenerate = () => {
     if (!uploadedDocId) return;
-    router.replace({ pathname: '/generate', params: { documentId: uploadedDocId, documentTitle: title, autoType: type } } as any);
+    router.replace({ pathname: '/generate', params: { documentId: uploadedDocId, documentTitle: title, autoType: selectedType } } as any);
   };
+
+  const TypeToggle = () => (
+    <View style={styles.toggleRow}>
+      <TouchableOpacity
+        style={[styles.toggleBtn, selectedType === 'flashcards' && styles.toggleActive]}
+        activeOpacity={0.8}
+        onPress={() => setSelectedType('flashcards')}
+      >
+        <BookOpen size={18} color={selectedType === 'flashcards' ? COLORS.text : COLORS.textMuted} />
+        <Text style={[styles.toggleText, selectedType === 'flashcards' && styles.toggleTextActive]}>
+          Flashcards
+        </Text>
+        {selectedType === 'flashcards' && <Check size={16} color={COLORS.text} />}
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.toggleBtn, selectedType === 'quiz' && styles.toggleActive]}
+        activeOpacity={0.8}
+        onPress={() => setSelectedType('quiz')}
+      >
+        <HelpCircle size={18} color={selectedType === 'quiz' ? COLORS.text : COLORS.textMuted} />
+        <Text style={[styles.toggleText, selectedType === 'quiz' && styles.toggleTextActive]}>
+          Quiz
+        </Text>
+        {selectedType === 'quiz' && <Check size={16} color={COLORS.text} />}
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -74,11 +104,15 @@ export default function UploadScreen() {
             </View>
             <Text style={styles.successTitle}>{t('uploadSuccess')}</Text>
             <Text style={styles.successMessage}>{t('uploadSuccessMessage')}</Text>
-            <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8} onPress={() => handleGenerate('flashcards')}>
-              <Text style={styles.primaryButtonText}>{t('generateFlashcards')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.8} onPress={() => handleGenerate('quiz')}>
-              <Text style={styles.secondaryButtonText}>{t('generateQuiz')}</Text>
+
+            <TypeToggle />
+
+            <Text style={styles.indicatorText}>
+              {selectedType === 'flashcards' ? t('flashcardsWillBeGenerated') : t('quizWillBeGenerated')}
+            </Text>
+
+            <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8} onPress={handleGenerate}>
+              <Text style={styles.primaryButtonText}>{t('generate')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -97,6 +131,9 @@ export default function UploadScreen() {
                 </View>
               )}
             </TouchableOpacity>
+
+            {/* Type Toggle */}
+            <TypeToggle />
 
             {/* Title Input */}
             <Text style={styles.label}>{t('titleLabel')}</Text>
@@ -140,14 +177,18 @@ const styles = StyleSheet.create({
   fileEmptyText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.textSecondary, marginTop: 12 },
   fileSelected: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   fileName: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.text, flex: 1 },
+  toggleRow: { flexDirection: 'row', gap: 12, marginBottom: 24, width: '100%' },
+  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 14, borderWidth: 1, borderColor: COLORS.border },
+  toggleActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  toggleText: { fontSize: 13, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
+  toggleTextActive: { color: COLORS.text },
   label: { fontSize: 14, fontFamily: FONTS.semiBold, color: COLORS.textSecondary, marginBottom: 8 },
   input: { backgroundColor: COLORS.surface, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, color: COLORS.text, fontSize: 16, fontFamily: FONTS.regular, borderWidth: 1, borderColor: COLORS.border, marginBottom: 24 },
-  primaryButton: { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 12 },
+  primaryButton: { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 12, width: '100%' },
   primaryButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.text },
-  secondaryButton: { backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  secondaryButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.primary },
   successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   successIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.success + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   successTitle: { fontSize: 24, fontFamily: FONTS.bold, color: COLORS.text, marginBottom: 8 },
   successMessage: { fontSize: 15, fontFamily: FONTS.regular, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  indicatorText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 24 },
 });

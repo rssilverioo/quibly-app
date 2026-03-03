@@ -108,7 +108,7 @@ export default function LibraryScreen() {
         {/* Title + Create */}
         <View style={styles.header}>
           <Text style={styles.title}>{t('title')}</Text>
-          <TouchableOpacity style={styles.createBtn} activeOpacity={0.8} onPress={() => router.push('/generate')}>
+          <TouchableOpacity style={styles.createBtn} activeOpacity={0.8} onPress={() => router.push({ pathname: '/upload', params: { type: activeTab === 'flashcards' ? 'flashcards' : 'quiz' } })}>
             <Plus size={18} color={COLORS.text} />
             <Text style={styles.createBtnText}>{t('create')}</Text>
           </TouchableOpacity>
@@ -146,7 +146,7 @@ export default function LibraryScreen() {
                 title={t('noFlashcards')}
                 message={t('noFlashcardsMessage')}
                 ctaLabel={t('create')}
-                onCta={() => router.push('/generate')}
+                onCta={() => router.push({ pathname: '/upload', params: { type: 'flashcards' } })}
               />
             }
           />
@@ -164,7 +164,7 @@ export default function LibraryScreen() {
                 title={t('noQuizzes')}
                 message={t('noQuizzesMessage')}
                 ctaLabel={t('create')}
-                onCta={() => router.push('/generate')}
+                onCta={() => router.push({ pathname: '/upload', params: { type: 'quiz' } })}
               />
             }
           />
