@@ -1,0 +1,16 @@
+{
+  "title": "Flashcards",
+  "cardOf": "{{current}} of {{total}}",
+  "flip": "Tap to flip",
+  "next": "Next",
+  "previous": "Previous",
+  "complete": "Set Complete!",
+  "completeMessage": "You reviewed all {{count}} cards",
+  "reviewAgain": "Review Again",
+  "goBack": "Back to Library",
+  "empty": "No flashcards yet",
+  "emptyMessage": "Upload a document or generate by topic to create flashcards",
+  "deleteConfirm": "Delete this flashcard set?",
+  "deleteMessage": "This action cannot be undone.",
+  "xpEarned": "+{{xp}} XP"
+}

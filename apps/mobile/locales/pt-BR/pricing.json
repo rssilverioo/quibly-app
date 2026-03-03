@@ -1,0 +1,37 @@
+{
+  "title": "Preços",
+  "freePlan": "Grátis",
+  "proPlan": "Pro",
+  "currentPlan": "Plano Atual",
+  "upgrade": "Fazer upgrade para Pro",
+  "monthly": "Mensal",
+  "yearly": "Anual",
+  "perMonth": "/mês",
+  "perYear": "/ano",
+  "savePercent": "Economize {{percent}}%",
+  "freeFeatures": {
+    "flashcards": "3 sets de flashcards/dia",
+    "quizzes": "3 quizzes/dia",
+    "documents": "Enviar documentos",
+    "leagues": "Entrar em ligas"
+  },
+  "proFeatures": {
+    "flashcards": "Flashcards ilimitados",
+    "quizzes": "Quizzes ilimitados",
+    "documents": "Enviar documentos",
+    "leagues": "Entrar em ligas",
+    "priority": "Geração AI prioritária",
+    "noAds": "Sem anúncios"
+  },
+  "subscribe": "Assinar",
+  "cancel": "Cancelar Assinatura",
+  "cancelConfirm": "Cancelar sua assinatura Pro?",
+  "cancelMessage": "Você perderá acesso aos recursos Pro no fim do período de cobrança.",
+  "canceled": "Assinatura cancelada",
+  "subscribed": "Bem-vindo ao Pro! Sua assinatura está ativa.",
+  "myPlan": "Meu Plano",
+  "usage": "Uso",
+  "flashcardsUsed": "{{used}} / {{limit}} sets de flashcards",
+  "quizzesUsed": "{{used}} / {{limit}} quizzes",
+  "unlimited": "Ilimitado"
+}

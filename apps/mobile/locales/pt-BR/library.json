@@ -1,0 +1,15 @@
+{
+  "title": "Biblioteca",
+  "flashcards": "Flashcards",
+  "quizzes": "Quizzes",
+  "cards": "{{count}} cards",
+  "questions": "{{count}} questões",
+  "noFlashcards": "Nenhum flashcard ainda",
+  "noFlashcardsMessage": "Gere flashcards a partir de documentos ou tópicos",
+  "noQuizzes": "Nenhum quiz ainda",
+  "noQuizzesMessage": "Gere quizzes a partir de documentos ou tópicos",
+  "create": "Criar Novo",
+  "delete": "Excluir",
+  "score": "Nota: {{score}}%",
+  "notAttempted": "Não tentado"
+}

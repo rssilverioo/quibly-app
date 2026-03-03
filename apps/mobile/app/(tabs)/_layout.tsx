@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { COLORS, FONTS } from '@quibly/shared/constants';
-import { Home, Trophy, BookOpen, User } from 'lucide-react-native';
+import { Home, Trophy, Layers, User } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 export default function TabsLayout() {
@@ -40,9 +40,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="leagues"
+        name="challenges"
         options={{
-          title: t('tabs.leagues'),
+          title: t('tabs.challenges'),
           tabBarIcon: ({ focused }) => (
             <Trophy
               size={22}
@@ -53,13 +53,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="study"
+        name="library"
         options={{
-          title: t('tabs.study'),
+          title: t('tabs.library'),
           tabBarIcon: ({ focused }) => (
-            <BookOpen
-              size={24}
-              color={focused ? COLORS.primary : COLORS.primaryLight}
+            <Layers
+              size={22}
+              color={focused ? COLORS.primary : COLORS.textMuted}
               strokeWidth={focused ? 2.5 : 2}
             />
           ),

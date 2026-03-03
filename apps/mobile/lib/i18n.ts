@@ -12,6 +12,11 @@ import enLeagues from '../locales/en/leagues.json';
 import enSession from '../locales/en/session.json';
 import enFeed from '../locales/en/feed.json';
 import enNotifications from '../locales/en/notifications.json';
+import enFlashcards from '../locales/en/flashcards.json';
+import enQuizzes from '../locales/en/quizzes.json';
+import enDocuments from '../locales/en/documents.json';
+import enPricing from '../locales/en/pricing.json';
+import enLibrary from '../locales/en/library.json';
 
 // Português (BR)
 import ptCommon from '../locales/pt-BR/common.json';
@@ -22,6 +27,11 @@ import ptLeagues from '../locales/pt-BR/leagues.json';
 import ptSession from '../locales/pt-BR/session.json';
 import ptFeed from '../locales/pt-BR/feed.json';
 import ptNotifications from '../locales/pt-BR/notifications.json';
+import ptFlashcards from '../locales/pt-BR/flashcards.json';
+import ptQuizzes from '../locales/pt-BR/quizzes.json';
+import ptDocuments from '../locales/pt-BR/documents.json';
+import ptPricing from '../locales/pt-BR/pricing.json';
+import ptLibrary from '../locales/pt-BR/library.json';
 
 const LANGUAGE_KEY = '@quibly/language';
 
@@ -55,7 +65,7 @@ i18n
     compatibilityJSON: 'v4',
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'home', 'profile', 'leagues', 'session', 'feed', 'notifications'],
+    ns: ['common', 'auth', 'home', 'profile', 'leagues', 'session', 'feed', 'notifications', 'flashcards', 'quizzes', 'documents', 'pricing', 'library'],
     resources: {
       en: {
         common: enCommon,
@@ -66,6 +76,11 @@ i18n
         session: enSession,
         feed: enFeed,
         notifications: enNotifications,
+        flashcards: enFlashcards,
+        quizzes: enQuizzes,
+        documents: enDocuments,
+        pricing: enPricing,
+        library: enLibrary,
       },
       'pt-BR': {
         common: ptCommon,
@@ -76,6 +91,11 @@ i18n
         session: ptSession,
         feed: ptFeed,
         notifications: ptNotifications,
+        flashcards: ptFlashcards,
+        quizzes: ptQuizzes,
+        documents: ptDocuments,
+        pricing: ptPricing,
+        library: ptLibrary,
       },
     },
     interpolation: {

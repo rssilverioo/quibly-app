@@ -1,0 +1,16 @@
+{
+  "title": "Flashcards",
+  "cardOf": "{{current}} de {{total}}",
+  "flip": "Toque para virar",
+  "next": "Próximo",
+  "previous": "Anterior",
+  "complete": "Set Completo!",
+  "completeMessage": "Você revisou todos os {{count}} cards",
+  "reviewAgain": "Revisar Novamente",
+  "goBack": "Voltar à Biblioteca",
+  "empty": "Nenhum flashcard ainda",
+  "emptyMessage": "Envie um documento ou gere por tópico para criar flashcards",
+  "deleteConfirm": "Excluir este set de flashcards?",
+  "deleteMessage": "Esta ação não pode ser desfeita.",
+  "xpEarned": "+{{xp}} XP"
+}

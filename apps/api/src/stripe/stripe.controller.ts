@@ -26,6 +26,15 @@ export class StripeController {
     return this.stripeService.createCheckout(user.userId, dto.price);
   }
 
+  @Post('mobile-checkout')
+  @UseGuards(FirebaseAuthGuard)
+  createMobileCheckout(
+    @CurrentUser() user: { userId: string },
+    @Body() dto: CreateCheckoutDto,
+  ) {
+    return this.stripeService.createMobileCheckout(user.userId, dto.price);
+  }
+
   @Post('cancel')
   @UseGuards(FirebaseAuthGuard)
   cancelSubscription(@CurrentUser() user: { userId: string }) {

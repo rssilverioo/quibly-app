@@ -66,6 +66,64 @@ export class StripeService {
     return { clientSecret: session.client_secret };
   }
 
+  async createMobileCheckout(
+    userId: string,
+    price: 'brl_monthly' | 'brl_yearly' | 'usd_monthly' | 'usd_yearly',
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: userId },
+    });
+
+    if (!profile) throw new BadRequestException('User not found');
+
+    const priceId = this.priceIds[price];
+    if (!priceId) throw new BadRequestException('Invalid price');
+
+    let customerId = profile.stripeCustomerId;
+
+    if (!customerId) {
+      const customer = await this.stripe.customers.create({
+        email: profile.email,
+        metadata: { userId },
+      });
+      customerId = customer.id;
+      await this.prisma.profile.update({
+        where: { id: userId },
+        data: { stripeCustomerId: customerId },
+      });
+    }
+
+    // Create subscription with incomplete status so we get a PaymentIntent
+    const subscription = await this.stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice'],
+      metadata: { userId },
+    });
+
+    const invoice = subscription.latest_invoice as Stripe.Invoice;
+    const clientSecret = invoice.confirmation_secret?.client_secret;
+
+    if (!clientSecret) {
+      throw new BadRequestException('Could not create payment intent');
+    }
+
+    // Create ephemeral key so the mobile SDK can access the customer
+    const ephemeralKey = await this.stripe.ephemeralKeys.create(
+      { customer: customerId },
+      { apiVersion: '2025-10-29.clover' },
+    );
+
+    return {
+      paymentIntent: clientSecret,
+      ephemeralKey: ephemeralKey.secret,
+      customer: customerId,
+      subscriptionId: subscription.id,
+    };
+  }
+
   async cancelSubscription(userId: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { id: userId },

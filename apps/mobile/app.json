@@ -19,6 +19,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.quibly.app",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "associatedDomains": [
+        "applinks:tryquibly.com"
+      ],
       "infoPlist": {
         "NSCameraUsageDescription": "Quibly needs camera access for proof-of-study verification photos.",
         "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to select a profile picture."
@@ -38,6 +41,23 @@
         "NOTIFICATIONS",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "tryquibly.com",
+              "pathPrefix": "/join/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "web": {
@@ -69,7 +89,14 @@
           "iosAppId": "ca-app-pub-7106022757613059~7466871837"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.quibly.app",
+          "enableGooglePay": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

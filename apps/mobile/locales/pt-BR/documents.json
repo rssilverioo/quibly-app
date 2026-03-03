@@ -1,0 +1,21 @@
+{
+  "title": "Documentos",
+  "upload": "Enviar Documento",
+  "uploadTitle": "Enviar",
+  "selectFile": "Selecionar PDF",
+  "titleLabel": "Título",
+  "titlePlaceholder": "Dê um título ao seu documento",
+  "uploading": "Enviando...",
+  "uploadSuccess": "Documento enviado!",
+  "uploadSuccessMessage": "Agora você pode gerar flashcards ou quizzes a partir dele.",
+  "generateFlashcards": "Gerar Flashcards",
+  "generateQuiz": "Gerar Quiz",
+  "viewDocument": "Ver Documento",
+  "noDocuments": "Nenhum documento ainda",
+  "noDocumentsMessage": "Envie um PDF para começar",
+  "deleteConfirm": "Excluir este documento?",
+  "deleteMessage": "Isso também removerá flashcards e quizzes associados.",
+  "flashcardSets": "{{count}} sets de flashcards",
+  "quizCount": "{{count}} quizzes",
+  "pages": "{{count}} páginas"
+}

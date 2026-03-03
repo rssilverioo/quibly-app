@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Image, Platform, StyleSheet, View } from 'react-native';
+import { Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import AnimatedSplash from '../components/common/AnimatedSplash';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
@@ -12,6 +13,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { COLORS } from '@quibly/shared/constants';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import {
   configureNotifications,
@@ -26,62 +28,24 @@ SplashScreen.preventAutoHideAsync();
 
 function extractJoinPath(url: string | null): string | null {
   if (!url) return null;
-  const parsed = Linking.parse(url);
-  if (parsed.path?.startsWith('league/join/')) {
-    return `/${parsed.path}`;
+
+  // Universal Links / App Links: https://tryquibly.com/join/{code}
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'tryquibly.com' && parsed.pathname.startsWith('/join/')) {
+      const code = parsed.pathname.replace('/join/', '');
+      if (code) return `/league/join/${code}`;
+    }
+  } catch {}
+
+  // Custom scheme fallback: quibly://league/join/{code}
+  const linked = Linking.parse(url);
+  if (linked.path?.startsWith('league/join/')) {
+    return `/${linked.path}`;
   }
+
   return null;
 }
-
-function LoadingDots() {
-  const dot1 = useRef(new Animated.Value(0.3)).current;
-  const dot2 = useRef(new Animated.Value(0.3)).current;
-  const dot3 = useRef(new Animated.Value(0.3)).current;
-
-  useEffect(() => {
-    const animate = (dot: Animated.Value, delay: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(dot, { toValue: 1, duration: 400, useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0.3, duration: 400, useNativeDriver: true }),
-        ]),
-      );
-
-    const a1 = animate(dot1, 0);
-    const a2 = animate(dot2, 200);
-    const a3 = animate(dot3, 400);
-    a1.start();
-    a2.start();
-    a3.start();
-
-    return () => { a1.stop(); a2.stop(); a3.stop(); };
-  }, []);
-
-  return (
-    <View style={splashStyles.dotsRow}>
-      {[dot1, dot2, dot3].map((opacity, i) => (
-        <Animated.View key={i} style={[splashStyles.dot, { opacity }]} />
-      ))}
-    </View>
-  );
-}
-
-function AppSplash() {
-  return (
-    <View style={splashStyles.container}>
-      <Image source={require('../assets/icon.png')} style={splashStyles.logo} resizeMode="contain" />
-      <LoadingDots />
-    </View>
-  );
-}
-
-const splashStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 120, height: 120, marginBottom: 40, borderRadius: 24 },
-  dotsRow: { flexDirection: 'row', gap: 12 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
-});
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -123,7 +87,7 @@ function RootLayoutNav() {
         if (data?.type === 'chat_message' && data?.leagueId) {
           router.push(`/league/${data.leagueId}` as any);
         } else if (data?.type === 'feed_reaction' || data?.type === 'feed_comment') {
-          router.push('/(tabs)/leagues' as any);
+          router.push('/(tabs)/challenges' as any);
         }
       },
     );
@@ -169,7 +133,7 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, isLoading, segments]);
 
-  if (isLoading) return <AppSplash />;
+  if (isLoading) return <AnimatedSplash />;
 
   return (
     <Stack
@@ -187,6 +151,11 @@ function RootLayoutNav() {
         name="session"
         options={{ headerShown: false, gestureEnabled: false }}
       />
+      <Stack.Screen name="upload" options={{ headerShown: false }} />
+      <Stack.Screen name="generate" options={{ headerShown: false }} />
+      <Stack.Screen name="flashcards" options={{ headerShown: false }} />
+      <Stack.Screen name="quizzes" options={{ headerShown: false }} />
+      <Stack.Screen name="pricing" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -207,10 +176,14 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
+  const stripeKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <RootLayoutNav />
-    </AuthProvider>
+    <StripeProvider publishableKey={stripeKey}>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <RootLayoutNav />
+      </AuthProvider>
+    </StripeProvider>
   );
 }

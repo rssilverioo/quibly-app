@@ -1,0 +1,20 @@
+{
+  "title": "Quizzes",
+  "questionOf": "Questão {{current}} de {{total}}",
+  "correct": "Correto!",
+  "incorrect": "Incorreto",
+  "correctAnswer": "Resposta correta: {{answer}}",
+  "results": "Resultados",
+  "score": "{{correct}} / {{total}}",
+  "scorePercent": "{{percent}}%",
+  "great": "Ótimo trabalho!",
+  "good": "Bom esforço!",
+  "tryAgain": "Continue praticando!",
+  "retake": "Refazer Quiz",
+  "goBack": "Voltar à Biblioteca",
+  "empty": "Nenhum quiz ainda",
+  "emptyMessage": "Envie um documento ou gere por tópico para criar quizzes",
+  "deleteConfirm": "Excluir este quiz?",
+  "deleteMessage": "Esta ação não pode ser desfeita.",
+  "xpEarned": "+{{xp}} XP"
+}

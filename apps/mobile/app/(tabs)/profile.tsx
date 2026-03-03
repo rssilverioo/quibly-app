@@ -12,7 +12,7 @@ import { logout as firebaseLogout } from '../../services/auth';
 import { uploadAvatar } from '../../services/storage';
 import { updateProfile } from '../../services/auth';
 import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
-import { xpForLevel, calculateTitle } from '@quibly/shared/constants';
+import { COLORS, FONTS, xpForLevel, calculateTitle } from '@quibly/shared/constants';
 import {
   Clock, ShieldCheck, Flame, Zap, Target, Star,
   LogOut, ChevronRight, Camera, Trophy, BookOpen,
@@ -20,14 +20,6 @@ import {
 } from 'lucide-react-native';
 import i18n from '../../lib/i18n';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
-
-const COLORS = {
-  background: '#0A0A0F', surface: '#141420', surfaceLight: '#1E1E2E',
-  border: '#2A2A3E', primary: '#1E40AF', primaryLight: '#2B53D8',
-  secondary: '#00D4AA', accent: '#FF6B6B', warning: '#FFB84D',
-  success: '#00D4AA', error: '#FF4757', text: '#FFFFFF',
-  textSecondary: '#9CA3AF', textMuted: '#6B7280', gold: '#FFD700',
-};
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STAT_CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - 12) / 2;
@@ -234,6 +226,11 @@ export default function ProfileScreen() {
 
         <Text style={styles.sectionTitle}>{t('settings')}</Text>
         <View style={styles.settingsContainer}>
+          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/pricing')} activeOpacity={0.7}>
+            <Crown size={18} color={COLORS.gold} style={{ width: 28 }} />
+            <Text style={[styles.settingsLabel, { color: COLORS.text }]}>{t('pricing:myPlan')}</Text>
+            <ChevronRight size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
             <Pencil size={18} color={COLORS.primaryLight} style={{ width: 28 }} />
             <Text style={[styles.settingsLabel, { color: COLORS.text }]}>{t('editProfile')}</Text>

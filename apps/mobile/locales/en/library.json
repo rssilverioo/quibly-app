@@ -1,0 +1,15 @@
+{
+  "title": "Library",
+  "flashcards": "Flashcards",
+  "quizzes": "Quizzes",
+  "cards": "{{count}} cards",
+  "questions": "{{count}} questions",
+  "noFlashcards": "No flashcards yet",
+  "noFlashcardsMessage": "Generate flashcards from documents or topics",
+  "noQuizzes": "No quizzes yet",
+  "noQuizzesMessage": "Generate quizzes from documents or topics",
+  "create": "Create New",
+  "delete": "Delete",
+  "score": "Score: {{score}}%",
+  "notAttempted": "Not attempted"
+}

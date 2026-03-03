@@ -6,18 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { COLORS, FONTS } from '@quibly/shared/constants';
 import { useAuth } from '../../contexts/AuthContext';
 import { getMyLeagues, joinLeague } from '../../services/leagues';
 import { Trophy } from 'lucide-react-native';
 import type { League, LeagueStatus } from '@quibly/shared';
-
-const COLORS = {
-  background: '#0A0A0F', surface: '#141420', surfaceLight: '#1E1E2E',
-  border: '#2A2A3E', primary: '#1E40AF', primaryLight: '#2B53D8',
-  secondary: '#00D4AA', accent: '#FF6B6B', warning: '#FFB84D',
-  success: '#00D4AA', error: '#FF4757', text: '#FFFFFF',
-  textSecondary: '#9CA3AF', textMuted: '#6B7280',
-};
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);

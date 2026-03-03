@@ -17,8 +17,8 @@
   "private": "Privada",
   "tabs": {
     "home": "Início",
-    "leagues": "Ligas",
-    "study": "Estudar",
+    "challenges": "Desafios",
+    "library": "Biblioteca",
     "profile": "Perfil"
   },
   "members": "Membros",
