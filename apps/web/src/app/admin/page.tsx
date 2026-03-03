@@ -76,18 +76,19 @@ export default function AdminDashboard() {
 
   if (!stats || !growth) return null;
 
-  const signupsChartData = growth.signups.map((d) => ({
+  const signupsChartData = (growth.signups ?? []).map((d) => ({
     date: formatChartDate(d.date),
     count: d.count,
   }));
 
-  const generationsChartData = growth.generations.map((d) => ({
+  const generationsChartData = (growth.generations ?? []).map((d) => ({
     date: formatChartDate(d.date),
     flashcard_sets: d.flashcard_sets,
     quizzes: d.quizzes,
   }));
 
-  const activeUsersChartData = growth.activeUsers.map((d) => ({
+  const activeUsers = growth.activeUsers ?? (growth as any).active_users ?? [];
+  const activeUsersChartData = activeUsers.map((d: any) => ({
     date: formatChartDate(d.date),
     count: d.count,
   }));
