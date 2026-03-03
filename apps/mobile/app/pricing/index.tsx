@@ -33,8 +33,8 @@ export default function PricingScreen() {
   } as const;
 
   const priceLabels = {
-    monthly: isBrl ? 'R$ 19,90' : '$4.99',
-    yearly: isBrl ? 'R$ 199,90' : '$49.99',
+    monthly: isBrl ? 'R$ 19,99' : '$9.99',
+    yearly: isBrl ? 'R$ 149,99' : '$99.99',
   };
 
   const handleSubscribe = async () => {
@@ -177,7 +177,7 @@ export default function PricingScreen() {
               onPress={() => setBilling('yearly')}
             >
               <Text style={[styles.billingText, billing === 'yearly' && styles.billingTextActive]}>{t('yearly')}</Text>
-              {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: isBrl ? 16 : 17 })}</Text>}
+              {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: isBrl ? 37 : 17 })}</Text>}
             </TouchableOpacity>
           </View>
         )}

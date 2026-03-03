@@ -9,6 +9,9 @@ export class ImageSearchService {
   constructor(private readonly configService: ConfigService) {}
 
   async searchImage(query: string): Promise<string | null> {
+    // TODO: Enable when Google Custom Search billing is configured or Unsplash is integrated
+    return null;
+
     try {
       const apiKey = this.configService.get<string>('GOOGLE_API_KEY', '');
       const cseId = this.configService.get<string>('GOOGLE_CSE_ID', '');

@@ -2,7 +2,7 @@
   "title": "Biblioteca",
   "flashcards": "Flashcards",
   "quizzes": "Quizzes",
-  "cards": "{{count}} cards",
+  "cards": "{{count}} cartões",
   "questions": "{{count}} questões",
   "noFlashcards": "Nenhum flashcard ainda",
   "noFlashcardsMessage": "Gere flashcards a partir de documentos ou tópicos",
