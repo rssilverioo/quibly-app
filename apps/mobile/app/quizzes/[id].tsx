@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -186,6 +186,15 @@ export default function QuizPlayerScreen() {
           </Text>
           <Text style={styles.questionText}>{questions[currentIndex].question}</Text>
 
+          {/* Question Image */}
+          {questions[currentIndex].image_url ? (
+            <Image
+              source={{ uri: questions[currentIndex].image_url }}
+              style={styles.questionImage}
+              resizeMode="cover"
+            />
+          ) : null}
+
           {/* Options */}
           {questions[currentIndex].options.map((option, i) => (
             <QuizOption
@@ -227,7 +236,8 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   contentInner: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
   questionNumber: { fontSize: 13, fontFamily: FONTS.semiBold, color: COLORS.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  questionText: { fontSize: 20, fontFamily: FONTS.bold, color: COLORS.text, marginBottom: 24, lineHeight: 28 },
+  questionText: { fontSize: 20, fontFamily: FONTS.bold, color: COLORS.text, marginBottom: 16, lineHeight: 28 },
+  questionImage: { width: '100%', height: 180, borderRadius: 14, marginBottom: 16 },
   feedback: { marginTop: 8, padding: 16, backgroundColor: COLORS.surface, borderRadius: 14 },
   feedbackText: { fontSize: 16, fontFamily: FONTS.bold, marginBottom: 4 },
   correctAnswer: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.textSecondary },

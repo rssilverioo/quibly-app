@@ -149,6 +149,8 @@ export default function FlashcardPlayerScreen() {
               key={currentIndex}
               front={cards[currentIndex].front}
               back={cards[currentIndex].back}
+              explain={cards[currentIndex].explain}
+              imageUrl={cards[currentIndex].image_url}
               onFlip={handleFlip}
             />
             <Text style={styles.flipHint}>{t('flip')}</Text>

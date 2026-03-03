@@ -30,7 +30,7 @@ export class GeminiService {
       this.model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
         generationConfig: {
-          temperature: 0.3,
+          temperature: 0.7,
           responseMimeType: 'application/json',
         },
       });
@@ -42,31 +42,42 @@ export class GeminiService {
     content: string,
     language = 'en',
   ): Promise<GeneratedFlashcard[]> {
-    const prompt = `You are an expert educator. Create 10-15 high-quality flashcards from the following content.
-Each flashcard must have:
-- "front": the question or concept (concise)
-- "back": the answer or definition (clear and complete)
-- "explain": a brief explanation to help understand why (1-2 sentences)
-- "imageQuery": a short English search query (3-5 words) to find a relevant educational image
+    const textContent = content.slice(0, 50000);
+    this.logger.log(`Generating flashcards from ${textContent.length} chars, language=${language}`);
 
-Language for front/back/explain: ${language}
-imageQuery must always be in English.
+    const prompt = `You are a world-class educator creating study flashcards. Analyze the content below and create between 15 and 30 flashcards that cover ALL the key concepts, definitions, facts, and important details.
 
-Return a JSON array of flashcard objects. Only return the JSON array, nothing else.
+RULES:
+- Create as many cards as the content deserves. Short content = 10-15 cards. Long detailed content = 20-30 cards.
+- "front": A short, clear question or term (max 15 words). Be specific, not vague.
+- "back": A concise, direct answer (max 30 words). No filler words.
+- "explain": One sentence explaining WHY this is important or HOW to remember it.
+- "imageQuery": 3-5 English words to search a relevant image (e.g. "cell mitosis diagram", "french revolution painting").
+- Cover the ENTIRE content, not just the beginning.
+- Mix different types: definitions, cause/effect, comparisons, key facts, formulas, dates.
+- Language for front/back/explain: ${language}
+- imageQuery must ALWAYS be in English regardless of content language.
 
-Content:
-${content.slice(0, 30000)}`;
+Return ONLY a JSON array of objects with keys: front, back, explain, imageQuery.
+
+Content to study:
+${textContent}`;
 
     const model = this.getModel();
     const result = await model.generateContent(prompt);
     const text = result.response.text();
+    this.logger.log(`Flashcards raw response length: ${text.length}`);
 
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text);
+      this.logger.log(`Generated ${parsed.length} flashcards`);
+      return parsed;
     } catch {
       this.logger.warn('Failed to parse flashcards JSON, attempting cleanup');
       const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned);
+      this.logger.log(`Generated ${parsed.length} flashcards (after cleanup)`);
+      return parsed;
     }
   }
 
@@ -74,32 +85,52 @@ ${content.slice(0, 30000)}`;
     content: string,
     language = 'en',
   ): Promise<GeneratedQuestion[]> {
-    const prompt = `You are an expert educator. Create 7-20 multiple-choice questions from the following content.
-Each question must have:
-- "question": the question text
-- "options": exactly 4 answer options as a string array
-- "correctIndex": the 0-based index of the correct option
-- "imageQuery": a short English search query (3-5 words) to find a relevant educational image
+    const textContent = content.slice(0, 50000);
+    this.logger.log(`Generating quiz from ${textContent.length} chars, language=${language}`);
 
-Language for question/options: ${language}
-imageQuery must always be in English.
+    const prompt = `You are a world-class educator creating a multiple-choice quiz. Analyze the content below and create between 15 and 30 questions that thoroughly test understanding.
 
-Return a JSON array of question objects. Only return the JSON array, nothing else.
+CRITICAL RULES:
+- Create as many questions as the content deserves. Short content = 10-15. Long detailed content = 20-30.
+- "question": Clear, specific question (not vague or ambiguous).
+- "options": EXACTLY 4 plausible answer choices. Wrong answers must be realistic distractors, not obviously wrong.
+- "correctIndex": The 0-based index (0, 1, 2, or 3) of the correct answer.
+- IMPORTANT: Distribute correct answers EVENLY across all 4 positions. Roughly 25% should be index 0, 25% index 1, 25% index 2, 25% index 3. NEVER put most correct answers in the same position.
+- "imageQuery": 3-5 English words to search a relevant educational image.
+- Mix question types: factual recall, conceptual understanding, application, comparison, true analysis.
+- Cover the ENTIRE content, not just the first paragraphs.
+- Language for question/options: ${language}
+- imageQuery must ALWAYS be in English regardless of content language.
 
-Content:
-${content.slice(0, 30000)}`;
+Return ONLY a JSON array of objects with keys: question, options, correctIndex, imageQuery.
+
+Content to quiz on:
+${textContent}`;
 
     const model = this.getModel();
     const result = await model.generateContent(prompt);
     const text = result.response.text();
+    this.logger.log(`Quiz raw response length: ${text.length}`);
 
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text) as GeneratedQuestion[];
+      this.logger.log(`Generated ${parsed.length} questions, correctIndex distribution: ${JSON.stringify(this.getDistribution(parsed))}`);
+      return parsed;
     } catch {
       this.logger.warn('Failed to parse quiz JSON, attempting cleanup');
       const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned) as GeneratedQuestion[];
+      this.logger.log(`Generated ${parsed.length} questions (after cleanup)`);
+      return parsed;
     }
+  }
+
+  private getDistribution(questions: GeneratedQuestion[]): Record<number, number> {
+    const dist: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (const q of questions) {
+      dist[q.correctIndex] = (dist[q.correctIndex] || 0) + 1;
+    }
+    return dist;
   }
 
   async extractTextFromImage(buffer: Buffer): Promise<string> {

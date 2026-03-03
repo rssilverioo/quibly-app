@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -11,6 +12,8 @@ import { UsageService } from '../usage/usage.service';
 
 @Injectable()
 export class GenerateService {
+  private readonly logger = new Logger(GenerateService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly geminiService: GeminiService,
@@ -24,6 +27,8 @@ export class GenerateService {
     if (doc.userId !== userId) throw new ForbiddenException();
     if (!doc.extractedText) throw new BadRequestException('Document has no extracted text');
 
+    this.logger.log(`Document "${doc.title}" has ${doc.extractedText.length} chars of extracted text`);
+
     const usage = await this.usageService.checkUsageLimit(userId, 'flashcard_sets');
     if (!usage.allowed) {
       throw new BadRequestException(
@@ -32,16 +37,25 @@ export class GenerateService {
     }
 
     const cards = await this.geminiService.generateFlashcards(doc.extractedText, language);
+    this.logger.log(`Generated ${cards.length} flashcards for "${doc.title}"`);
 
-    // Search images in parallel
-    const cardsWithImages = await Promise.all(
-      cards.map(async (card, index) => {
-        const imageUrl = card.imageQuery
-          ? await this.imageSearchService.searchImage(card.imageQuery)
-          : null;
-        return { ...card, imageUrl, sortOrder: index };
-      }),
-    );
+    // Search images in parallel (batch of 5 to avoid rate limits)
+    const cardsWithImages = [];
+    for (let i = 0; i < cards.length; i += 5) {
+      const batch = cards.slice(i, i + 5);
+      const results = await Promise.all(
+        batch.map(async (card, batchIndex) => {
+          const imageUrl = card.imageQuery
+            ? await this.imageSearchService.searchImage(card.imageQuery)
+            : null;
+          return { ...card, imageUrl, sortOrder: i + batchIndex };
+        }),
+      );
+      cardsWithImages.push(...results);
+    }
+
+    const withImages = cardsWithImages.filter((c) => c.imageUrl).length;
+    this.logger.log(`Images found: ${withImages}/${cardsWithImages.length}`);
 
     const set = await this.prisma.flashcardSet.create({
       data: {
@@ -74,6 +88,8 @@ export class GenerateService {
     if (doc.userId !== userId) throw new ForbiddenException();
     if (!doc.extractedText) throw new BadRequestException('Document has no extracted text');
 
+    this.logger.log(`Document "${doc.title}" has ${doc.extractedText.length} chars of extracted text`);
+
     const usage = await this.usageService.checkUsageLimit(userId, 'quizzes');
     if (!usage.allowed) {
       throw new BadRequestException(
@@ -82,15 +98,25 @@ export class GenerateService {
     }
 
     const questions = await this.geminiService.generateQuiz(doc.extractedText, language);
+    this.logger.log(`Generated ${questions.length} quiz questions for "${doc.title}"`);
 
-    const questionsWithImages = await Promise.all(
-      questions.map(async (q, index) => {
-        const imageUrl = q.imageQuery
-          ? await this.imageSearchService.searchImage(q.imageQuery)
-          : null;
-        return { ...q, imageUrl, sortOrder: index };
-      }),
-    );
+    // Search images in parallel (batch of 5 to avoid rate limits)
+    const questionsWithImages = [];
+    for (let i = 0; i < questions.length; i += 5) {
+      const batch = questions.slice(i, i + 5);
+      const results = await Promise.all(
+        batch.map(async (q, batchIndex) => {
+          const imageUrl = q.imageQuery
+            ? await this.imageSearchService.searchImage(q.imageQuery)
+            : null;
+          return { ...q, imageUrl, sortOrder: i + batchIndex };
+        }),
+      );
+      questionsWithImages.push(...results);
+    }
+
+    const withImages = questionsWithImages.filter((q) => q.imageUrl).length;
+    this.logger.log(`Images found: ${withImages}/${questionsWithImages.length}`);
 
     const quiz = await this.prisma.quiz.create({
       data: {
