@@ -1,0 +1,187 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
+import { StatCard } from '@/components/charts/stat-card';
+import { Table, Thead, Tbody, Tr, Th, Td } from '@/components/ui/table';
+import { formatDate, formatNumber } from '@/lib/utils';
+
+interface RevenueData {
+  proUsers: number;
+  freeUsers: number;
+  planBreakdown: { stripePriceId: string | null; _count: { _all: number } }[];
+  subscriptionStatuses: { subscriptionStatus: string | null; _count: { _all: number } }[];
+  recentSubscriptions: Array<{
+    id: string;
+    email: string;
+    username: string;
+    stripePriceId: string | null;
+    subscriptionStatus: string | null;
+    currentPeriodEnd: string | null;
+    createdAt: string;
+  }>;
+}
+
+function getStatusVariant(status: string | null): 'success' | 'error' | 'warning' {
+  if (status === 'active') return 'success';
+  if (status === 'canceled' || status === 'past_due') return 'error';
+  return 'warning';
+}
+
+export default function RevenuePage() {
+  const [data, setData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const result = await api.get<RevenueData>('/admin/revenue');
+        setData(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load revenue data');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Spinner className="w-8 h-8" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-quibly-error text-lg font-medium mb-2">Error</p>
+          <p className="text-quibly-text-muted">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-quibly-text">Revenue</h1>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StatCard title="PRO Users" value={formatNumber(data.proUsers)} />
+        <StatCard title="FREE Users" value={formatNumber(data.freeUsers)} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <h2 className="text-lg font-semibold text-quibly-text mb-4">Plan Breakdown</h2>
+          <Table>
+            <Thead>
+              <Tr>
+                <Th>Price ID</Th>
+                <Th>Users</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {data.planBreakdown.map((plan, i) => (
+                <Tr key={i}>
+                  <Td className="font-mono text-xs">
+                    {plan.stripePriceId ?? 'N/A'}
+                  </Td>
+                  <Td>{plan._count._all}</Td>
+                </Tr>
+              ))}
+              {data.planBreakdown.length === 0 && (
+                <Tr>
+                  <Td colSpan={2} className="text-center text-quibly-text-muted">
+                    No plan data available
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-semibold text-quibly-text mb-4">Subscription Status</h2>
+          <Table>
+            <Thead>
+              <Tr>
+                <Th>Status</Th>
+                <Th>Count</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {data.subscriptionStatuses.map((s, i) => (
+                <Tr key={i}>
+                  <Td>
+                    <Badge variant={getStatusVariant(s.subscriptionStatus)}>
+                      {s.subscriptionStatus ?? 'N/A'}
+                    </Badge>
+                  </Td>
+                  <Td>{s._count._all}</Td>
+                </Tr>
+              ))}
+              {data.subscriptionStatuses.length === 0 && (
+                <Tr>
+                  <Td colSpan={2} className="text-center text-quibly-text-muted">
+                    No status data available
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        </Card>
+      </div>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-quibly-text mb-4">Recent Subscriptions</h2>
+        <Table>
+          <Thead>
+            <Tr>
+              <Th>User</Th>
+              <Th>Email</Th>
+              <Th>Price ID</Th>
+              <Th>Status</Th>
+              <Th>Period End</Th>
+              <Th>Joined</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {data.recentSubscriptions.map((sub) => (
+              <Tr key={sub.id}>
+                <Td className="font-medium text-quibly-text">{sub.username}</Td>
+                <Td>{sub.email}</Td>
+                <Td className="font-mono text-xs">{sub.stripePriceId ?? 'N/A'}</Td>
+                <Td>
+                  <Badge variant={getStatusVariant(sub.subscriptionStatus)}>
+                    {sub.subscriptionStatus ?? 'N/A'}
+                  </Badge>
+                </Td>
+                <Td>
+                  {sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'N/A'}
+                </Td>
+                <Td>{formatDate(sub.createdAt)}</Td>
+              </Tr>
+            ))}
+            {data.recentSubscriptions.length === 0 && (
+              <Tr>
+                <Td colSpan={6} className="text-center text-quibly-text-muted">
+                  No recent subscriptions
+                </Td>
+              </Tr>
+            )}
+          </Tbody>
+        </Table>
+      </Card>
+    </div>
+  );
+}

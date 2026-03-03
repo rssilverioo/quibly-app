@@ -2,10 +2,23 @@ import { auth } from './firebase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com';
 
+// Cache token for 50 seconds to avoid repeated getIdToken() on concurrent requests
+let cachedToken: string | null = null;
+let tokenExpiry = 0;
+const TOKEN_CACHE_MS = 50_000;
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = auth.currentUser;
   if (!user) return {};
+
+  const now = Date.now();
+  if (cachedToken && now < tokenExpiry) {
+    return { Authorization: `Bearer ${cachedToken}` };
+  }
+
   const token = await user.getIdToken();
+  cachedToken = token;
+  tokenExpiry = now + TOKEN_CACHE_MS;
   return { Authorization: `Bearer ${token}` };
 }
 

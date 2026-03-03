@@ -29,15 +29,21 @@ export default function FlashcardPlayerScreen() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [reviewedCards, setReviewedCards] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    const setId = Array.isArray(id) ? id[0] : id;
+    if (!setId) return;
     (async () => {
       try {
-        const data = await getFlashcardSet(id);
+        const data = await getFlashcardSet(setId);
         setSet(data);
-        setCards(data.flashcards?.sort((a, b) => a.sort_order - b.sort_order) ?? []);
-      } catch {}
+        const flashcards = data.flashcards ?? [];
+        setCards(flashcards.sort((a: Flashcard, b: Flashcard) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+      } catch (err: any) {
+        console.error('[FlashcardPlayer] Failed to load:', err?.message);
+        setError(err?.message ?? 'Failed to load flashcards');
+      }
       setLoading(false);
     })();
   }, [id]);
@@ -86,10 +92,21 @@ export default function FlashcardPlayerScreen() {
     );
   }
 
-  if (!set || cards.length === 0) {
+  if (error || !set || cards.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center}><Text style={styles.emptyText}>{t('empty')}</Text></View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft size={24} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>{error ?? t('empty')}</Text>
+          <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.surface, borderRadius: 10 }}
+            onPress={() => router.back()}>
+            <Text style={{ color: COLORS.primary, fontFamily: FONTS.semiBold, fontSize: 14 }}>{t('goBack')}</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }

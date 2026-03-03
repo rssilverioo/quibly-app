@@ -35,17 +35,22 @@ export default function QuizPlayerScreen() {
   const [showXp, setShowXp] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    const quizId = Array.isArray(id) ? id[0] : id;
+    if (!quizId) return;
     (async () => {
       try {
-        const data = await getQuiz(id);
+        const data = await getQuiz(quizId);
         setQuiz(data);
-        const sorted = data.questions?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
+        const sorted = data.questions?.sort((a: Question, b: Question) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) ?? [];
         setQuestions(sorted);
         setAnswers(new Array(sorted.length).fill(null));
-      } catch {}
+      } catch (err: any) {
+        console.error('[QuizPlayer] Failed to load:', err?.message);
+        setError(err?.message ?? 'Failed to load quiz');
+      }
       setLoading(false);
     })();
   }, [id]);
@@ -119,10 +124,21 @@ export default function QuizPlayerScreen() {
     );
   }
 
-  if (!quiz || questions.length === 0) {
+  if (error || !quiz || questions.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center}><Text style={styles.emptyText}>{t('empty')}</Text></View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft size={24} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>{error ?? t('empty')}</Text>
+          <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.surface, borderRadius: 10 }}
+            onPress={() => router.back()}>
+            <Text style={{ color: COLORS.primary, fontFamily: FONTS.semiBold, fontSize: 14 }}>{t('goBack')}</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }

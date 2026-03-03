@@ -1,5 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/join/:code", "destination": "/join.html" }
-  ]
+  "framework": "nextjs"
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Switch, Modal, TextInput, ActivityIndicator, StatusBar,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -168,7 +169,7 @@ export default function SessionSetupScreen() {
       </View>
 
       <Modal visible={showNewSubject} animationType="slide" transparent onRequestClose={() => setShowNewSubject(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>New Subject</Text>
             <TextInput style={styles.modalInput} placeholder="Subject name" placeholderTextColor={COLORS.textMuted}
@@ -190,7 +191,7 @@ export default function SessionSetupScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

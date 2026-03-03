@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Alert, RefreshControl, Dimensions,
+  Image, Alert, RefreshControl, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -46,22 +46,31 @@ export default function ProfileScreen() {
   const [achievements, setAchievements] = useState<AchievementWithStatus[]>([]);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
 
+  const achievementsFetched = useRef(false);
+
   const fetchAchievements = useCallback(async () => {
     try {
       const data = await getAllAchievements();
       setAchievements(data);
+      achievementsFetched.current = true;
     } catch {
-      // Seed achievements if they don't exist yet, then retry
-      try {
-        await seedAchievements();
-        const data = await getAllAchievements();
-        setAchievements(data);
-      } catch {}
+      // Achievements endpoint may not be seeded yet - fail silently
+      // Don't cascade into seedAchievements on every load
+      if (!achievementsFetched.current) {
+        try {
+          await seedAchievements();
+          const data = await getAllAchievements();
+          setAchievements(data);
+          achievementsFetched.current = true;
+        } catch {
+          // API not available - just show profile without achievements
+        }
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (profile) fetchAchievements();
+    if (profile && !achievementsFetched.current) fetchAchievements();
   }, [profile, fetchAchievements]);
 
   const onRefresh = useCallback(async () => {
@@ -94,7 +103,15 @@ export default function ProfileScreen() {
   };
 
   if (!profile) {
-    return <SafeAreaView style={styles.loadingContainer}><Text style={styles.loadingText}>{t('common:loading')}</Text></SafeAreaView>;
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginBottom: 12 }} />
+        <Text style={styles.loadingText}>{t('common:loading')}</Text>
+        <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.surface, borderRadius: 10 }} onPress={refreshProfile}>
+          <Text style={{ color: COLORS.primary, fontFamily: FONTS.semiBold, fontSize: 14 }}>{t('common:retry', { defaultValue: 'Retry' })}</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
   }
 
   const currentLevel = profile.level;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Dimensions, TextInput,
@@ -59,22 +59,22 @@ export default function HomeScreen() {
     } catch { /* Silently fail */ }
   }, [user]);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setIsLoading(true);
-      await fetchDashboardData();
-      if (mounted) setIsLoading(false);
-    }
-    load();
-    return () => { mounted = false; };
-  }, [fetchDashboardData]);
+  const hasLoaded = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      refreshProfile();
-      fetchDashboardData();
-    }, [refreshProfile, fetchDashboardData])
+      let cancelled = false;
+      async function load() {
+        if (!hasLoaded.current) setIsLoading(true);
+        await Promise.all([fetchDashboardData(), refreshProfile()]);
+        if (!cancelled) {
+          setIsLoading(false);
+          hasLoaded.current = true;
+        }
+      }
+      load();
+      return () => { cancelled = true; };
+    }, [fetchDashboardData, refreshProfile])
   );
 
   const onRefresh = useCallback(async () => {

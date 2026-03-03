@@ -194,4 +194,39 @@ export class NotificationsService {
       { type: 'achievement' },
     );
   }
+
+  async broadcastToSegment(
+    title: string,
+    body: string,
+    segment: 'all' | 'pro' | 'free',
+  ): Promise<{ sent: number }> {
+    const where: any = {};
+
+    if (segment === 'pro') {
+      where.user = { plan: 'PRO' };
+    } else if (segment === 'free') {
+      where.user = { plan: 'FREE' };
+    }
+
+    const pushTokens = await this.prisma.pushToken.findMany({
+      where,
+      select: { token: true },
+    });
+
+    if (pushTokens.length === 0) return { sent: 0 };
+
+    const allTokens = pushTokens.map((t) => t.token);
+    const BATCH_SIZE = 500;
+
+    for (let i = 0; i < allTokens.length; i += BATCH_SIZE) {
+      const batch = allTokens.slice(i, i + BATCH_SIZE);
+      await this.sendToTokens(
+        batch,
+        { title, body },
+        { type: 'broadcast' },
+      );
+    }
+
+    return { sent: allTokens.length };
+  }
 }
