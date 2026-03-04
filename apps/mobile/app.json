@@ -84,13 +84,6 @@
           "color": "#1E40AF"
         }
       ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-7106022757613059~7466871837",
-          "iosAppId": "ca-app-pub-7106022757613059~7466871837"
-        }
-      ],
       "@react-native-community/datetimepicker",
       [
         "@stripe/stripe-react-native",
