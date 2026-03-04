@@ -112,7 +112,7 @@ export class StripeService {
     // Create ephemeral key so the mobile SDK can access the customer
     const ephemeralKey = await this.stripe.ephemeralKeys.create(
       { customer: customerId },
-      { apiVersion: '2025-10-29.clover' },
+      { apiVersion: '2024-12-18.acacia' },
     );
 
     this.logger.log(`[mobile-checkout] SUCCESS`);

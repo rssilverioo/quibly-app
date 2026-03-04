@@ -109,8 +109,8 @@ export default function ContentPage() {
       const res = await api.get<{ flashcardSets: FlashcardSet[]; pagination: PaginationMeta }>(
         `/admin/flashcard-sets?${params}`,
       );
-      setFlashcardSets(res.flashcardSets);
-      setFcPagination(res.pagination);
+      setFlashcardSets(res.flashcardSets ?? []);
+      setFcPagination(res.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 1 });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load flashcard sets');
     } finally {
@@ -126,8 +126,8 @@ export default function ContentPage() {
       const res = await api.get<{ quizzes: Quiz[]; pagination: PaginationMeta }>(
         `/admin/quizzes?${params}`,
       );
-      setQuizzes(res.quizzes);
-      setQzPagination(res.pagination);
+      setQuizzes(res.quizzes ?? []);
+      setQzPagination(res.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 1 });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load quizzes');
     } finally {

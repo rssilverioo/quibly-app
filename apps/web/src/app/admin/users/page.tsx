@@ -205,10 +205,10 @@ export default function AdminUsersPage() {
                         {user.plan}
                       </Badge>
                     </Td>
-                    <Td>{user.level}</Td>
+                    <Td>{user.level ?? 0}</Td>
                     <Td>{formatNumber(user.totalXp)}</Td>
-                    <Td>{user.currentStreak}d</Td>
-                    <Td>{user._count.studySessions}</Td>
+                    <Td>{user.currentStreak ?? 0}d</Td>
+                    <Td>{user._count?.studySessions ?? 0}</Td>
                     <Td>{formatDate(user.createdAt)}</Td>
                   </Tr>
                 ))

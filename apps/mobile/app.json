@@ -20,11 +20,13 @@
       "bundleIdentifier": "com.quibly.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
+        "applinks:tryquibly.com",
         "applinks:tryquibly.com"
       ],
       "infoPlist": {
         "NSCameraUsageDescription": "Quibly needs camera access for proof-of-study verification photos.",
-        "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to select a profile picture."
+        "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to select a profile picture.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
