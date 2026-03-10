@@ -31,8 +31,7 @@ export class RevenueCatService {
 
   validateAuthKey(authHeader: string | undefined): boolean {
     if (!authHeader) return false;
-    const token = authHeader.replace('Bearer ', '');
-    return token === this.webhookAuthKey;
+    return authHeader === this.webhookAuthKey;
   }
 
   async handleWebhook(body: RevenueCatWebhookBody): Promise<void> {
