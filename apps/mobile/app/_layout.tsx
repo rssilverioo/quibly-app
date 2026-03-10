@@ -13,7 +13,6 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { COLORS } from '@quibly/shared/constants';
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import {
   configureNotifications,
@@ -22,6 +21,7 @@ import {
   addNotificationResponseListener,
 } from '../lib/notifications';
 import { registerPushToken } from '../services/notifications';
+import { initRevenueCat } from '../services/iap';
 import '../lib/i18n';
 
 SplashScreen.preventAutoHideAsync();
@@ -48,7 +48,7 @@ function extractJoinPath(url: string | null): string | null {
 }
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const pendingDeepLink = useRef<string | null>(null);
@@ -58,6 +58,14 @@ function RootLayoutNav() {
   useEffect(() => {
     configureNotifications();
   }, []);
+
+  // Initialize RevenueCat when authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user?.uid) return;
+    initRevenueCat(user.uid).catch((err) =>
+      console.warn('Failed to init RevenueCat:', err),
+    );
+  }, [isAuthenticated, user?.uid]);
 
   // Register FCM push token when authenticated
   useEffect(() => {
@@ -176,14 +184,10 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
-  const stripeKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
-
   return (
-    <StripeProvider publishableKey={stripeKey} merchantIdentifier="merchant.com.quibly.app">
-      <AuthProvider>
-        <StatusBar style="light" />
-        <RootLayoutNav />
-      </AuthProvider>
-    </StripeProvider>
+    <AuthProvider>
+      <StatusBar style="light" />
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }

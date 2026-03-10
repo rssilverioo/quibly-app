@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { usePaymentSheet } from '@stripe/stripe-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@quibly/shared/constants';
-import { ArrowLeft, Check, Crown } from 'lucide-react-native';
-import { createMobileCheckout, activateSubscription, cancelSubscription } from '../../services/stripe';
+import { ArrowLeft, Check, Crown, RotateCcw } from 'lucide-react-native';
 import { useUsage } from '../../hooks/useUsage';
+import { useIAP } from '../../hooks/useIAP';
 import i18n from '../../lib/i18n';
 
 type Billing = 'monthly' | 'yearly';
@@ -20,115 +19,56 @@ export default function PricingScreen() {
   const router = useRouter();
   const { t } = useTranslation('pricing');
   const { usage, refresh: refreshUsage } = useUsage();
-  const { initPaymentSheet, presentPaymentSheet } = usePaymentSheet();
+  const { monthlyPackage, yearlyPackage, purchasing, purchase, restore, getPrice, getManageSubscriptionUrl } = useIAP();
   const [billing, setBilling] = useState<Billing>('monthly');
-  const [processing, setProcessing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const isPro = usage?.plan === 'PRO';
   const isBrl = i18n.language === 'pt-BR';
+  const selectedPackage = billing === 'monthly' ? monthlyPackage : yearlyPackage;
 
-  const prices = {
-    monthly: isBrl ? 'brl_monthly' : 'usd_monthly',
-    yearly: isBrl ? 'brl_yearly' : 'usd_yearly',
-  } as const;
+  const monthlyPrice = getPrice('monthly');
+  const yearlyPrice = getPrice('yearly');
 
   const priceLabels = {
-    monthly: isBrl ? 'R$ 19,99' : '$9.99',
-    yearly: isBrl ? 'R$ 149,99' : '$99.99',
+    monthly: monthlyPrice ?? (isBrl ? 'R$ 19,90' : '$9.99'),
+    yearly: yearlyPrice ?? (isBrl ? 'R$ 149,90' : '$99.99'),
   };
 
   const handleSubscribe = async () => {
-    setProcessing(true);
-    const selectedPrice = prices[billing];
-
+    if (!selectedPackage) return;
     try {
-      // 1. Get payment sheet params from backend
-      const response = await createMobileCheckout(selectedPrice);
-      console.log('[Pricing] checkout response keys:', Object.keys(response));
-
-      const ephemeralKey = response.ephemeralKey || (response as any).ephemeral_key;
-      const customer = response.customer;
-      const setupSecret = response.setupIntent || (response as any).setup_intent;
-      const paymentSecret = response.paymentIntent || (response as any).payment_intent;
-      const isSetupIntent = !!setupSecret;
-      const clientSecret = setupSecret || paymentSecret;
-
-      if (!clientSecret) {
-        throw new Error(`No clientSecret in response: ${JSON.stringify(response)}`);
-      }
-
-      // 2. Initialize payment sheet (SetupIntent or PaymentIntent)
-      const sheetParams: Parameters<typeof initPaymentSheet>[0] = {
-        customerEphemeralKeySecret: ephemeralKey,
-        customerId: customer,
-        merchantDisplayName: 'Quibly',
-        returnURL: 'quibly://stripe-redirect',
-        style: 'alwaysDark' as const,
-        applePay: { merchantCountryCode: isBrl ? 'BR' : 'US' },
-        googlePay: { merchantCountryCode: isBrl ? 'BR' : 'US', testEnv: __DEV__ },
-      };
-
-      if (isSetupIntent) {
-        sheetParams.setupIntentClientSecret = clientSecret;
-      } else {
-        sheetParams.paymentIntentClientSecret = clientSecret;
-      }
-
-      console.log('[Pricing] initPaymentSheet — isSetupIntent:', isSetupIntent);
-      const { error: initError } = await initPaymentSheet(sheetParams);
-
-      if (initError) {
-        console.error('[Pricing] initPaymentSheet error:', initError.code, initError.message);
-        Alert.alert(t('common:error'), initError.message);
-        setProcessing(false);
-        return;
-      }
-
-      // 3. Present the payment sheet
-      const { error: presentError } = await presentPaymentSheet();
-
-      if (presentError) {
-        if (presentError.code !== 'Canceled') {
-          Alert.alert(t('common:error'), presentError.message);
-        }
-        setProcessing(false);
-        return;
-      }
-
-      // 4. If SetupIntent flow, activate subscription now (payment method was just saved)
-      if (isSetupIntent) {
-        console.log('[Pricing] Activating subscription...');
-        await activateSubscription(selectedPrice);
-      }
-
+      await purchase(selectedPackage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('common:done'), t('subscribed'));
       refreshUsage();
     } catch (err: any) {
+      if (err?.userCancelled || err?.message?.includes('canceled')) return;
       console.error('[Pricing] error:', err?.message ?? err);
-      Alert.alert(t('common:error'), err?.message ?? 'Payment failed');
-    } finally {
-      setProcessing(false);
+      Alert.alert(t('common:error'), err?.message ?? 'Purchase failed');
     }
   };
 
-  const handleCancel = () => {
-    Alert.alert(t('cancelConfirm'), t('cancelMessage'), [
-      { text: t('common:cancel'), style: 'cancel' },
-      {
-        text: t('cancel'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await cancelSubscription();
-            Alert.alert(t('canceled'));
-            refreshUsage();
-          } catch (err: any) {
-            Alert.alert(t('common:error'), err?.message ?? 'Cancel failed');
-          }
-        },
-      },
-    ]);
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      const result = await restore();
+      if (result.restored) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(t('common:done'), t('restoreSuccess'));
+        refreshUsage();
+      } else {
+        Alert.alert(t('restoreEmpty'));
+      }
+    } catch (err: any) {
+      Alert.alert(t('common:error'), err?.message ?? 'Restore failed');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const handleManageSubscription = () => {
+    Linking.openURL(getManageSubscriptionUrl());
   };
 
   const freeFeatures = ['flashcards', 'quizzes', 'documents', 'leagues'] as const;
@@ -177,7 +117,7 @@ export default function PricingScreen() {
               onPress={() => setBilling('yearly')}
             >
               <Text style={[styles.billingText, billing === 'yearly' && styles.billingTextActive]}>{t('yearly')}</Text>
-              {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: isBrl ? 37 : 17 })}</Text>}
+              {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: 17 })}</Text>}
             </TouchableOpacity>
           </View>
         )}
@@ -220,25 +160,47 @@ export default function PricingScreen() {
               <Text style={styles.featureText}>{t(`proFeatures.${key}`)}</Text>
             </View>
           ))}
+
+          <Text style={styles.subscriptionTerms}>{t('subscriptionTerms')}</Text>
+
           {!isPro ? (
             <TouchableOpacity
-              style={[styles.subscribeButton, processing && { opacity: 0.6 }]}
+              style={[styles.subscribeButton, purchasing && { opacity: 0.6 }]}
               activeOpacity={0.8}
               onPress={handleSubscribe}
-              disabled={processing}
+              disabled={purchasing}
             >
-              {processing ? (
+              {purchasing ? (
                 <ActivityIndicator color={COLORS.background} />
               ) : (
                 <Text style={styles.subscribeButtonText}>{t('subscribe')}</Text>
               )}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.cancelButton} activeOpacity={0.8} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+            <TouchableOpacity style={styles.manageButton} activeOpacity={0.8} onPress={handleManageSubscription}>
+              <Text style={styles.manageButtonText}>{t('manageSubscription')}</Text>
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Restore Purchases */}
+        {!isPro && (
+          <TouchableOpacity
+            style={styles.restoreButton}
+            activeOpacity={0.7}
+            onPress={handleRestore}
+            disabled={restoring}
+          >
+            {restoring ? (
+              <ActivityIndicator size="small" color={COLORS.textMuted} />
+            ) : (
+              <>
+                <RotateCcw size={16} color={COLORS.textMuted} />
+                <Text style={styles.restoreButtonText}>{t('restorePurchases')}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -272,8 +234,11 @@ const styles = StyleSheet.create({
   currentBadgeText: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.primary, textTransform: 'uppercase' },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   featureText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.text },
+  subscriptionTerms: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, marginTop: 8, lineHeight: 16 },
   subscribeButton: { backgroundColor: COLORS.gold, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   subscribeButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.background },
-  cancelButton: { backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: COLORS.error + '40' },
-  cancelButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.error },
+  manageButton: { backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: COLORS.border },
+  manageButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.text },
+  restoreButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14 },
+  restoreButtonText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.textMuted },
 });

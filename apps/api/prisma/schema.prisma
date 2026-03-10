@@ -103,6 +103,7 @@ model Profile {
   stripePriceId          String?   @map("stripe_price_id")
   subscriptionStatus     String?   @map("subscription_status")
   currentPeriodEnd       DateTime? @map("current_period_end") @db.Timestamptz()
+  subscriptionPlatform           String?   @map("subscription_platform")  // 'stripe' | 'apple' | 'google'
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 

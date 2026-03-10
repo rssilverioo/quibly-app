@@ -32,10 +32,10 @@ export class ImageSearchService {
         imgSize: 'medium',
       });
 
-      const items = res.data.items;
-      if (items && items.length > 0) {
-        this.logger.log(`Image found for "${query}": ${items[0].link}`);
-        return items[0].link || null;
+      const items = res.data?.items ?? [];
+      if (items.length > 0) {
+        this.logger.log(`Image found for "${query}": ${items[0]!.link}`);
+        return items[0]!.link || null;
       }
 
       this.logger.warn(`No image results for "${query}"`);

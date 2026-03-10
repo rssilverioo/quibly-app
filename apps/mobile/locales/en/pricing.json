@@ -33,5 +33,10 @@
   "usage": "Usage",
   "flashcardsUsed": "{{used}} / {{limit}} flashcard sets",
   "quizzesUsed": "{{used}} / {{limit}} quizzes",
-  "unlimited": "Unlimited"
+  "unlimited": "Unlimited",
+  "restorePurchases": "Restore Purchases",
+  "manageSubscription": "Manage Subscription",
+  "restoreSuccess": "Your subscription has been restored!",
+  "restoreEmpty": "No previous purchases found.",
+  "subscriptionTerms": "Payment will be charged to your App Store or Google Play account. Subscription auto-renews unless canceled at least 24 hours before the end of the current period."
 }

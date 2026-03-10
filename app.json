@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "19f5183b-183b-41f8-a257-4f920b433e40"
+      }
+    },
+    "android": {
+      "package": "com.quibly.app"
+    }
+  }
+}

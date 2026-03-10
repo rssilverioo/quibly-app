@@ -84,14 +84,7 @@
           "color": "#1E40AF"
         }
       ],
-      "@react-native-community/datetimepicker",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.quibly.app",
-          "enableGooglePay": true
-        }
-      ]
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

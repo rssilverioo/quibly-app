@@ -33,5 +33,10 @@
   "usage": "Uso",
   "flashcardsUsed": "{{used}} / {{limit}} sets de flashcards",
   "quizzesUsed": "{{used}} / {{limit}} quizzes",
-  "unlimited": "Ilimitado"
+  "unlimited": "Ilimitado",
+  "restorePurchases": "Restaurar Compras",
+  "manageSubscription": "Gerenciar Assinatura",
+  "restoreSuccess": "Sua assinatura foi restaurada!",
+  "restoreEmpty": "Nenhuma compra anterior encontrada.",
+  "subscriptionTerms": "O pagamento será cobrado na sua conta App Store ou Google Play. A assinatura renova automaticamente, a menos que seja cancelada pelo menos 24 horas antes do fim do período atual."
 }
