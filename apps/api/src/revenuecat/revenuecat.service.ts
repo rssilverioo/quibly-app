@@ -119,8 +119,6 @@ export class RevenueCatService {
         return 'apple';
       case 'PLAY_STORE':
         return 'google';
-      case 'STRIPE':
-        return 'stripe';
       default:
         return null;
     }

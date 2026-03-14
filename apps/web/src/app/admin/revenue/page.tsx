@@ -12,13 +12,13 @@ import { formatDate, formatNumber } from '@/lib/utils';
 interface RevenueData {
   proUsers: number;
   freeUsers: number;
-  planBreakdown: { stripePriceId: string | null; _count: { _all: number } }[];
+  planBreakdown: { platform: string | null; count: number }[];
   subscriptionStatuses: { subscriptionStatus: string | null; _count: { _all: number } }[];
   recentSubscriptions: Array<{
     id: string;
     email: string;
     username: string;
-    stripePriceId: string | null;
+    subscriptionPlatform: string | null;
     subscriptionStatus: string | null;
     currentPeriodEnd: string | null;
     createdAt: string;
@@ -86,7 +86,7 @@ export default function RevenuePage() {
           <Table>
             <Thead>
               <Tr>
-                <Th>Price ID</Th>
+                <Th>Platform</Th>
                 <Th>Users</Th>
               </Tr>
             </Thead>
@@ -94,9 +94,9 @@ export default function RevenuePage() {
               {data.planBreakdown.map((plan, i) => (
                 <Tr key={i}>
                   <Td className="font-mono text-xs">
-                    {plan.stripePriceId ?? 'N/A'}
+                    {plan.platform ?? 'N/A'}
                   </Td>
-                  <Td>{plan._count._all}</Td>
+                  <Td>{plan.count}</Td>
                 </Tr>
               ))}
               {data.planBreakdown.length === 0 && (
@@ -149,7 +149,7 @@ export default function RevenuePage() {
             <Tr>
               <Th>User</Th>
               <Th>Email</Th>
-              <Th>Price ID</Th>
+              <Th>Platform</Th>
               <Th>Status</Th>
               <Th>Period End</Th>
               <Th>Joined</Th>
@@ -160,7 +160,7 @@ export default function RevenuePage() {
               <Tr key={sub.id}>
                 <Td className="font-medium text-quibly-text">{sub.username}</Td>
                 <Td>{sub.email}</Td>
-                <Td className="font-mono text-xs">{sub.stripePriceId ?? 'N/A'}</Td>
+                <Td className="font-mono text-xs">{sub.subscriptionPlatform ?? 'N/A'}</Td>
                 <Td>
                   <Badge variant={getStatusVariant(sub.subscriptionStatus)}>
                     {sub.subscriptionStatus ?? 'N/A'}

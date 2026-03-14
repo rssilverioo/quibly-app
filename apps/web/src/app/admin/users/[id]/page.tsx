@@ -26,9 +26,7 @@ interface UserDetail {
   totalStudyMinutes: number;
   lockInScore: number;
   verifiedHours: string;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
+  subscriptionPlatform: string | null;
   subscriptionStatus: string | null;
   currentPeriodEnd: string | null;
   createdAt: string;
@@ -173,15 +171,9 @@ export default function AdminUserDetailPage() {
               </p>
             </div>
             <div>
-              <p className="text-quibly-text-muted">Price ID</p>
+              <p className="text-quibly-text-muted">Platform</p>
               <p className="text-quibly-text font-medium mt-0.5 break-all">
-                {user.stripePriceId || 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-quibly-text-muted">Stripe Customer</p>
-              <p className="text-quibly-text font-medium mt-0.5 break-all">
-                {user.stripeCustomerId || 'N/A'}
+                {user.subscriptionPlatform || 'N/A'}
               </p>
             </div>
             <div>

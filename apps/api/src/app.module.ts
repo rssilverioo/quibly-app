@@ -20,7 +20,6 @@ import { FlashcardsModule } from './flashcards/flashcards.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { UsageModule } from './usage/usage.module';
 import { GenerateModule } from './generate/generate.module';
-import { StripeModule } from './stripe/stripe.module';
 import { RevenueCatModule } from './revenuecat/revenuecat.module';
 import { AdminModule } from './admin/admin.module';
 import { GamificationModule } from './gamification/gamification.module';
@@ -50,7 +49,6 @@ import { GamificationModule } from './gamification/gamification.module';
     QuizzesModule,
     UsageModule,
     GenerateModule,
-    StripeModule,
     RevenueCatModule,
     AdminModule,
     GamificationModule,

@@ -22,9 +22,12 @@ export function useIAP() {
         if (!mounted) return;
 
         const current = offerings?.current;
+        console.log('[useIAP] offerings:', JSON.stringify(offerings, null, 2));
         if (current) {
           setMonthlyPackage(current.monthly ?? null);
           setYearlyPackage(current.annual ?? null);
+        } else {
+          console.warn('[useIAP] No current offering found');
         }
       } catch (err) {
         console.warn('[useIAP] load offerings error:', err);

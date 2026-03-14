@@ -98,12 +98,9 @@ model Profile {
   totalStudyMinutes      Int       @default(0) @map("total_study_minutes")
   lastStudyDate          DateTime? @map("last_study_date") @db.Date
   plan                   Plan      @default(FREE)
-  stripeCustomerId       String?   @unique @map("stripe_customer_id")
-  stripeSubscriptionId   String?   @unique @map("stripe_subscription_id")
-  stripePriceId          String?   @map("stripe_price_id")
   subscriptionStatus     String?   @map("subscription_status")
   currentPeriodEnd       DateTime? @map("current_period_end") @db.Timestamptz()
-  subscriptionPlatform           String?   @map("subscription_platform")  // 'stripe' | 'apple' | 'google'
+  subscriptionPlatform   String?   @map("subscription_platform")  // 'apple' | 'google'
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 

@@ -143,7 +143,7 @@ export class AdminService {
     ]);
 
     const planBreakdown = await this.prisma.profile.groupBy({
-      by: ['stripePriceId'],
+      by: ['subscriptionPlatform'],
       where: { plan: 'PRO' },
       _count: { _all: true },
     });
@@ -162,7 +162,7 @@ export class AdminService {
         id: true,
         email: true,
         username: true,
-        stripePriceId: true,
+        subscriptionPlatform: true,
         subscriptionStatus: true,
         currentPeriodEnd: true,
         createdAt: true,
@@ -173,7 +173,7 @@ export class AdminService {
       proUsers,
       freeUsers,
       planBreakdown: planBreakdown.map((g) => ({
-        priceId: g.stripePriceId,
+        platform: g.subscriptionPlatform,
         count: g._count._all,
       })),
       subscriptionStatuses: subscriptionStatuses.map((g) => ({
