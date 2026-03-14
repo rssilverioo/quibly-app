@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Patch,
   Post,
@@ -29,6 +30,11 @@ export class UsersController {
   @Get('me/stats')
   getMyStats(@CurrentUser() user: { userId: string; email: string }) {
     return this.usersService.getStats(user.userId);
+  }
+
+  @Delete('me')
+  deleteMyAccount(@CurrentUser() user: { userId: string; email: string }) {
+    return this.usersService.deleteUser(user.userId);
   }
 
   @Patch('me')

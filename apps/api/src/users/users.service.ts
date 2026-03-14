@@ -1,6 +1,7 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { FirebaseService } from '../firebase/firebase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 function serializeProfile<T extends { verifiedHours: any }>(profile: T) {
@@ -9,9 +10,12 @@ function serializeProfile<T extends { verifiedHours: any }>(profile: T) {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   async getProfile(userId: string) {
@@ -104,5 +108,28 @@ export class UsersService {
       },
       take: 20,
     });
+  }
+
+  async deleteUser(userId: string) {
+    // 1. Delete profile from database (cascade deletes related data)
+    await this.prisma.profile.delete({ where: { id: userId } }).catch(() => {
+      // Profile may not exist — continue with cleanup
+    });
+
+    // 2. Delete avatar from S3
+    try {
+      await this.storageService.deleteObject(`avatars/${userId}`);
+    } catch (err) {
+      this.logger.warn(`Failed to delete avatar for user ${userId}: ${err}`);
+    }
+
+    // 3. Delete Firebase Auth user
+    try {
+      await this.firebaseService.getAuth().deleteUser(userId);
+    } catch (err) {
+      this.logger.warn(`Failed to delete Firebase user ${userId}: ${err}`);
+    }
+
+    return { deleted: true };
   }
 }

@@ -38,5 +38,9 @@
   "manageSubscription": "Manage Subscription",
   "restoreSuccess": "Your subscription has been restored!",
   "restoreEmpty": "No previous purchases found.",
-  "subscriptionTerms": "Payment will be charged to your App Store or Google Play account. Subscription auto-renews unless canceled at least 24 hours before the end of the current period."
+  "packageNotAvailable": "Subscription packages are not available right now. Please try again later.",
+  "subscriptionTerms": "Payment will be charged to your App Store or Google Play account. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.",
+  "termsOfUse": "Terms of Use",
+  "privacyPolicy": "Privacy Policy",
+  "andText": "and"
 }

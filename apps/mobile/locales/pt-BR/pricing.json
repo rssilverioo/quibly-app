@@ -38,5 +38,9 @@
   "manageSubscription": "Gerenciar Assinatura",
   "restoreSuccess": "Sua assinatura foi restaurada!",
   "restoreEmpty": "Nenhuma compra anterior encontrada.",
-  "subscriptionTerms": "O pagamento será cobrado na sua conta App Store ou Google Play. A assinatura renova automaticamente, a menos que seja cancelada pelo menos 24 horas antes do fim do período atual."
+  "packageNotAvailable": "Os pacotes de assinatura não estão disponíveis no momento. Tente novamente mais tarde.",
+  "subscriptionTerms": "O pagamento será cobrado na sua conta App Store ou Google Play. A assinatura renova automaticamente, a menos que seja cancelada pelo menos 24 horas antes do fim do período atual.",
+  "termsOfUse": "Termos de Uso",
+  "privacyPolicy": "Política de Privacidade",
+  "andText": "e"
 }

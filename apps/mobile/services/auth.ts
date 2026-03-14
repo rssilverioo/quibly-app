@@ -49,3 +49,8 @@ export async function updateProfile(
 ): Promise<Profile> {
   return api.patch<Profile>('/users/me', data);
 }
+
+export async function deleteAccount(): Promise<void> {
+  await api.delete('/users/me');
+  await signOut(auth);
+}

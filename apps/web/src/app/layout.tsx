@@ -5,8 +5,9 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Quibly Admin',
-  description: 'Quibly Admin Panel',
+  title: 'Quibly - Study PDFs with AI',
+  description:
+    'Turn your PDFs into interactive flashcards and quizzes with AI. Study in a fun, gamified way.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

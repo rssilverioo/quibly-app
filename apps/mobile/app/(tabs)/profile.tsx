@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
-import { logout as firebaseLogout } from '../../services/auth';
+import { logout as firebaseLogout, deleteAccount } from '../../services/auth';
 import { uploadAvatar } from '../../services/storage';
 import { updateProfile } from '../../services/auth';
 import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
@@ -16,7 +16,7 @@ import { COLORS, FONTS, xpForLevel, calculateTitle } from '@quibly/shared/consta
 import {
   Clock, ShieldCheck, Flame, Zap, Target, Star,
   LogOut, ChevronRight, Camera, Trophy, BookOpen,
-  Crown, Users, Award, GraduationCap, Skull, Shield, Lock, Pencil, Globe,
+  Crown, Users, Award, GraduationCap, Skull, Shield, Lock, Pencil, Globe, Trash2,
 } from 'lucide-react-native';
 import i18n from '../../lib/i18n';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
@@ -98,6 +98,20 @@ export default function ProfileScreen() {
       { text: t('logOut'), style: 'destructive', onPress: async () => {
         await firebaseLogout();
         router.replace('/(auth)/login');
+      }},
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t('deleteAccountConfirmTitle'), t('deleteAccountConfirmMessage'), [
+      { text: t('common:cancel'), style: 'cancel' },
+      { text: t('deleteAccount'), style: 'destructive', onPress: async () => {
+        try {
+          await deleteAccount();
+          router.replace('/(auth)/login');
+        } catch {
+          Alert.alert(t('common:error'), t('deleteAccountError'));
+        }
       }},
     ]);
   };
@@ -291,13 +305,21 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Log Out */}
-        <TouchableOpacity style={[styles.settingsContainer, styles.logoutRow, { marginTop: 12 }]} onPress={handleLogout} activeOpacity={0.7}>
-          <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.error + '15' }]}>
-            <LogOut size={17} color={COLORS.error} />
-          </View>
-          <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('logOut')}</Text>
-        </TouchableOpacity>
+        {/* Log Out & Delete Account */}
+        <View style={[styles.settingsContainer, { marginTop: 12 }]}>
+          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={handleLogout} activeOpacity={0.7}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.error + '15' }]}>
+              <LogOut size={17} color={COLORS.error} />
+            </View>
+            <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('logOut')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.settingsRow} onPress={handleDeleteAccount} activeOpacity={0.7}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.error + '15' }]}>
+              <Trash2 size={17} color={COLORS.error} />
+            </View>
+            <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('deleteAccount')}</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>

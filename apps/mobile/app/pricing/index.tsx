@@ -29,14 +29,18 @@ export default function PricingScreen() {
 
   const monthlyPrice = getPrice('monthly');
   const yearlyPrice = getPrice('yearly');
+  const pricesLoaded = !!monthlyPrice && !!yearlyPrice;
 
   const priceLabels = {
-    monthly: monthlyPrice ?? (isBrl ? 'R$ 19,90' : '$9.99'),
-    yearly: yearlyPrice ?? (isBrl ? 'R$ 149,90' : '$99.99'),
+    monthly: monthlyPrice ?? '...',
+    yearly: yearlyPrice ?? '...',
   };
 
   const handleSubscribe = async () => {
-    if (!selectedPackage) return;
+    if (!selectedPackage) {
+      Alert.alert(t('common:error'), t('packageNotAvailable'));
+      return;
+    }
     try {
       await purchase(selectedPackage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -162,13 +166,22 @@ export default function PricingScreen() {
           ))}
 
           <Text style={styles.subscriptionTerms}>{t('subscriptionTerms')}</Text>
+          <Text style={styles.legalLinks}>
+            <Text style={styles.legalLink} onPress={() => Linking.openURL('https://tryquibly.com/terms')}>
+              {t('termsOfUse')}
+            </Text>
+            <Text> {t('andText')} </Text>
+            <Text style={styles.legalLink} onPress={() => Linking.openURL('https://tryquibly.com/privacy')}>
+              {t('privacyPolicy')}
+            </Text>
+          </Text>
 
           {!isPro ? (
             <TouchableOpacity
-              style={[styles.subscribeButton, purchasing && { opacity: 0.6 }]}
+              style={[styles.subscribeButton, (purchasing || !pricesLoaded) && { opacity: 0.6 }]}
               activeOpacity={0.8}
               onPress={handleSubscribe}
-              disabled={purchasing}
+              disabled={purchasing || !pricesLoaded}
             >
               {purchasing ? (
                 <ActivityIndicator color={COLORS.background} />
@@ -235,6 +248,8 @@ const styles = StyleSheet.create({
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   featureText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.text },
   subscriptionTerms: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, marginTop: 8, lineHeight: 16 },
+  legalLinks: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, marginTop: 4, lineHeight: 16 },
+  legalLink: { color: COLORS.primary, textDecorationLine: 'underline' as const },
   subscribeButton: { backgroundColor: COLORS.gold, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   subscribeButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.background },
   manageButton: { backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: COLORS.border },
