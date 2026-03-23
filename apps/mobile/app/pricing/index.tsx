@@ -165,16 +165,30 @@ export default function PricingScreen() {
             </View>
           ))}
 
+          {!isPro && selectedPackage && (
+            <View style={styles.subscriptionDisclosure}>
+              <Text style={styles.subscriptionName}>
+                {selectedPackage.product.title || (billing === 'monthly' ? 'Quibly Pro (Monthly)' : 'Quibly Pro (Yearly)')}
+              </Text>
+              <Text style={styles.subscriptionDetail}>
+                {t('subscriptionDisclosure', {
+                  price: priceLabels[billing],
+                  period: billing === 'monthly' ? t('monthly').toLowerCase() : t('yearly').toLowerCase(),
+                })}
+              </Text>
+            </View>
+          )}
+
           <Text style={styles.subscriptionTerms}>{t('subscriptionTerms')}</Text>
-          <Text style={styles.legalLinks}>
-            <Text style={styles.legalLink} onPress={() => Linking.openURL('https://tryquibly.com/terms')}>
-              {t('termsOfUse')}
-            </Text>
-            <Text> {t('andText')} </Text>
-            <Text style={styles.legalLink} onPress={() => Linking.openURL('https://tryquibly.com/privacy')}>
-              {t('privacyPolicy')}
-            </Text>
-          </Text>
+          <View style={styles.legalLinksRow}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://tryquibly.com/terms')}>
+              <Text style={styles.legalLinkText}>{t('termsOfUse')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalSeparator}>  |  </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('https://tryquibly.com/privacy')}>
+              <Text style={styles.legalLinkText}>{t('privacyPolicy')}</Text>
+            </TouchableOpacity>
+          </View>
 
           {!isPro ? (
             <TouchableOpacity
@@ -247,9 +261,13 @@ const styles = StyleSheet.create({
   currentBadgeText: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.primary, textTransform: 'uppercase' },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   featureText: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.text },
-  subscriptionTerms: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, marginTop: 8, lineHeight: 16 },
-  legalLinks: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, marginTop: 4, lineHeight: 16 },
-  legalLink: { color: COLORS.primary, textDecorationLine: 'underline' as const },
+  subscriptionDisclosure: { backgroundColor: COLORS.surfaceLight ?? COLORS.surface, borderRadius: 10, padding: 12, marginTop: 12 },
+  subscriptionName: { fontSize: 13, fontFamily: FONTS.semiBold, color: COLORS.text, marginBottom: 4 },
+  subscriptionDetail: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, lineHeight: 16 },
+  subscriptionTerms: { fontSize: 11, fontFamily: FONTS.medium, color: COLORS.textMuted, marginTop: 10, lineHeight: 16 },
+  legalLinksRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  legalLinkText: { fontSize: 12, fontFamily: FONTS.semiBold, color: COLORS.primary, textDecorationLine: 'underline' as const },
+  legalSeparator: { fontSize: 12, color: COLORS.textMuted },
   subscribeButton: { backgroundColor: COLORS.gold, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   subscribeButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.background },
   manageButton: { backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: COLORS.border },
