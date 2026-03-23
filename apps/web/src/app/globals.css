@@ -21,3 +21,100 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #3A3A4E;
 }
+
+/* Landing page — flip card */
+.flip-card {
+  perspective: 600px;
+}
+.flip-card-inner {
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+.flip-card:hover .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-inner > * {
+  backface-visibility: hidden;
+}
+.flip-card-inner > :last-child {
+  transform: rotateY(180deg);
+  position: absolute;
+  inset: 0;
+}
+
+/* Landing page — button shimmer */
+.btn-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── Liquid Glass ─────────────────────────────────────── */
+
+/* Dark variant — for use on dark/gradient backgrounds */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Light variant — for use on white/light backgrounds */
+.liquid-glass-light {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 8px 32px rgba(31, 38, 135, 0.08),
+    inset 0 2px 12px rgba(255, 255, 255, 0.4);
+}
+
+/* Subtle tint variant — cards on light bg */
+.liquid-glass-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 4px 24px rgba(31, 38, 135, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Inner highlight pseudo — add to any glass element */
+.liquid-glass-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  pointer-events: none;
+}
+
+/* Animated gradient orbs — hero background */
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, 30px) scale(0.95); }
+  66% { transform: translate(20px, -20px) scale(1.05); }
+}
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25px, 25px) scale(1.08); }
+}
+
+.orb-1 { animation: orb-float-1 12s ease-in-out infinite; }
+.orb-2 { animation: orb-float-2 15s ease-in-out infinite; }
+.orb-3 { animation: orb-float-3 10s ease-in-out infinite; }
