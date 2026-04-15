@@ -2,8 +2,12 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  OAuthProvider,
+  signInWithCredential,
   User,
 } from 'firebase/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { auth } from '../lib/firebase';
 import { api } from '../lib/api';
 import type { Profile } from '@quibly/shared';
@@ -23,6 +27,56 @@ export async function register(email: string, password: string, username: string
 export async function login(email: string, password: string) {
   const credential = await signInWithEmailAndPassword(auth, email, password);
   return credential.user;
+}
+
+export async function signInWithApple(): Promise<{ user: User; isNewUser: boolean }> {
+  const randomBytes = await Crypto.getRandomBytesAsync(32);
+  const rawNonce = Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  const hashedNonce = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    rawNonce
+  );
+
+  const appleCredential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+    nonce: hashedNonce,
+  });
+
+  if (!appleCredential.identityToken) {
+    throw new Error('Apple Sign-In failed: no identity token returned.');
+  }
+
+  const provider = new OAuthProvider('apple.com');
+  const firebaseCredential = provider.credential({
+    idToken: appleCredential.identityToken,
+    rawNonce,
+  });
+
+  const { user } = await signInWithCredential(auth, firebaseCredential);
+
+  const fullName = [
+    appleCredential.fullName?.givenName,
+    appleCredential.fullName?.familyName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  const existingProfile = await getProfile();
+  if (existingProfile) {
+    return { user, isNewUser: false };
+  }
+
+  const displayName = fullName || user.displayName || user.email?.split('@')[0] || 'user';
+  const handle = displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 30);
+  await api.post<Profile>('/auth/profile', { username: displayName, handle });
+
+  return { user, isNewUser: true };
 }
 
 export async function logout() {

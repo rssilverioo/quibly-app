@@ -17,6 +17,7 @@
     ],
     "ios": {
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.quibly.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
@@ -84,7 +85,8 @@
           "color": "#1E40AF"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

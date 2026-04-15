@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AppleSignInButton from '../../components/auth/AppleSignInButton';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { register } from '../../services/auth';
@@ -95,6 +96,7 @@ export default function RegisterScreen() {
               onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((p) => ({ ...p, confirmPassword: undefined })); }}
               secureTextEntry error={fieldErrors.confirmPassword} />
             <Button title={t('register.button')} onPress={handleRegister} loading={isLoading} style={{ marginTop: 8 }} />
+            <AppleSignInButton onError={setError} />
           </View>
 
           <View style={styles.footer}>

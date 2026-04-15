@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AppleSignInButton from '../../components/auth/AppleSignInButton';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { login } from '../../services/auth';
@@ -80,6 +81,7 @@ export default function LoginScreen() {
             <Input label={t('login.email')} placeholder={t('login.emailPlaceholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             <Input label={t('login.password')} placeholder={t('login.passwordPlaceholder')} value={password} onChangeText={setPassword} secureTextEntry />
             <Button title={t('login.button')} onPress={handleLogin} loading={isLoading} style={{ marginTop: 8 }} />
+            <AppleSignInButton onError={setError} />
           </View>
 
           <View style={styles.footer}>
