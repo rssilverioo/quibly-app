@@ -44,6 +44,6 @@ export default function AppleSignInButton({ onError }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { width: '100%', marginTop: 16 },
-  button: { width: '100%', height: 48 },
+  wrapper: { width: '100%' },
+  button: { width: '100%', height: 50 },
 });

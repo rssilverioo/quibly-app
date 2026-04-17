@@ -65,8 +65,8 @@ export function levelFromXp(totalXp: number): number {
 // ─── Usage Limits ───
 
 export const USAGE_LIMITS = {
-  FREE: { flashcard_sets: 3, quizzes: 3 },
-  PRO: { flashcard_sets: Infinity, quizzes: Infinity },
+  FREE: { flashcard_sets: 3, quizzes: 3, audio_sessions: 1 },
+  PRO: { flashcard_sets: Infinity, quizzes: Infinity, audio_sessions: 5 },
 } as const;
 
 // ─── XP Rewards (AI Content) ───

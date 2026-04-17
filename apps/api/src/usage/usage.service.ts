@@ -8,7 +8,7 @@ export class UsageService {
 
   async checkUsageLimit(
     userId: string,
-    type: 'flashcard_sets' | 'quizzes',
+    type: 'flashcard_sets' | 'quizzes' | 'audio_sessions',
   ): Promise<{ allowed: boolean; used: number; limit: number }> {
     const profile = await this.prisma.profile.findUnique({
       where: { id: userId },
@@ -25,7 +25,8 @@ export class UsageService {
       where: { userId_date: { userId, date: today } },
     });
 
-    const used = usage?.[type === 'flashcard_sets' ? 'flashcardSets' : 'quizzes'] ?? 0;
+    const field = this.fieldFor(type);
+    const used = usage?.[field] ?? 0;
 
     return {
       allowed: used < limit,
@@ -36,12 +37,12 @@ export class UsageService {
 
   async incrementUsage(
     userId: string,
-    type: 'flashcard_sets' | 'quizzes',
+    type: 'flashcard_sets' | 'quizzes' | 'audio_sessions',
   ): Promise<void> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const field = type === 'flashcard_sets' ? 'flashcardSets' : 'quizzes';
+    const field = this.fieldFor(type);
 
     await this.prisma.dailyUsage.upsert({
       where: { userId_date: { userId, date: today } },
@@ -82,6 +83,18 @@ export class UsageService {
         used: usage?.quizzes ?? 0,
         limit: limits.quizzes === Infinity ? -1 : limits.quizzes,
       },
+      audio_sessions: {
+        used: usage?.audioSessions ?? 0,
+        limit: limits.audio_sessions === Infinity ? -1 : limits.audio_sessions,
+      },
     };
+  }
+
+  private fieldFor(
+    type: 'flashcard_sets' | 'quizzes' | 'audio_sessions',
+  ): 'flashcardSets' | 'quizzes' | 'audioSessions' {
+    if (type === 'flashcard_sets') return 'flashcardSets';
+    if (type === 'audio_sessions') return 'audioSessions';
+    return 'quizzes';
   }
 }

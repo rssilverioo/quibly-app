@@ -23,6 +23,8 @@ import { GenerateModule } from './generate/generate.module';
 import { RevenueCatModule } from './revenuecat/revenuecat.module';
 import { AdminModule } from './admin/admin.module';
 import { GamificationModule } from './gamification/gamification.module';
+import { OpenaiModule } from './openai/openai.module';
+import { AudioSessionsModule } from './audio-sessions/audio-sessions.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { GamificationModule } from './gamification/gamification.module';
     RevenueCatModule,
     AdminModule,
     GamificationModule,
+    OpenaiModule,
+    AudioSessionsModule,
   ],
 })
 export class AppModule {}

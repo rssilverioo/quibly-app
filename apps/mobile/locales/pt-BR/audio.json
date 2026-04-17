@@ -1,0 +1,21 @@
+{
+  "preparing": "Preparando sua sessão...",
+  "ready": "Sessão pronta",
+  "segments": "segmentos",
+  "start": "Começar a ouvir",
+  "done": "Sessão concluída",
+  "finish": "Concluir",
+  "error": "Algo deu errado",
+  "back": "Voltar",
+  "type": {
+    "intro": "Introdução",
+    "card_q": "Pergunta",
+    "card_a": "Resposta",
+    "quiz_q": "Quiz",
+    "quiz_a": "Resposta",
+    "explain": "Aprofundando",
+    "recap": "Recapitulação",
+    "close": "Fechamento"
+  },
+  "studyWithAudio": "Estudar por áudio"
+}

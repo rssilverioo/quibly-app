@@ -16,6 +16,30 @@ interface GeneratedQuestion {
   imageQuery: string;
 }
 
+export type AudioScriptSegmentType =
+  | 'intro'
+  | 'card_q'
+  | 'card_a'
+  | 'quiz_q'
+  | 'quiz_a'
+  | 'explain'
+  | 'recap'
+  | 'close';
+
+export interface AudioScriptSegment {
+  type: AudioScriptSegmentType;
+  text: string;
+  pauseAfterMs: number;
+  cardId?: string;
+}
+
+export interface AudioScriptFlashcardInput {
+  id: string;
+  front: string;
+  back: string;
+  explain?: string | null;
+}
+
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
@@ -131,6 +155,64 @@ ${textContent}`;
       dist[q.correctIndex] = (dist[q.correctIndex] || 0) + 1;
     }
     return dist;
+  }
+
+  async planAudioScript(
+    flashcards: AudioScriptFlashcardInput[],
+    durationMinutes: number,
+    language = 'en',
+    userName?: string,
+  ): Promise<AudioScriptSegment[]> {
+    this.logger.log(`Planning audio script: ${flashcards.length} cards, ${durationMinutes}min, lang=${language}`);
+
+    const cardsPreview = flashcards
+      .map((c) => `- id=${c.id} | Q: ${c.front} | A: ${c.back}`)
+      .join('\n');
+
+    const greeting = userName ? `Address the user as "${userName}" in the intro.` : 'Use a friendly neutral greeting.';
+
+    const prompt = `You are a friendly AI study coach narrating a ${durationMinutes}-minute audio study session in ${language}. Generate a complete script as a JSON array of segments. Audio will be converted via text-to-speech, so write natural spoken language (no markdown, no bullet points, no code). The total spoken duration must be close to ${durationMinutes} minutes assuming 150 words per minute.
+
+STRUCTURE (in this order):
+1. One "intro" segment (~30 seconds). Warm greeting. ${greeting} Say what you'll cover. Motivate briefly.
+2. For each flashcard (cover ALL of them, but shuffle order so it's not sequential):
+   - One "card_q" segment with JUST the question (say it naturally, e.g. "Next: <front>"). cardId = the flashcard id.
+   - One "card_a" segment with the answer + brief explanation. cardId = same.
+3. After every 5 cards, insert one "quiz_q" segment (a mini verbal quiz using cards just covered, multiple choice read aloud as "A, B, or C") followed by a "quiz_a" segment confirming the answer.
+4. One "explain" segment near the end (~30-60s) that highlights 2-3 of the trickiest or most important concepts from the cards.
+5. One "recap" segment (~60s) listing the key ideas.
+6. One "close" segment (~20s) congratulating, mentioning streak, inviting them back tomorrow.
+
+SEGMENT FIELDS:
+- "type": one of "intro" | "card_q" | "card_a" | "quiz_q" | "quiz_a" | "explain" | "recap" | "close"
+- "text": the spoken text (natural, conversational, ${language})
+- "pauseAfterMs": silence after this segment in milliseconds. Use 4000 after card_q (thinking time), 3000 after quiz_q, 800 for other transitions, 1500 before recap/close.
+- "cardId": ONLY on card_q and card_a segments, set to the flashcard's id.
+
+Flashcards to cover:
+${cardsPreview}
+
+Return ONLY a JSON object with shape: { "segments": [ ... ] }. Do not wrap in markdown.`;
+
+    const model = this.getModel();
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    this.logger.log(`Audio script raw response length: ${text.length}`);
+
+    let parsed: { segments: AudioScriptSegment[] };
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    }
+
+    if (!parsed?.segments || !Array.isArray(parsed.segments)) {
+      throw new Error('Gemini returned invalid audio script shape');
+    }
+
+    this.logger.log(`Generated ${parsed.segments.length} audio segments`);
+    return parsed.segments;
   }
 
   async extractTextFromImage(buffer: Buffer): Promise<string> {

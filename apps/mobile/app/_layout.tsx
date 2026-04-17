@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import AnimatedSplash from '../components/common/AnimatedSplash';
@@ -53,6 +53,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const pendingDeepLink = useRef<string | null>(null);
   const pushTokenRegistered = useRef(false);
+  const [splashFinished, setSplashFinished] = useState(false);
 
   // Initialize notifications
   useEffect(() => {
@@ -141,7 +142,9 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, isLoading, segments]);
 
-  if (isLoading) return <AnimatedSplash />;
+  if (isLoading || !splashFinished) {
+    return <AnimatedSplash onFinish={() => setSplashFinished(true)} />;
+  }
 
   return (
     <Stack

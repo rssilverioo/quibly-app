@@ -1,121 +1,187 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import Animated, {
-  useSharedValue,
+  Easing,
   useAnimatedStyle,
+  useSharedValue,
   withDelay,
-  withTiming,
-  withSpring,
   withRepeat,
   withSequence,
-  Easing,
+  withTiming,
 } from 'react-native-reanimated';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { COLORS } from '@quibly/shared/constants';
 
-const LETTERS = ['Q', 'U', 'I', 'B', 'L', 'Y'];
-const LETTER_STAGGER = 80;
-const LETTER_START = 600;
-const DOT_COUNT = 3;
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const FINISH_AT = 2700;
 
-function AnimatedLetter({ letter, index }: { letter: string; index: number }) {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(30);
+interface Props {
+  onFinish?: () => void;
+}
+
+const WAVE_TOP = SCREEN_H * 0.6;
+
+interface WaveLayerProps {
+  color: string;
+  duration: number;
+  amplitude: number;
+  topOffset: number;
+  zIndex: number;
+}
+
+function WaveLayer({ color, duration, amplitude, topOffset, zIndex }: WaveLayerProps) {
+  const x = useSharedValue(0);
+  const y = useSharedValue(0);
 
   useEffect(() => {
-    const delay = LETTER_START + index * LETTER_STAGGER;
-    opacity.value = withDelay(delay, withTiming(1, { duration: 300 }));
-    translateY.value = withDelay(
-      delay,
-      withSpring(0, { damping: 12, stiffness: 120 }),
+    x.value = withRepeat(
+      withTiming(-SCREEN_W, { duration, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    y.value = withRepeat(
+      withSequence(
+        withTiming(-amplitude, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
     );
   }, []);
 
   const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateX: x.value }, { translateY: y.value }],
   }));
 
-  return <Animated.Text style={[styles.letter, style]}>{letter}</Animated.Text>;
+  // Build a wave shape using overlapping ellipses
+  const blobCount = 8;
+  const blobWidth = SCREEN_W / 3;
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.waveLayer,
+        { top: topOffset, height: SCREEN_H, zIndex },
+        style,
+      ]}
+    >
+      {/* Solid base */}
+      <View style={[styles.waveBase, { backgroundColor: color, top: 30 }]} />
+      {/* Crests: large ellipses overlapping along the top */}
+      {Array.from({ length: blobCount }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            top: -blobWidth / 4,
+            left: i * (blobWidth * 0.7) - blobWidth * 0.2,
+            width: blobWidth,
+            height: blobWidth / 2,
+            borderRadius: blobWidth,
+            backgroundColor: color,
+          }}
+        />
+      ))}
+    </Animated.View>
+  );
 }
 
-function AnimatedDot({ index }: { index: number }) {
-  const opacity = useSharedValue(0);
+export default function AnimatedSplash({ onFinish }: Props) {
+  const rootOpacity = useSharedValue(1);
+  const rootScale = useSharedValue(1);
+  const fadeIn = useSharedValue(0);
+
+  const logoDrop = useSharedValue(-180);
+  const logoOpacity = useSharedValue(0);
+  const logoBobY = useSharedValue(0);
+  const logoTilt = useSharedValue(0);
+
+  const glowOpacity = useSharedValue(0);
+  const glowScale = useSharedValue(1);
 
   useEffect(() => {
-    // Dots appear at 2000ms, then loop
-    opacity.value = withDelay(
-      2000 + index * 200,
+    fadeIn.value = withTiming(1, { duration: 500 });
+
+    logoOpacity.value = withDelay(200, withTiming(1, { duration: 350 }));
+    logoDrop.value = withDelay(
+      200,
+      withSequence(
+        withTiming(0, { duration: 700, easing: Easing.bezier(0.3, 1.4, 0.5, 1) }),
+        withTiming(-12, { duration: 200, easing: Easing.out(Easing.cubic) }),
+        withTiming(0, { duration: 280, easing: Easing.inOut(Easing.cubic) }),
+      ),
+    );
+
+    logoBobY.value = withDelay(
+      1400,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: 400, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.3, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-12, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         false,
       ),
     );
-  }, []);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  return <Animated.View style={[styles.dot, style]} />;
-}
-
-export default function AnimatedSplash() {
-  // Logo
-  const logoScale = useSharedValue(0.3);
-  const logoOpacity = useSharedValue(0);
-
-  // Glow
-  const glowScale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0);
-
-  // Subtitle
-  const subtitleOpacity = useSharedValue(0);
-  const subtitleTranslateY = useSharedValue(10);
-
-  useEffect(() => {
-    // Phase 1: Logo entrance (0-600ms)
-    logoOpacity.value = withTiming(1, { duration: 400 });
-    logoScale.value = withSpring(1, { damping: 10, stiffness: 100 });
-
-    // Glow pulse (starts at 200ms, loops)
-    glowOpacity.value = withDelay(
-      200,
+    logoTilt.value = withDelay(
+      1400,
       withRepeat(
         withSequence(
-          withTiming(0.15, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.05, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-7, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+          withTiming(7, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+
+    glowOpacity.value = withDelay(
+      400,
+      withRepeat(
+        withSequence(
+          withTiming(0.5, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.2, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         false,
       ),
     );
     glowScale.value = withDelay(
-      200,
+      400,
       withRepeat(
         withSequence(
-          withTiming(1.15, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.2, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         false,
       ),
     );
 
-    // Phase 3: Subtitle (1500-1900ms)
-    subtitleOpacity.value = withDelay(1500, withTiming(1, { duration: 400 }));
-    subtitleTranslateY.value = withDelay(
-      1500,
-      withTiming(0, { duration: 400, easing: Easing.out(Easing.ease) }),
-    );
+    const t = setTimeout(() => {
+      rootOpacity.value = withTiming(0, { duration: 400, easing: Easing.in(Easing.cubic) });
+      rootScale.value = withTiming(1.05, { duration: 400, easing: Easing.in(Easing.cubic) });
+      setTimeout(() => onFinish?.(), 400);
+    }, FINISH_AT);
+
+    return () => clearTimeout(t);
   }, []);
 
-  const logoStyle = useAnimatedStyle(() => ({
+  const rootStyle = useAnimatedStyle(() => ({
+    opacity: rootOpacity.value,
+    transform: [{ scale: rootScale.value }],
+  }));
+
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeIn.value }));
+
+  const logoContainerStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
-    transform: [{ scale: logoScale.value }],
+    transform: [
+      { translateY: logoDrop.value + logoBobY.value },
+      { rotate: `${logoTilt.value}deg` },
+    ],
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -123,96 +189,93 @@ export default function AnimatedSplash() {
     transform: [{ scale: glowScale.value }],
   }));
 
-  const subtitleStyle = useAnimatedStyle(() => ({
-    opacity: subtitleOpacity.value,
-    transform: [{ translateY: subtitleTranslateY.value }],
-  }));
+  const logoY = WAVE_TOP - 50;
 
   return (
-    <View style={styles.container}>
-      {/* Logo with glow */}
-      <View style={styles.logoContainer}>
+    <Animated.View style={[styles.root, rootStyle]}>
+      <LinearGradient
+        colors={['#0F1232', '#1E1B4B', '#312E81', '#1E40AF']}
+        locations={[0, 0.3, 0.55, 0.8]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Stars */}
+      <Animated.View style={[StyleSheet.absoluteFill, fadeStyle]} pointerEvents="none">
+        <View style={[styles.star, { top: SCREEN_H * 0.08, left: SCREEN_W * 0.18, opacity: 0.7 }]} />
+        <View style={[styles.star, styles.starSm, { top: SCREEN_H * 0.14, left: SCREEN_W * 0.7 }]} />
+        <View style={[styles.star, { top: SCREEN_H * 0.21, left: SCREEN_W * 0.45, opacity: 0.5 }]} />
+        <View style={[styles.star, styles.starSm, { top: SCREEN_H * 0.28, left: SCREEN_W * 0.85 }]} />
+        <View style={[styles.star, { top: SCREEN_H * 0.32, left: SCREEN_W * 0.12, opacity: 0.6 }]} />
+        <View style={[styles.star, styles.starSm, { top: SCREEN_H * 0.38, left: SCREEN_W * 0.6 }]} />
+        <View style={[styles.star, { top: SCREEN_H * 0.05, left: SCREEN_W * 0.55, opacity: 0.4 }]} />
+      </Animated.View>
+
+      {/* Logo surfing */}
+      <Animated.View style={[styles.logoContainer, { top: logoY }, logoContainerStyle]}>
         <Animated.View style={[styles.glow, glowStyle]} />
-        <Animated.View style={logoStyle}>
-          <Image
-            source={require('../../assets/icon.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
-      </View>
+        <Image
+          source={require('../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </Animated.View>
 
-      {/* Letter row */}
-      <View style={styles.letterRow}>
-        {LETTERS.map((letter, i) => (
-          <AnimatedLetter key={i} letter={letter} index={i} />
-        ))}
-      </View>
-
-      {/* Subtitle */}
-      <Animated.Text style={[styles.subtitle, subtitleStyle]}>
-        Lock In. Compete. Win.
-      </Animated.Text>
-
-      {/* Loading dots */}
-      <View style={styles.dotsRow}>
-        {Array.from({ length: DOT_COUNT }).map((_, i) => (
-          <AnimatedDot key={i} index={i} />
-        ))}
-      </View>
-    </View>
+      {/* Wave layers */}
+      <WaveLayer color="rgba(96,165,250,0.35)" duration={6000} amplitude={6} topOffset={WAVE_TOP - 8} zIndex={1} />
+      <WaveLayer color="#1E40AF" duration={3500} amplitude={10} topOffset={WAVE_TOP + 18} zIndex={3} />
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  star: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#FFFFFF',
+  },
+  starSm: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.5,
   },
   logoContainer: {
+    position: 'absolute',
+    left: SCREEN_W / 2 - 50,
+    width: 100,
+    height: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    zIndex: 2,
   },
   glow: {
     position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: COLORS.primary,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#60A5FA',
   },
   logo: {
     width: 100,
     height: 100,
-    borderRadius: 22,
+    borderRadius: 24,
   },
-  letterRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 12,
+  waveLayer: {
+    position: 'absolute',
+    left: 0,
+    width: SCREEN_W * 2,
   },
-  letter: {
-    fontFamily: FONTS.bold,
-    fontSize: 36,
-    color: COLORS.text,
-  },
-  subtitle: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: COLORS.textMuted,
-    letterSpacing: 1.5,
-    marginBottom: 40,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary,
+  waveBase: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: SCREEN_H,
   },
 });

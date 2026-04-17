@@ -1,33 +1,23 @@
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   signOut,
+  GoogleAuthProvider,
   OAuthProvider,
   signInWithCredential,
   User,
 } from 'firebase/auth';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { auth } from '../lib/firebase';
 import { api } from '../lib/api';
 import type { Profile } from '@quibly/shared';
 
-export async function register(email: string, password: string, username: string) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  const uid = credential.user.uid;
-
-  const handle = username.toLowerCase().replace(/\s+/g, '_');
-
-  // Create profile in the API (PostgreSQL via Prisma)
-  const profile = await api.post<Profile>('/auth/profile', { username, handle });
-
-  return { uid, profile };
-}
-
-export async function login(email: string, password: string) {
-  const credential = await signInWithEmailAndPassword(auth, email, password);
-  return credential.user;
-}
+GoogleSignin.configure({
+  iosClientId: '419383312629-hl004370ib4ea9ni56daf3vu1k3g5ns2.apps.googleusercontent.com',
+});
 
 export async function signInWithApple(): Promise<{ user: User; isNewUser: boolean }> {
   const randomBytes = await Crypto.getRandomBytesAsync(32);
@@ -79,7 +69,36 @@ export async function signInWithApple(): Promise<{ user: User; isNewUser: boolea
   return { user, isNewUser: true };
 }
 
+export async function signInWithGoogle(): Promise<{ user: User; isNewUser: boolean }> {
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  const result = await GoogleSignin.signIn();
+  const idToken = result.data?.idToken ?? (result as any).idToken;
+
+  if (!idToken) {
+    throw new Error('Google Sign-In failed: no ID token returned.');
+  }
+
+  const credential = GoogleAuthProvider.credential(idToken);
+  const { user } = await signInWithCredential(auth, credential);
+
+  const existingProfile = await getProfile();
+  if (existingProfile) {
+    return { user, isNewUser: false };
+  }
+
+  const displayName = user.displayName || user.email?.split('@')[0] || 'user';
+  const handle = displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 30);
+  await api.post<Profile>('/auth/profile', { username: displayName, handle });
+
+  return { user, isNewUser: true };
+}
+
+export { statusCodes as googleStatusCodes };
+
 export async function logout() {
+  try {
+    await GoogleSignin.signOut();
+  } catch {}
   await signOut(auth);
 }
 

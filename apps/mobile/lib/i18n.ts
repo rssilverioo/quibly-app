@@ -17,6 +17,7 @@ import enQuizzes from '../locales/en/quizzes.json';
 import enDocuments from '../locales/en/documents.json';
 import enPricing from '../locales/en/pricing.json';
 import enLibrary from '../locales/en/library.json';
+import enAudio from '../locales/en/audio.json';
 
 // Português (BR)
 import ptCommon from '../locales/pt-BR/common.json';
@@ -32,6 +33,7 @@ import ptQuizzes from '../locales/pt-BR/quizzes.json';
 import ptDocuments from '../locales/pt-BR/documents.json';
 import ptPricing from '../locales/pt-BR/pricing.json';
 import ptLibrary from '../locales/pt-BR/library.json';
+import ptAudio from '../locales/pt-BR/audio.json';
 
 const LANGUAGE_KEY = '@quibly/language';
 
@@ -65,7 +67,7 @@ i18n
     compatibilityJSON: 'v4',
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'home', 'profile', 'leagues', 'session', 'feed', 'notifications', 'flashcards', 'quizzes', 'documents', 'pricing', 'library'],
+    ns: ['common', 'auth', 'home', 'profile', 'leagues', 'session', 'feed', 'notifications', 'flashcards', 'quizzes', 'documents', 'pricing', 'library', 'audio'],
     resources: {
       en: {
         common: enCommon,
@@ -81,6 +83,7 @@ i18n
         documents: enDocuments,
         pricing: enPricing,
         library: enLibrary,
+        audio: enAudio,
       },
       'pt-BR': {
         common: ptCommon,
@@ -96,6 +99,7 @@ i18n
         documents: ptDocuments,
         pricing: ptPricing,
         library: ptLibrary,
+        audio: ptAudio,
       },
     },
     interpolation: {

@@ -1,0 +1,21 @@
+{
+  "preparing": "Preparing your session...",
+  "ready": "Session ready",
+  "segments": "segments",
+  "start": "Start listening",
+  "done": "Session complete",
+  "finish": "Finish",
+  "error": "Something went wrong",
+  "back": "Go back",
+  "type": {
+    "intro": "Intro",
+    "card_q": "Question",
+    "card_a": "Answer",
+    "quiz_q": "Quiz",
+    "quiz_a": "Answer",
+    "explain": "Deep dive",
+    "recap": "Recap",
+    "close": "Wrap up"
+  },
+  "studyWithAudio": "Study with audio"
+}

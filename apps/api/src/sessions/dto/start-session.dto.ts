@@ -8,10 +8,10 @@ export class StartSessionDto {
   @IsOptional()
   league_id?: string;
 
-  @IsEnum(['pomodoro', 'deep_focus', 'custom'], {
-    message: 'timer_mode must be one of: pomodoro, deep_focus, custom',
+  @IsEnum(['pomodoro', 'deep_focus', 'custom', 'audio'], {
+    message: 'timer_mode must be one of: pomodoro, deep_focus, custom, audio',
   })
-  timer_mode: 'pomodoro' | 'deep_focus' | 'custom';
+  timer_mode: 'pomodoro' | 'deep_focus' | 'custom' | 'audio';
 
   @IsNumber()
   @Min(5)

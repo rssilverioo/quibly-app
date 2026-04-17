@@ -1,4 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,58 +9,56 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import AppleSignInButton from '../../components/auth/AppleSignInButton';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import { login } from '../../services/auth';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
 const COLORS = {
   background: '#0A0A0F',
-  primary: '#1E40AF',
   text: '#FFFFFF',
   textSecondary: '#9CA3AF',
+  textTertiary: '#6B7280',
   error: '#FF4757',
+  success: '#10B981',
 };
 
 export default function LoginScreen() {
   const { t } = useTranslation('auth');
   const { message } = useLocalSearchParams<{ message?: string }>();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleLogin = async () => {
-    setError('');
-    if (!email.trim()) { setError(t('login.emailRequired')); return; }
-    if (!password) { setError(t('login.passwordRequired')); return; }
-
-    setIsLoading(true);
-    try {
-      await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      const msg = err?.code === 'auth/invalid-credential'
-        ? t('login.invalidCredentials')
-        : err?.message ?? t('login.genericError');
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bounces={false}>
-        <View style={styles.container}>
-          <View style={styles.brandSection}>
-            <Image source={require('../../assets/quibly-text.png')} style={styles.brandImage} resizeMode="contain" />
+    <View style={styles.flex}>
+      <LinearGradient
+        colors={['#1E1B4B', '#0A0A0F', '#0A0A0F']}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={[styles.glow, styles.glowTop]} />
+      <View style={[styles.glow, styles.glowBottom]} />
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Image
+              source={require('../../assets/quibly-text.png')}
+              style={styles.brandImage}
+              resizeMode="contain"
+            />
             <Text style={styles.tagline}>{t('tagline')}</Text>
           </View>
 
@@ -69,47 +68,133 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <View style={styles.formSection}>
-            <Text style={styles.title}>{t('login.title')}</Text>
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
-            {error ? (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+          <View style={styles.actions}>
+            <Text style={styles.heading}>{t('login.title')}</Text>
+            <Text style={styles.subheading}>{t('login.socialSubtitle')}</Text>
 
-            <Input label={t('login.email')} placeholder={t('login.emailPlaceholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-            <Input label={t('login.password')} placeholder={t('login.passwordPlaceholder')} value={password} onChangeText={setPassword} secureTextEntry />
-            <Button title={t('login.button')} onPress={handleLogin} loading={isLoading} style={{ marginTop: 8 }} />
-            <AppleSignInButton onError={setError} />
+            <View style={styles.buttons}>
+              <AppleSignInButton onError={setError} />
+              <GoogleSignInButton onError={setError} />
+            </View>
+
+            <Text style={styles.legal}>{t('login.legal')}</Text>
           </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('login.noAccount')}</Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.footerLink}>{t('login.signUp')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.background },
-  scrollContent: { flexGrow: 1 },
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 80, paddingBottom: 40, justifyContent: 'center' },
-  brandSection: { alignItems: 'center', marginBottom: 48 },
-  brandImage: { width: 200, height: 60 },
-  tagline: { fontSize: 16, color: COLORS.textSecondary, marginTop: 8, letterSpacing: 0.5 },
-  successBanner: { backgroundColor: 'rgba(16,185,129,0.12)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', borderRadius: 12, padding: 14, marginBottom: 20 },
-  successText: { color: '#10B981', fontSize: 14, textAlign: 'center', fontWeight: '500' },
-  formSection: { width: '100%' },
-  title: { fontSize: 24, fontWeight: '700', color: COLORS.text, marginBottom: 24 },
-  errorBanner: { backgroundColor: 'rgba(255,71,87,0.12)', borderWidth: 1, borderColor: 'rgba(255,71,87,0.3)', borderRadius: 12, padding: 14, marginBottom: 20 },
-  errorText: { color: COLORS.error, fontSize: 14, textAlign: 'center', fontWeight: '500' },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 },
-  footerText: { color: COLORS.textSecondary, fontSize: 14 },
-  footerLink: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 100,
+    paddingBottom: 48,
+    justifyContent: 'space-between',
+  },
+  glow: {
+    position: 'absolute',
+    width: 360,
+    height: 360,
+    borderRadius: 360,
+    opacity: 0.35,
+  },
+  glowTop: {
+    top: -120,
+    right: -120,
+    backgroundColor: '#3B82F6',
+  },
+  glowBottom: {
+    bottom: -160,
+    left: -120,
+    backgroundColor: '#7C3AED',
+    opacity: 0.25,
+  },
+  hero: {
+    alignItems: 'center',
+    marginBottom: 56,
+  },
+  logo: {
+    width: 88,
+    height: 88,
+    marginBottom: 20,
+    borderRadius: 22,
+  },
+  brandImage: {
+    width: 180,
+    height: 48,
+  },
+  tagline: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    marginTop: 12,
+    letterSpacing: 0.4,
+    textAlign: 'center',
+  },
+  successBanner: {
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.3)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  successText: {
+    color: COLORS.success,
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(255,71,87,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,71,87,0.3)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  actions: {
+    width: '100%',
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.text,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  subheading: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 32,
+    lineHeight: 21,
+  },
+  buttons: {
+    width: '100%',
+    gap: 12,
+  },
+  legal: {
+    fontSize: 12,
+    color: COLORS.textTertiary,
+    textAlign: 'center',
+    marginTop: 28,
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
 });

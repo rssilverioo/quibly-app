@@ -15,6 +15,7 @@ export default function SessionLayout() {
         name="active"
         options={{ gestureEnabled: false }}
       />
+      <Stack.Screen name="audio" />
     </Stack>
   );
 }

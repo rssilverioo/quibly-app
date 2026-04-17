@@ -7,9 +7,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@quibly/shared/constants';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Headphones } from 'lucide-react-native';
 import type { FlashcardSet, Flashcard } from '@quibly/shared';
 import { getFlashcardSet } from '../../services/flashcards';
+import { createAudioSession } from '../../services/audio-sessions';
 import { useGamification } from '../../hooks/useGamification';
 import FlashcardCard from '../../components/flashcards/FlashcardCard';
 import XPToast from '../../components/common/XPToast';
@@ -84,6 +85,17 @@ export default function FlashcardPlayerScreen() {
     setReviewedCards(new Set());
   };
 
+  const handleStudyWithAudio = useCallback(async () => {
+    const setId = Array.isArray(id) ? id[0] : id;
+    if (!setId) return;
+    try {
+      const created = await createAudioSession(setId, 20);
+      router.push({ pathname: '/session/audio', params: { id: created.id } });
+    } catch (err: any) {
+      console.error('[FlashcardPlayer] Audio session failed:', err?.message);
+    }
+  }, [id, router]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -122,7 +134,9 @@ export default function FlashcardPlayerScreen() {
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{set.title}</Text>
-        <Text style={styles.counter}>{t('cardOf', { current: currentIndex + 1, total: cards.length })}</Text>
+        <TouchableOpacity onPress={handleStudyWithAudio} style={styles.audioBtn} hitSlop={10}>
+          <Headphones size={22} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Progress bar */}
@@ -183,6 +197,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: 16, fontFamily: FONTS.semiBold, color: COLORS.text, marginHorizontal: 8 },
   counter: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.textMuted },
+  audioBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   progressTrack: { height: 4, backgroundColor: COLORS.surfaceLight, marginHorizontal: 20, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 2 },
   cardContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
