@@ -58,7 +58,7 @@ export class GeminiService {
     return this.client;
   }
 
-  private async chatJSON<T>(prompt: string): Promise<T> {
+  async chatJSON<T>(prompt: string): Promise<T> {
     const client = this.getClient();
     const response = await client.chat.completions.create({
       model: MODEL,

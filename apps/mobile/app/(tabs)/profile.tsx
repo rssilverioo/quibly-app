@@ -245,7 +245,7 @@ export default function ProfileScreen() {
 
         {/* Account */}
         <View style={styles.settingsContainer}>
-          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/league/create' as any)} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/league' as any)} activeOpacity={0.7}>
             <View style={[styles.settingsIconWrap, { backgroundColor: '#FEF3C7' }]}>
               <Trophy size={17} color="#D97706" />
             </View>

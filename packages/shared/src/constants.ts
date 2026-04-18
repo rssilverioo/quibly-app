@@ -65,7 +65,7 @@ export function levelFromXp(totalXp: number): number {
 // ─── Usage Limits ───
 
 export const USAGE_LIMITS = {
-  FREE: { flashcard_sets: 3, quizzes: 3, audio_sessions: 1 },
+  FREE: { flashcard_sets: 3, quizzes: 3, audio_sessions: 99 },
   PRO: { flashcard_sets: Infinity, quizzes: Infinity, audio_sessions: 5 },
 } as const;
 
@@ -165,27 +165,27 @@ export function inviteUrl(inviteCode: string): string {
   return `${APP_URLS.WEB_BASE}/join/${inviteCode}`;
 }
 
-// ─── Colors (Dark Theme) ───
+// ─── Colors (Light Theme) ───
 
 export const COLORS = {
-  background: "#0A0A0F",
-  surface: "#141420",
-  surfaceLight: "#1E1E2E",
-  border: "#2A2A3E",
+  background: "#EEF5FF",
+  surface: "#FFFFFF",
+  surfaceLight: "#F8FAFC",
+  border: "#E2E8F0",
   primary: "#1E40AF",
-  primaryLight: "#2B53D8",
-  secondary: "#00D4AA",
-  accent: "#FF6B6B",
-  warning: "#FFB84D",
-  success: "#00D4AA",
-  error: "#FF4757",
-  text: "#FFFFFF",
-  textSecondary: "#9CA3AF",
-  textMuted: "#6B7280",
+  primaryLight: "#3B82F6",
+  secondary: "#10B981",
+  accent: "#EF4444",
+  warning: "#F59E0B",
+  success: "#10B981",
+  error: "#EF4444",
+  text: "#1A2E4A",
+  textSecondary: "#4A6580",
+  textMuted: "#8BA3BC",
 
   // Rank colors
-  gold: "#FFD700",
-  silver: "#C0C0C0",
+  gold: "#F59E0B",
+  silver: "#94A3B8",
   bronze: "#CD7F32",
 } as const;
 

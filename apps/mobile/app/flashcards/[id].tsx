@@ -7,10 +7,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '@quibly/shared/constants';
-import { ArrowLeft, ChevronLeft, ChevronRight, Headphones } from 'lucide-react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import type { FlashcardSet, Flashcard } from '@quibly/shared';
 import { getFlashcardSet } from '../../services/flashcards';
-import { createAudioSession } from '../../services/audio-sessions';
 import { useGamification } from '../../hooks/useGamification';
 import FlashcardCard from '../../components/flashcards/FlashcardCard';
 import XPToast from '../../components/common/XPToast';
@@ -85,17 +84,6 @@ export default function FlashcardPlayerScreen() {
     setReviewedCards(new Set());
   };
 
-  const handleStudyWithAudio = useCallback(async () => {
-    const setId = Array.isArray(id) ? id[0] : id;
-    if (!setId) return;
-    try {
-      const created = await createAudioSession(setId, 20);
-      router.push({ pathname: '/session/audio', params: { id: created.id } });
-    } catch (err: any) {
-      console.error('[FlashcardPlayer] Audio session failed:', err?.message);
-    }
-  }, [id, router]);
-
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -134,9 +122,7 @@ export default function FlashcardPlayerScreen() {
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{set.title}</Text>
-        <TouchableOpacity onPress={handleStudyWithAudio} style={styles.audioBtn} hitSlop={10}>
-          <Headphones size={22} color={COLORS.primary} />
-        </TouchableOpacity>
+        <Text style={styles.counter}>{t('cardOf', { current: currentIndex + 1, total: cards.length })}</Text>
       </View>
 
       {/* Progress bar */}

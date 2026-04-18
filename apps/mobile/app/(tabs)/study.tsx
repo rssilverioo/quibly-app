@@ -72,24 +72,6 @@ export default function StudyScreen() {
           <ChevronRight size={22} color="#8BA3BC" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.mainCard} activeOpacity={0.85}
-          onPress={() => {
-            if (flashcardSets.length > 0) {
-              router.push(`/flashcards/${flashcardSets[0].id}`);
-            } else {
-              router.push('/upload');
-            }
-          }}>
-          <View style={[styles.mainIcon, { backgroundColor: '#D97706' }]}>
-            <Headphones size={28} color="#FFFFFF" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.mainTitle}>Audio Study</Text>
-            <Text style={styles.mainSub}>Listen & learn hands-free</Text>
-          </View>
-          <ChevronRight size={22} color="#8BA3BC" />
-        </TouchableOpacity>
-
         {/* Quick stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
@@ -115,16 +97,16 @@ export default function StudyScreen() {
           </View>
         </View>
 
-        {/* Recent decks for quick audio */}
+        {/* Recent decks */}
         {flashcardSets.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Quick start audio</Text>
+            <Text style={styles.sectionTitle}>{t('continueStudying')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
               {flashcardSets.slice(0, 6).map((set) => (
                 <TouchableOpacity key={set.id} style={styles.deckCard} activeOpacity={0.85}
                   onPress={() => router.push(`/flashcards/${set.id}`)}>
                   <View style={styles.deckIcon}>
-                    <Headphones size={16} color="#1E40AF" />
+                    <BookOpen size={16} color="#1E40AF" />
                   </View>
                   <Text style={styles.deckTitle} numberOfLines={2}>{set.title}</Text>
                   <Text style={styles.deckMeta}>{set._count?.flashcards ?? '?'} cards</Text>

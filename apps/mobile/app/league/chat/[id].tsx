@@ -248,7 +248,7 @@ export default function LeagueChatScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Message List */}

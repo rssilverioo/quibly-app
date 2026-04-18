@@ -175,19 +175,13 @@ export default function HomeScreen() {
               <Text style={styles.gridSub}>{t('librarySub', { defaultValue: 'Your flashcards & quizzes' })}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF3C7' }]} activeOpacity={0.85}
-              onPress={() => {
-                if (flashcardSets.length > 0) {
-                  router.push(`/flashcards/${flashcardSets[0].id}`);
-                } else {
-                  router.push('/upload');
-                }
-              }}>
-              <View style={[styles.gridIcon, { backgroundColor: '#D97706' }]}>
-                <Headphones size={20} color="#FFFFFF" />
+            <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEE2E2' }]} activeOpacity={0.85}
+              onPress={() => router.push('/(tabs)/library')}>
+              <View style={[styles.gridIcon, { backgroundColor: '#DC2626' }]}>
+                <HelpCircle size={20} color="#FFFFFF" />
               </View>
-              <Text style={styles.gridTitle}>{t('audioStudy', { defaultValue: 'Audio Study' })}</Text>
-              <Text style={styles.gridSub}>{t('audioStudySub', { defaultValue: 'Listen & learn hands-free' })}</Text>
+              <Text style={styles.gridTitle}>{t('quizzes', { defaultValue: 'Quizzes' })}</Text>
+              <Text style={styles.gridSub}>{t('quizzesSub', { defaultValue: 'Test your knowledge' })}</Text>
             </TouchableOpacity>
           </View>
 

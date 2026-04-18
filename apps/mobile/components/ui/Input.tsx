@@ -8,18 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-const COLORS = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1E1E2E',
-  border: '#2A2A3E',
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  text: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
-  error: '#FF4757',
-};
+import { COLORS } from '@quibly/shared/constants';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   /** Label displayed above the input */

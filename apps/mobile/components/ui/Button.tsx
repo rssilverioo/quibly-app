@@ -8,18 +8,7 @@ import {
   type TextStyle,
 } from 'react-native';
 
-const COLORS = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1E1E2E',
-  border: '#2A2A3E',
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  text: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
-  error: '#FF4757',
-};
+import { COLORS } from '@quibly/shared/constants';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -71,7 +60,7 @@ export default function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? COLORS.text : COLORS.primary}
+          color={variant === 'primary' ? '#FFFFFF' : COLORS.primary}
         />
       ) : (
         <Text style={textStyle}>{title}</Text>
@@ -109,7 +98,7 @@ const variantStyles: Record<
       backgroundColor: COLORS.primary,
     },
     text: {
-      color: COLORS.text,
+      color: '#FFFFFF',
     },
   },
   secondary: {

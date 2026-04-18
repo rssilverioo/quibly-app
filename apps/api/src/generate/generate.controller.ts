@@ -1,9 +1,17 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { IsString, IsOptional } from 'class-validator';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GenerateService } from './generate.service';
 import { GenerateFromDocumentDto } from './dto/generate-from-document.dto';
 import { GenerateFromTopicDto } from './dto/generate-from-topic.dto';
+
+class ExplainDto {
+  @IsString() front: string;
+  @IsString() back: string;
+  @IsString() @IsOptional() explain?: string;
+  @IsString() @IsOptional() language?: string;
+}
 
 @Controller('generate')
 @UseGuards(FirebaseAuthGuard)
@@ -45,5 +53,10 @@ export class GenerateController {
       dto.type,
       dto.language,
     );
+  }
+
+  @Post('explain')
+  explain(@Body() dto: ExplainDto) {
+    return this.generateService.explainCard(dto.front, dto.back, dto.explain, dto.language);
   }
 }

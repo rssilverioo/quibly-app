@@ -226,7 +226,7 @@ export default function LeagueFeedScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         keyboardVerticalOffset={90}
       >
         <FlatList

@@ -232,6 +232,23 @@ export class GenerateService {
     }
   }
 
+  async explainCard(front: string, back: string, explain?: string, language?: string) {
+    const lang = language || this.detectLanguage(front + ' ' + back);
+    const prompt = `You are a friendly tutor explaining a study concept to a student. The student just saw this flashcard:
+
+Question: ${front}
+Answer: ${back}
+${explain ? `Explanation: ${explain}` : ''}
+
+Generate TWO things in ${lang}:
+1. "simple": Explain this concept like you're talking to a 10-year-old. Use a real-world analogy or example. 2-3 sentences max. Be fun and memorable.
+2. "mnemonic": Create a short memory trick, acronym, or rhyme to help remember this. 1 sentence.
+
+Return JSON: { "simple": "...", "mnemonic": "..." }`;
+
+    return this.geminiService.chatJSON<{ simple: string; mnemonic: string }>(prompt);
+  }
+
   private detectLanguage(text: string): string {
     const lower = text.toLowerCase();
     // Portuguese indicators
