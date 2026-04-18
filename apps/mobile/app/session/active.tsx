@@ -1,16 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, StatusBar, Dimensions, AppState } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, AppState } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft } from 'lucide-react-native';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { ArrowLeft, Pause, Play, Square } from 'lucide-react-native';
+import { FONTS } from '@quibly/shared/constants';
+import Svg, { Circle } from 'react-native-svg';
 import { useSessionStore } from '../../stores/session.store';
 import { useAuth } from '../../contexts/AuthContext';
 import ProofCheckModal from '../../components/ProofCheckModal';
 import LevelUpAnimation from '../../components/LevelUpAnimation';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TIMER_SIZE = Math.min(SCREEN_WIDTH * 0.7, 280);
+const { width: SW } = Dimensions.get('window');
+const TIMER_SIZE = Math.min(SW * 0.7, 280);
+const STROKE_WIDTH = 10;
+const RADIUS = (TIMER_SIZE - STROKE_WIDTH) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+const WORK_COLOR = '#1E40AF';
+const BREAK_COLOR = '#10B981';
 
 export default function ActiveSessionScreen() {
   const router = useRouter();
@@ -33,8 +40,10 @@ export default function ActiveSessionScreen() {
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
   const timerDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const progress = totalPhaseSeconds > 0 ? (totalPhaseSeconds - remainingSeconds) / totalPhaseSeconds : 0;
+  const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+  const activeColor = phase === 'work' ? WORK_COLOR : BREAK_COLOR;
 
-  // Fast-forward timer when returning from background
   const backgroundedAtRef = useRef<number | null>(null);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
@@ -49,7 +58,6 @@ export default function ActiveSessionScreen() {
     return () => sub.remove();
   }, [isRunning, fastForward]);
 
-  // Auto-pause when navigating away from this screen
   useFocusEffect(
     useCallback(() => {
       return () => { if (isRunning) pause(); };
@@ -75,10 +83,7 @@ export default function ActiveSessionScreen() {
     isRunning ? pause() : resume();
   }, [isRunning, pause, resume]);
 
-  const handleBack = useCallback(() => {
-    pause();
-    router.back();
-  }, [pause, router]);
+  const handleBack = useCallback(() => { pause(); router.back(); }, [pause, router]);
 
   const goHome = useCallback(async () => {
     reset();
@@ -101,10 +106,7 @@ export default function ActiveSessionScreen() {
             setShowLevelUp(true);
             return;
           }
-        } catch (err) {
-          console.error('[EndSession] Error:', err);
-          setIsEnding(false);
-        }
+        } catch (err) { console.error('[EndSession]', err); setIsEnding(false); }
         goHome();
       }},
     ]);
@@ -112,43 +114,87 @@ export default function ActiveSessionScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden />
+      {/* Back button — only when paused */}
       {!isRunning && (
         <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
-          <ArrowLeft size={18} color={COLORS.textSecondary} />
+          <ArrowLeft size={18} color="#8BA3BC" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
       )}
-      <View style={styles.phaseContainer}>
-        <Text style={[styles.phaseLabel, phase === 'break' && styles.phaseLabelBreak]}>
-          {phase === 'work' ? 'WORK' : 'BREAK'}
-        </Text>
-      </View>
 
-      <View style={styles.timerContainer}>
-        <View style={[styles.timerOuter, phase === 'break' && styles.timerOuterBreak]}>
-          <Text style={[styles.timerText, phase === 'break' && styles.timerTextBreak]}>{timerDisplay}</Text>
+      {/* Phase label */}
+      <Text style={[styles.phaseLabel, { color: activeColor }]}>
+        {phase === 'work' ? 'WORK' : 'BREAK'}
+      </Text>
+
+      {/* Circular timer */}
+      <View style={styles.timerWrap}>
+        <Svg width={TIMER_SIZE} height={TIMER_SIZE} style={{ transform: [{ rotate: '-90deg' }] }}>
+          {/* Background track */}
+          <Circle
+            cx={TIMER_SIZE / 2}
+            cy={TIMER_SIZE / 2}
+            r={RADIUS}
+            stroke="#E2E8F0"
+            strokeWidth={STROKE_WIDTH}
+            fill="none"
+          />
+          {/* Progress arc */}
+          <Circle
+            cx={TIMER_SIZE / 2}
+            cy={TIMER_SIZE / 2}
+            r={RADIUS}
+            stroke={activeColor}
+            strokeWidth={STROKE_WIDTH}
+            fill="none"
+            strokeDasharray={`${CIRCUMFERENCE}`}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </Svg>
+        {/* Timer text centered */}
+        <View style={styles.timerTextWrap}>
+          <Text style={styles.timerText}>{timerDisplay}</Text>
         </View>
       </View>
 
+      {/* Subject */}
       {subjectName && (
-        <View style={styles.subjectContainer}>
-          <View style={[styles.subjectDot, { backgroundColor: subjectColor ?? COLORS.primary }]} />
-          <Text style={styles.subjectNameText}>{subjectName}</Text>
+        <View style={styles.subjectRow}>
+          <View style={[styles.subjectDot, { backgroundColor: subjectColor ?? WORK_COLOR }]} />
+          <Text style={styles.subjectName}>{subjectName}</Text>
         </View>
       )}
 
-      <View style={styles.dotsContainer}>
+      {/* Pomodoro dots */}
+      <View style={styles.dotsRow}>
         {Array.from({ length: totalCycles }).map((_, i) => (
-          <View key={i} style={[styles.dot, i < pomodorosCompleted ? styles.dotFilled : styles.dotOutline]} />
+          <View key={i} style={[styles.dot, i < pomodorosCompleted ? { backgroundColor: WORK_COLOR } : styles.dotEmpty]} />
         ))}
       </View>
 
-      <TouchableOpacity style={styles.pauseButton} onPress={handlePauseResume} activeOpacity={0.7}>
-        <Text style={styles.pauseButtonText}>{isRunning ? 'Pause' : 'Resume'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={[styles.endButton, isEnding && { opacity: 0.5 }]} onPress={handleEndSession} activeOpacity={0.7} disabled={isEnding}>
-        <Text style={styles.endButtonText}>{isEnding ? 'Ending...' : 'End Session'}</Text>
+      {/* Controls */}
+      <View style={styles.controls}>
+        <TouchableOpacity
+          style={[styles.controlBtn, { backgroundColor: activeColor }]}
+          onPress={handlePauseResume}
+          activeOpacity={0.85}
+        >
+          {isRunning
+            ? <Pause size={28} color="#FFFFFF" />
+            : <Play size={28} color="#FFFFFF" style={{ marginLeft: 3 }} />
+          }
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.endBtn, isEnding && { opacity: 0.5 }]}
+        onPress={handleEndSession}
+        activeOpacity={0.7}
+        disabled={isEnding}
+      >
+        <Square size={16} color="#EF4444" style={{ marginRight: 6 }} />
+        <Text style={styles.endBtnText}>{isEnding ? 'Ending...' : 'End Session'}</Text>
       </TouchableOpacity>
 
       {pendingProofCheck && <ProofCheckModal />}
@@ -161,26 +207,27 @@ export default function ActiveSessionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   backButton: { position: 'absolute', top: 60, left: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8 },
-  backText: { color: COLORS.textSecondary, fontSize: 16, fontFamily: FONTS.medium },
-  phaseContainer: { marginBottom: 32 },
-  phaseLabel: { color: COLORS.primary, fontSize: 14, fontFamily: FONTS.bold, letterSpacing: 6, textTransform: 'uppercase' },
-  phaseLabelBreak: { color: COLORS.secondary },
-  timerContainer: { width: TIMER_SIZE, height: TIMER_SIZE, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
-  timerOuter: { width: TIMER_SIZE, height: TIMER_SIZE, borderRadius: TIMER_SIZE / 2, borderWidth: 3, borderColor: COLORS.primary + '30', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface + '60' },
-  timerOuterBreak: { borderColor: COLORS.secondary + '30' },
-  timerText: { color: COLORS.text, fontSize: 64, fontFamily: FONTS.bold, letterSpacing: 2 },
-  timerTextBreak: { color: COLORS.secondary },
-  subjectContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  subjectDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  subjectNameText: { color: COLORS.textSecondary, fontSize: 15, fontFamily: FONTS.medium },
-  dotsContainer: { flexDirection: 'row', gap: 10, marginBottom: 48 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  dotFilled: { backgroundColor: COLORS.primary },
-  dotOutline: { borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: 'transparent' },
-  pauseButton: { paddingHorizontal: 32, paddingVertical: 12, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface, marginBottom: 16 },
-  pauseButtonText: { color: COLORS.textSecondary, fontSize: 15, fontFamily: FONTS.medium },
-  endButton: { paddingHorizontal: 24, paddingVertical: 10 },
-  endButtonText: { color: COLORS.accent, fontSize: 14, fontFamily: FONTS.medium },
+  backText: { color: '#8BA3BC', fontSize: 16, fontFamily: FONTS.medium },
+
+  phaseLabel: { fontSize: 14, fontFamily: FONTS.bold, letterSpacing: 6, textTransform: 'uppercase', marginBottom: 32 },
+
+  timerWrap: { width: TIMER_SIZE, height: TIMER_SIZE, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  timerTextWrap: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  timerText: { color: '#1A2E4A', fontSize: 56, fontFamily: FONTS.bold, letterSpacing: 2 },
+
+  subjectRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  subjectDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+  subjectName: { color: '#4A6580', fontSize: 15, fontFamily: FONTS.medium },
+
+  dotsRow: { flexDirection: 'row', gap: 10, marginBottom: 40 },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  dotEmpty: { borderWidth: 2, borderColor: '#CBD5E1', backgroundColor: 'transparent' },
+
+  controls: { flexDirection: 'row', gap: 20, marginBottom: 24 },
+  controlBtn: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center', shadowColor: '#1E40AF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
+
+  endBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
+  endBtnText: { color: '#EF4444', fontSize: 14, fontFamily: FONTS.medium },
 });

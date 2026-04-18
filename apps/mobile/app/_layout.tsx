@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import AnimatedSplash from '../components/common/AnimatedSplash';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
@@ -48,12 +47,11 @@ function extractJoinPath(url: string | null): string | null {
 }
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, profile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const pendingDeepLink = useRef<string | null>(null);
   const pushTokenRegistered = useRef(false);
-  const [splashFinished, setSplashFinished] = useState(false);
 
   // Initialize notifications
   useEffect(() => {
@@ -142,25 +140,24 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, isLoading, segments]);
 
-  if (isLoading || !splashFinished) {
-    return <AnimatedSplash onFinish={() => setSplashFinished(true)} />;
-  }
+  if (isLoading) return null;
 
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: COLORS.background },
+        contentStyle: { backgroundColor: '#EEF5FF' },
         animation: 'slide_from_right',
       }}
     >
       <Stack.Screen name="(auth)" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="league" options={{ headerShown: false }} />
       <Stack.Screen
         name="session"
-        options={{ headerShown: false, gestureEnabled: false }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen name="upload" options={{ headerShown: false }} />
       <Stack.Screen name="generate" options={{ headerShown: false }} />

@@ -25,6 +25,7 @@ import { AdminModule } from './admin/admin.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { OpenaiModule } from './openai/openai.module';
 import { AudioSessionsModule } from './audio-sessions/audio-sessions.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { AudioSessionsModule } from './audio-sessions/audio-sessions.module';
     GamificationModule,
     OpenaiModule,
     AudioSessionsModule,
+    OnboardingModule,
   ],
 })
 export class AppModule {}

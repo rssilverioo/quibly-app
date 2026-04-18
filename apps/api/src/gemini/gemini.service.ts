@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 interface GeneratedFlashcard {
   front: string;
@@ -40,26 +40,39 @@ export interface AudioScriptFlashcardInput {
   explain?: string | null;
 }
 
+const MODEL = 'gpt-4o-mini';
+
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
-  private model: GenerativeModel | null = null;
+  private client: OpenAI | null = null;
 
   constructor(private readonly configService: ConfigService) {}
 
-  private getModel(): GenerativeModel {
-    if (!this.model) {
-      const apiKey = this.configService.get<string>('GEMINI_API_KEY', '');
-      const genAI = new GoogleGenerativeAI(apiKey);
-      this.model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-        },
-      });
+  private getClient(): OpenAI {
+    if (!this.client) {
+      const apiKey = this.configService.get<string>('OPENAI_API_KEY', '');
+      if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
+      this.client = new OpenAI({ apiKey });
     }
-    return this.model;
+    return this.client;
+  }
+
+  private async chatJSON<T>(prompt: string): Promise<T> {
+    const client = this.getClient();
+    const response = await client.chat.completions.create({
+      model: MODEL,
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant. Always respond with valid JSON. IMPORTANT: If the user content/topic is written in a specific language (e.g. Portuguese, Spanish), generate ALL output in that same language regardless of the language parameter. Auto-detect the input language.' },
+        { role: 'user', content: prompt },
+      ],
+    });
+
+    const text = response.choices[0]?.message?.content ?? '';
+    this.logger.log(`AI response length: ${text.length} chars`);
+    return JSON.parse(text) as T;
   }
 
   async generateFlashcards(
@@ -82,27 +95,15 @@ RULES:
 - Language for front/back/explain: ${language}
 - imageQuery must ALWAYS be in English regardless of content language.
 
-Return ONLY a JSON array of objects with keys: front, back, explain, imageQuery.
+Return a JSON object with shape: { "flashcards": [ { "front": "...", "back": "...", "explain": "...", "imageQuery": "..." } ] }
 
 Content to study:
 ${textContent}`;
 
-    const model = this.getModel();
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    this.logger.log(`Flashcards raw response length: ${text.length}`);
-
-    try {
-      const parsed = JSON.parse(text);
-      this.logger.log(`Generated ${parsed.length} flashcards`);
-      return parsed;
-    } catch {
-      this.logger.warn('Failed to parse flashcards JSON, attempting cleanup');
-      const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      this.logger.log(`Generated ${parsed.length} flashcards (after cleanup)`);
-      return parsed;
-    }
+    const result = await this.chatJSON<{ flashcards: GeneratedFlashcard[] }>(prompt);
+    const flashcards = result.flashcards ?? [];
+    this.logger.log(`Generated ${flashcards.length} flashcards`);
+    return flashcards;
   }
 
   async generateQuiz(
@@ -119,34 +120,43 @@ CRITICAL RULES:
 - "question": Clear, specific question (not vague or ambiguous).
 - "options": EXACTLY 4 plausible answer choices. Wrong answers must be realistic distractors, not obviously wrong.
 - "correctIndex": The 0-based index (0, 1, 2, or 3) of the correct answer.
-- IMPORTANT: Distribute correct answers EVENLY across all 4 positions. Roughly 25% should be index 0, 25% index 1, 25% index 2, 25% index 3. NEVER put most correct answers in the same position.
+- CRITICAL: You MUST distribute correct answers EVENLY across all 4 positions. Each index (0, 1, 2, 3) must be used roughly equally. Count them before responding. If more than 30% of answers have the same index, redistribute. This is the most important rule.
 - "imageQuery": 3-5 English words to search a relevant educational image.
 - Mix question types: factual recall, conceptual understanding, application, comparison, true analysis.
 - Cover the ENTIRE content, not just the first paragraphs.
 - Language for question/options: ${language}
 - imageQuery must ALWAYS be in English regardless of content language.
 
-Return ONLY a JSON array of objects with keys: question, options, correctIndex, imageQuery.
+Return a JSON object with shape: { "questions": [ { "question": "...", "options": ["..."], "correctIndex": 0, "imageQuery": "..." } ] }
 
 Content to quiz on:
 ${textContent}`;
 
-    const model = this.getModel();
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    this.logger.log(`Quiz raw response length: ${text.length}`);
+    const result = await this.chatJSON<{ questions: GeneratedQuestion[] }>(prompt);
+    const questions = result.questions ?? [];
+    this.logger.log(`Generated ${questions.length} questions, pre-shuffle distribution: ${JSON.stringify(this.getDistribution(questions))}`);
+    const shuffled = this.shuffleAnswers(questions);
+    this.logger.log(`Post-shuffle distribution: ${JSON.stringify(this.getDistribution(shuffled))}`);
+    return shuffled;
+  }
 
-    try {
-      const parsed = JSON.parse(text) as GeneratedQuestion[];
-      this.logger.log(`Generated ${parsed.length} questions, correctIndex distribution: ${JSON.stringify(this.getDistribution(parsed))}`);
-      return parsed;
-    } catch {
-      this.logger.warn('Failed to parse quiz JSON, attempting cleanup');
-      const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned) as GeneratedQuestion[];
-      this.logger.log(`Generated ${parsed.length} questions (after cleanup)`);
-      return parsed;
-    }
+  private shuffleAnswers(questions: GeneratedQuestion[]): GeneratedQuestion[] {
+    return questions.map((q) => {
+      const correctAnswer = q.options[q.correctIndex];
+      const shuffled = [...q.options];
+
+      // Fisher-Yates shuffle
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      return {
+        ...q,
+        options: shuffled,
+        correctIndex: shuffled.indexOf(correctAnswer),
+      };
+    });
   }
 
   private getDistribution(questions: GeneratedQuestion[]): Record<number, number> {
@@ -192,40 +202,35 @@ SEGMENT FIELDS:
 Flashcards to cover:
 ${cardsPreview}
 
-Return ONLY a JSON object with shape: { "segments": [ ... ] }. Do not wrap in markdown.`;
+Return a JSON object with shape: { "segments": [ ... ] }`;
 
-    const model = this.getModel();
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    this.logger.log(`Audio script raw response length: ${text.length}`);
+    const result = await this.chatJSON<{ segments: AudioScriptSegment[] }>(prompt);
 
-    let parsed: { segments: AudioScriptSegment[] };
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      parsed = JSON.parse(cleaned);
+    if (!result?.segments || !Array.isArray(result.segments)) {
+      throw new Error('AI returned invalid audio script shape');
     }
 
-    if (!parsed?.segments || !Array.isArray(parsed.segments)) {
-      throw new Error('Gemini returned invalid audio script shape');
-    }
-
-    this.logger.log(`Generated ${parsed.segments.length} audio segments`);
-    return parsed.segments;
+    this.logger.log(`Generated ${result.segments.length} audio segments`);
+    return result.segments;
   }
 
   async extractTextFromImage(buffer: Buffer): Promise<string> {
-    const model = this.getModel();
-    const result = await model.generateContent([
-      'Extract all text from this image. Return only the extracted text, nothing else.',
-      {
-        inlineData: {
-          mimeType: 'image/png',
-          data: buffer.toString('base64'),
+    const client = this.getClient();
+    const base64 = buffer.toString('base64');
+
+    const response = await client.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Extract all text from this image. Return only the extracted text, nothing else.' },
+            { type: 'image_url', image_url: { url: `data:image/png;base64,${base64}` } },
+          ],
         },
-      },
-    ]);
-    return result.response.text();
+      ],
+    });
+
+    return response.choices[0]?.message?.content ?? '';
   }
 }

@@ -20,6 +20,8 @@ import {
 } from 'lucide-react-native';
 import i18n from '../../lib/i18n';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
+import { getMyLeagues } from '../../services/leagues';
+import type { League } from '@quibly/shared';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STAT_CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - 12) / 2;
@@ -45,6 +47,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [achievements, setAchievements] = useState<AchievementWithStatus[]>([]);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
+  const [leagues, setLeagues] = useState<League[]>([]);
 
   const achievementsFetched = useRef(false);
 
@@ -72,6 +75,12 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (profile && !achievementsFetched.current) fetchAchievements();
   }, [profile, fetchAchievements]);
+
+  useEffect(() => {
+    if (user) {
+      getMyLeagues(user.uid).then(setLeagues).catch(() => {});
+    }
+  }, [user]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -202,56 +211,33 @@ export default function ProfileScreen() {
           })}
         </View>
 
-        {/* Achievements */}
+        {/* Achievements — compact horizontal */}
         {achievements.length > 0 && (
           <>
             <View style={styles.achievementsHeader}>
               <Text style={styles.sectionTitle}>{t('achievements')}</Text>
               <Text style={styles.achievementsCount}>
-                {t('achievementCount', { unlocked: achievements.filter((a) => a.unlocked).length, total: achievements.length })}
+                {achievements.filter((a) => a.unlocked).length}/{achievements.length}
               </Text>
             </View>
-            <View style={styles.achievementsGrid}>
-              {achievements.map((a) => {
-                const IconComponent = ACHIEVEMENT_ICONS[a.icon] || Trophy;
-                return (
-                  <View
-                    key={a.id}
-                    style={[
-                      styles.achievementCard,
-                      !a.unlocked && styles.achievementCardLocked,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.achievementIconContainer,
-                        a.unlocked
-                          ? { backgroundColor: COLORS.primary + '22' }
-                          : { backgroundColor: COLORS.surfaceLight },
-                      ]}
-                    >
-                      {a.unlocked ? (
-                        <IconComponent size={22} color={COLORS.primary} />
-                      ) : (
-                        <Lock size={16} color={COLORS.textMuted} />
-                      )}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.achievementsScroll}>
+              {achievements
+                .sort((a, b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0))
+                .map((a) => {
+                  const IconComponent = ACHIEVEMENT_ICONS[a.icon] || Trophy;
+                  return (
+                    <View key={a.id} style={[styles.achievementChip, !a.unlocked && styles.achievementChipLocked]}>
+                      <View style={[styles.achievementChipIcon, a.unlocked ? { backgroundColor: '#DBEAFE' } : { backgroundColor: '#F1F5F9' }]}>
+                        {a.unlocked
+                          ? <IconComponent size={16} color="#1E40AF" />
+                          : <Lock size={12} color="#8BA3BC" />
+                        }
+                      </View>
+                      <Text style={[styles.achievementChipName, !a.unlocked && { color: '#8BA3BC' }]} numberOfLines={1}>{a.name}</Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.achievementName,
-                        !a.unlocked && styles.achievementNameLocked,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {a.name}
-                    </Text>
-                    <Text style={styles.achievementDesc} numberOfLines={2}>
-                      {a.description}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+            </ScrollView>
           </>
         )}
 
@@ -259,12 +245,20 @@ export default function ProfileScreen() {
 
         {/* Account */}
         <View style={styles.settingsContainer}>
+          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/league/create' as any)} activeOpacity={0.7}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Trophy size={17} color="#D97706" />
+            </View>
+            <Text style={styles.settingsLabel}>{t('leagues:title', { defaultValue: 'My Leagues' })}</Text>
+            {leagues.length > 0 && <Text style={styles.settingsBadge}>{leagues.length}</Text>}
+            <ChevronRight size={17} color="#8BA3BC" />
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/pricing')} activeOpacity={0.7}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.gold + '18' }]}>
-              <Crown size={17} color={COLORS.gold} />
+            <View style={[styles.settingsIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Crown size={17} color="#D97706" />
             </View>
             <Text style={styles.settingsLabel}>{t('pricing:myPlan')}</Text>
-            <ChevronRight size={17} color={COLORS.textMuted} />
+            <ChevronRight size={17} color="#8BA3BC" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingsRow} onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
             <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.primaryLight + '18' }]}>
@@ -335,59 +329,70 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  safeArea: { flex: 1, backgroundColor: '#EEF5FF' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 8 },
-  loadingContainer: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { color: COLORS.textMuted, fontSize: 16 },
+  loadingContainer: { flex: 1, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  loadingText: { color: '#8BA3BC', fontSize: 16 },
   headerSection: { alignItems: 'center', paddingTop: 16, paddingBottom: 24 },
-  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: COLORS.primary },
-  avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.primaryLight },
-  avatarInitials: { color: COLORS.text, fontSize: 28, fontWeight: '700' },
-  avatarEditBadge: { position: 'absolute', bottom: 0, right: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.background },
-  avatarEditIcon: { color: COLORS.text, fontSize: 16, fontWeight: '700', lineHeight: 18 },
-  username: { color: COLORS.text, fontSize: 24, fontWeight: '700', marginTop: 14 },
-  handle: { color: COLORS.textMuted, fontSize: 15, marginTop: 4 },
+  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#1E40AF' },
+  avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#1E40AF', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#3B82F6' },
+  avatarInitials: { color: '#FFFFFF', fontSize: 28, fontWeight: '700' },
+  avatarEditBadge: { position: 'absolute', bottom: 0, right: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: '#1E40AF', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#EEF5FF' },
+  avatarEditIcon: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', lineHeight: 18 },
+  username: { color: '#1A2E4A', fontSize: 24, fontWeight: '700', marginTop: 14 },
+  handle: { color: '#8BA3BC', fontSize: 15, marginTop: 4 },
   titleBadge: { marginTop: 10, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   titleText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
-  bio: { color: COLORS.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 10, paddingHorizontal: 20, lineHeight: 20 },
-  xpCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: COLORS.border },
+  bio: { color: '#4A6580', fontSize: 14, textAlign: 'center', marginTop: 10, paddingHorizontal: 20, lineHeight: 20 },
+  xpCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   xpCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  levelBadge: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(124,92,252,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.primary },
-  levelBadgeInner: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  levelBadgeNumber: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
+  levelBadge: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#1E40AF' },
+  levelBadgeInner: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1E40AF', alignItems: 'center', justifyContent: 'center' },
+  levelBadgeNumber: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
   xpInfo: { marginLeft: 16, flex: 1 },
-  levelLabel: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
-  xpText: { color: COLORS.textSecondary, fontSize: 14, marginTop: 2 },
+  levelLabel: { color: '#1A2E4A', fontSize: 18, fontWeight: '700' },
+  xpText: { color: '#8BA3BC', fontSize: 14, marginTop: 2 },
   xpBarContainer: { marginBottom: 8 },
-  xpBarBackground: { height: 10, backgroundColor: COLORS.surfaceLight, borderRadius: 5, overflow: 'hidden' },
-  xpBarFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 5 },
-  sectionTitle: { color: COLORS.text, fontSize: 18, fontWeight: '700', marginBottom: 14 },
+  xpBarBackground: { height: 10, backgroundColor: '#E2E8F0', borderRadius: 5, overflow: 'hidden' },
+  xpBarFill: { height: '100%', backgroundColor: '#1E40AF', borderRadius: 5 },
+  sectionTitle: { color: '#1A2E4A', fontSize: 18, fontWeight: '700', marginBottom: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
-  statCard: { width: STAT_CARD_WIDTH, backgroundColor: COLORS.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  statCard: { width: STAT_CARD_WIDTH, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
   statIcon: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
-  statValue: { color: COLORS.text, fontSize: 20, fontWeight: '700' },
-  statLabel: { color: COLORS.textMuted, fontSize: 12, marginTop: 4, fontWeight: '500' },
-  // Achievements
+  statValue: { color: '#1A2E4A', fontSize: 20, fontWeight: '700' },
+  statLabel: { color: '#8BA3BC', fontSize: 12, marginTop: 4, fontWeight: '500' },
+  // Achievements — horizontal chips
   achievementsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 },
-  achievementsCount: { color: COLORS.textMuted, fontSize: 14, fontWeight: '600' },
-  achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
-  achievementCard: { width: (SCREEN_WIDTH - 24 * 2 - 20) / 3, backgroundColor: COLORS.surface, borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  achievementCardLocked: { opacity: 0.45 },
-  achievementIconContainer: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  achievementName: { color: COLORS.text, fontSize: 11, fontWeight: '700', textAlign: 'center', marginBottom: 2 },
-  achievementNameLocked: { color: COLORS.textMuted },
-  achievementDesc: { color: COLORS.textMuted, fontSize: 9, textAlign: 'center', lineHeight: 12 },
+  achievementsCount: { color: '#8BA3BC', fontSize: 14, fontWeight: '600' },
+  achievementsScroll: { paddingRight: 24, marginBottom: 24 },
+  achievementChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 24, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  achievementChipLocked: { opacity: 0.45 },
+  achievementChipIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  achievementChipName: { color: '#1A2E4A', fontSize: 12, fontWeight: '600' },
+  settingsBadge: { backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: 12, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginRight: 6, overflow: 'hidden' },
   // Settings
-  settingsContainer: { backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  settingsContainer: { backgroundColor: '#FFFFFF', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
   settingsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  settingsRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border + '40' },
+  settingsRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   settingsIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  settingsLabel: { flex: 1, fontSize: 15, fontFamily: FONTS.medium, color: COLORS.text },
+  settingsLabel: { flex: 1, fontSize: 15, fontFamily: FONTS.medium, color: '#1A2E4A' },
   logoutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  langToggleContainer: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 14, backgroundColor: COLORS.surfaceLight, borderRadius: 12, padding: 4 },
+  langToggleContainer: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 14, backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4 },
   langOption: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  langOptionActive: { backgroundColor: COLORS.primary },
-  langOptionText: { fontSize: 14, fontFamily: FONTS.semiBold, color: COLORS.textMuted },
-  langOptionTextActive: { color: COLORS.text },
+  langOptionActive: { backgroundColor: '#1E40AF' },
+  langOptionText: { fontSize: 14, fontFamily: FONTS.semiBold, color: '#8BA3BC' },
+  langOptionTextActive: { color: '#FFFFFF' },
+  // Leagues
+  leagueActions: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  leagueCreateBtn: { flex: 1, height: 40, backgroundColor: '#1E40AF', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  leagueCreateText: { color: '#FFFFFF', fontSize: 14, fontFamily: FONTS.bold },
+  leagueJoinBtn: { flex: 1, height: 40, backgroundColor: '#FFFFFF', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#1E40AF' },
+  leagueJoinText: { color: '#1E40AF', fontSize: 14, fontFamily: FONTS.bold },
+  leagueCard: { width: 140, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, marginRight: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  leagueTrophy: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  leagueName: { fontSize: 14, fontFamily: FONTS.semiBold, color: '#1A2E4A', marginBottom: 4 },
+  leagueMeta: { fontSize: 11, fontFamily: FONTS.medium, color: '#8BA3BC' },
+  leagueEmpty: { alignItems: 'center', paddingVertical: 24, marginBottom: 16 },
+  leagueEmptyText: { fontSize: 14, fontFamily: FONTS.medium, color: '#8BA3BC', marginTop: 8 },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { COLORS } from '@quibly/shared/constants';
+import { View, Text, StyleSheet } from 'react-native';
+import { FONTS } from '@quibly/shared/constants';
 
 interface QuizProgressProps {
   total: number;
@@ -9,21 +9,19 @@ interface QuizProgressProps {
 }
 
 export default function QuizProgress({ total, current, answers }: QuizProgressProps) {
-  return (
-    <View style={styles.row}>
-      {Array.from({ length: total }, (_, i) => {
-        let color = COLORS.surfaceLight;
-        if (answers[i] === true) color = COLORS.success;
-        else if (answers[i] === false) color = COLORS.error;
-        else if (i === current) color = COLORS.primary;
+  const progress = total > 0 ? ((current + 1) / total) * 100 : 0;
 
-        return <View key={i} style={[styles.bubble, { backgroundColor: color }]} />;
-      })}
+  return (
+    <View style={styles.container}>
+      <View style={styles.barTrack}>
+        <View style={[styles.barFill, { width: `${Math.min(progress, 100)}%` }]} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 20, flexWrap: 'wrap' },
-  bubble: { width: 10, height: 10, borderRadius: 5 },
+  container: { paddingHorizontal: 20, paddingVertical: 8 },
+  barTrack: { height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' },
+  barFill: { height: '100%', backgroundColor: '#1E40AF', borderRadius: 4 },
 });

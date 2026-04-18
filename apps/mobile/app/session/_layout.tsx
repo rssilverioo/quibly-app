@@ -6,15 +6,12 @@ export default function SessionLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: COLORS.background },
+        contentStyle: { backgroundColor: '#EEF5FF' },
         animation: 'slide_from_right',
       }}
     >
       <Stack.Screen name="setup" />
-      <Stack.Screen
-        name="active"
-        options={{ gestureEnabled: false }}
-      />
+      <Stack.Screen name="active" />
       <Stack.Screen name="audio" />
     </Stack>
   );

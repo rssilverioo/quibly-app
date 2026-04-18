@@ -17,6 +17,10 @@ export interface Profile {
   plan: Plan;
   subscription_status: string | null;
   current_period_end: string | null;
+  onboarding_completed: boolean;
+  education_level: string | null;
+  study_goal: string | null;
+  daily_goal_minutes: number;
   created_at: string;
   updated_at: string;
 }

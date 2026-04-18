@@ -158,10 +158,12 @@ export class GenerateService {
       );
     }
 
-    const content = `Topic: ${topic}. Generate comprehensive educational content about this topic.`;
+    // Auto-detect language from topic text if language is 'en' but topic looks non-English
+    const detectedLang = language && language !== 'en' ? language : this.detectLanguage(topic);
+    const content = topic;
 
     if (type === 'flashcards') {
-      const cards = await this.geminiService.generateFlashcards(content, language);
+      const cards = await this.geminiService.generateFlashcards(content, detectedLang);
       const cardsWithImages = await Promise.all(
         cards.map(async (card, index) => {
           const imageUrl = card.imageQuery
@@ -194,7 +196,7 @@ export class GenerateService {
       await this.usageService.incrementUsage(userId, 'flashcard_sets');
       return set;
     } else {
-      const questions = await this.geminiService.generateQuiz(content, language);
+      const questions = await this.geminiService.generateQuiz(content, detectedLang);
       const questionsWithImages = await Promise.all(
         questions.map(async (q, index) => {
           const imageUrl = q.imageQuery
@@ -228,5 +230,16 @@ export class GenerateService {
       await this.usageService.incrementUsage(userId, 'quizzes');
       return quiz;
     }
+  }
+
+  private detectLanguage(text: string): string {
+    const lower = text.toLowerCase();
+    // Portuguese indicators
+    if (/[àáâãçéêíóôõúü]/.test(lower)) return 'pt-BR';
+    if (/\b(sobre|como|para|uma|dos|das|que|história|ciência|matemática)\b/.test(lower)) return 'pt-BR';
+    // Spanish indicators
+    if (/[ñ¿¡]/.test(lower)) return 'es';
+    if (/\b(sobre|como|para|una|los|las|que|historia|ciencia)\b/.test(lower) && /ñ/.test(lower)) return 'es';
+    return 'en';
   }
 }
