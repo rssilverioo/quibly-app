@@ -127,16 +127,23 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(auth)';
 
+    const inOnboarding = segments[0] === 'onboarding';
+    const needsOnboarding = profile && 'onboarding_completed' in profile && profile.onboarding_completed === false;
+
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
-      if (pendingDeepLink.current) {
+      if (needsOnboarding && !inOnboarding) {
+        router.replace('/onboarding');
+      } else if (pendingDeepLink.current) {
         const target = pendingDeepLink.current;
         pendingDeepLink.current = null;
         router.replace(target as any);
       } else {
         router.replace('/(tabs)');
       }
+    } else if (isAuthenticated && needsOnboarding && !inOnboarding && !inAuthGroup) {
+      router.replace('/onboarding');
     }
   }, [isAuthenticated, isLoading, segments]);
 
@@ -186,7 +193,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <RootLayoutNav />
     </AuthProvider>
   );

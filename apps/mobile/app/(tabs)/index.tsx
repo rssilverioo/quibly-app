@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Dimensions, Image,
+  ActivityIndicator, RefreshControl, Dimensions, Image, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +17,8 @@ import { listQuizzes } from '../../services/quizzes';
 import { getStudyDates } from '../../services/sessions';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
 import StreakBadge from '../../components/gamification/StreakBadge';
-import { Target, CheckCircle } from 'lucide-react-native';
+import { AlertCircle, TrendingUp, CheckCircle, Plus, ArrowRight } from 'lucide-react-native';
+import { getFocusAreas, addFocusArea, type FocusArea } from '../../services/focus-areas';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -33,15 +34,19 @@ export default function HomeScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
   const [todaySessions, setTodaySessions] = useState(0);
+  const [focusAreas, setFocusAreas] = useState<FocusArea[]>([]);
+  const [addingFocus, setAddingFocus] = useState(false);
+  const [focusTopic, setFocusTopic] = useState('');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
       const now = new Date();
-      const [sets, quizList, studyDates] = await Promise.allSettled([
+      const [sets, quizList, studyDates, areas] = await Promise.allSettled([
         listFlashcardSets(),
         listQuizzes(),
         getStudyDates(now.getFullYear(), now.getMonth() + 1),
+        getFocusAreas(),
       ]);
       if (sets.status === 'fulfilled') setFlashcardSets(sets.value ?? []);
       if (quizList.status === 'fulfilled') setQuizzes(quizList.value ?? []);
@@ -50,25 +55,34 @@ export default function HomeScreen() {
         const todayData = studyDates.value?.find((d) => d.date.startsWith(today));
         setTodaySessions(todayData ? Math.ceil(todayData.minutes / 25) : 0);
       }
+      if (areas.status === 'fulfilled') {
+        setFocusAreas(areas.value ?? []);
+      }
     } catch {}
   }, [user]);
 
   const hasLoaded = useRef(false);
+  const isFetching = useRef(false);
   useFocusEffect(
     useCallback(() => {
+      if (isFetching.current) return;
+      isFetching.current = true;
       let cancelled = false;
       (async () => {
         if (!hasLoaded.current) setIsLoading(true);
-        await Promise.all([fetchData(), refreshProfile()]);
+        try {
+          await Promise.allSettled([fetchData(), refreshProfile()]);
+        } catch {}
         if (!cancelled) { setIsLoading(false); hasLoaded.current = true; }
+        isFetching.current = false;
       })();
-      return () => { cancelled = true; };
-    }, [fetchData, refreshProfile])
+      return () => { cancelled = true; isFetching.current = false; };
+    }, [])
   );
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchData(), refreshProfile()]);
+    await Promise.allSettled([fetchData(), refreshProfile()]);
     setIsRefreshing(false);
   }, [fetchData, refreshProfile]);
 
@@ -97,54 +111,76 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.greeting}>{t('greeting', { name: profile?.username ?? t('defaultName') })}</Text>
+              <Text style={styles.greeting}>{t('greeting', { name: profile?.username || user?.displayName || t('defaultName') })}</Text>
               {title && <Text style={[styles.titleBadge, { color: title.color }]}>{t(`profile:titles.${title.id}`)}</Text>}
             </View>
             <StreakBadge streak={profile?.current_streak ?? 0} onPress={() => setShowStreakCalendar(true)} />
           </View>
 
-          {/* Daily Goal */}
-          {(() => {
-            const DAILY_GOAL = 3;
-            const done = Math.min(todaySessions, DAILY_GOAL);
-            const complete = done >= DAILY_GOAL;
-            const progress = done / DAILY_GOAL;
-            const message = done === 0
-              ? t('dailyGoal.start', { defaultValue: "Let's start your day!" })
-              : done < DAILY_GOAL - 1
-              ? t('dailyGoal.progress', { defaultValue: 'Good progress! Keep going.' })
-              : !complete
-              ? t('dailyGoal.almost', { defaultValue: 'Almost there! One more!' })
-              : t('dailyGoal.complete', { defaultValue: 'Daily goal complete!' });
-            return (
-              <TouchableOpacity
-                style={[styles.goalCard, complete && styles.goalCardComplete]}
-                activeOpacity={0.85}
-                onPress={() => router.push('/(tabs)/study')}
-              >
-                <View style={styles.goalTop}>
-                  <View style={[styles.goalIconCircle, complete && { backgroundColor: '#D1FAE5' }]}>
-                    {complete
-                      ? <CheckCircle size={22} color="#059669" />
-                      : <Target size={22} color="#1E40AF" />
-                    }
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.goalTitle}>
-                      {t('dailyGoal.title', { defaultValue: 'Daily Goal' })}
-                    </Text>
-                    <Text style={styles.goalMessage}>{message}</Text>
-                  </View>
-                  <Text style={[styles.goalCount, complete && { color: '#059669' }]}>
-                    {done}/{DAILY_GOAL}
-                  </Text>
+          {/* Focus Areas — only show when there's data */}
+          {focusAreas.length > 0 && (
+            <View style={styles.focusSection}>
+              <Text style={styles.focusSectionTitle}>Focus Areas</Text>
+
+              {focusAreas.map((area) => {
+                const isWeak = area.status === 'weak';
+                const isMastered = area.status === 'mastered';
+                const statusColor = isWeak ? '#EF4444' : isMastered ? '#10B981' : '#F59E0B';
+                const statusBg = isWeak ? '#FEE2E2' : isMastered ? '#D1FAE5' : '#FEF3C7';
+                const statusLabel = isWeak ? 'Needs work' : isMastered ? 'Mastered' : 'Getting better';
+
+                return (
+                  <TouchableOpacity
+                    key={area.id}
+                    style={styles.focusCard}
+                    activeOpacity={0.85}
+                    onPress={() => router.push({ pathname: '/generate', params: { topic: area.topic, fromTopic: 'true' } } as any)}
+                  >
+                    <View style={[styles.focusIndicator, { backgroundColor: statusColor }]} />
+                    <View style={styles.focusContent}>
+                      <Text style={styles.focusTopic}>{area.topic}</Text>
+                      <View style={styles.focusMetaRow}>
+                        <View style={[styles.focusStatusBadge, { backgroundColor: statusBg }]}>
+                          <Text style={[styles.focusStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                        </View>
+                        <Text style={styles.focusScore}>{area.score}%</Text>
+                      </View>
+                    </View>
+                    <ArrowRight size={18} color="#8BA3BC" />
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Add topic */}
+              {addingFocus ? (
+                <View style={styles.addFocusInput}>
+                  <TextInput
+                    style={styles.focusInput}
+                    placeholder="What topic are you struggling with?"
+                    placeholderTextColor="#8BA3BC"
+                    value={focusTopic}
+                    onChangeText={setFocusTopic}
+                    autoFocus
+                    onSubmitEditing={async () => {
+                      if (!focusTopic.trim()) return;
+                      try {
+                        const area = await addFocusArea(focusTopic.trim());
+                        setFocusAreas((prev) => [area, ...prev]);
+                        setFocusTopic('');
+                        setAddingFocus(false);
+                      } catch {}
+                    }}
+                    returnKeyType="done"
+                  />
                 </View>
-                <View style={styles.goalBarBg}>
-                  <View style={[styles.goalBarFill, { width: `${progress * 100}%` }, complete && { backgroundColor: '#10B981' }]} />
-                </View>
-              </TouchableOpacity>
-            );
-          })()}
+              ) : (
+                <TouchableOpacity style={styles.addFocusBtn} activeOpacity={0.85} onPress={() => setAddingFocus(true)}>
+                  <Plus size={18} color="#1E40AF" />
+                  <Text style={styles.addFocusBtnText}>Add a topic you're struggling with</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Quick Actions Grid — 2x2 */}
           <Text style={styles.sectionLabel}>{t('quickActions', { defaultValue: 'Quick Actions' })}</Text>
@@ -266,16 +302,21 @@ const styles = StyleSheet.create({
   heroIconCircle: { width: 56, height: 56, borderRadius: 56, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
 
   // Section label
-  // Daily Goal
-  goalCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 20, shadowColor: '#1E40AF', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 4 },
-  goalCardComplete: { backgroundColor: '#F0FDF4' },
-  goalTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  goalIconCircle: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  goalTitle: { fontSize: 16, fontFamily: FONTS.bold, color: '#1A2E4A', marginBottom: 2 },
-  goalMessage: { fontSize: 13, fontFamily: FONTS.regular, color: '#8BA3BC' },
-  goalCount: { fontSize: 22, fontFamily: FONTS.bold, color: '#1E40AF' },
-  goalBarBg: { height: 8, backgroundColor: '#EEF2FF', borderRadius: 4, overflow: 'hidden' },
-  goalBarFill: { height: '100%', backgroundColor: '#3B82F6', borderRadius: 4 },
+  // Focus Areas
+  focusSection: { marginBottom: 20 },
+  focusSectionTitle: { fontSize: 18, fontFamily: FONTS.bold, color: '#1A2E4A', marginBottom: 12 },
+  focusCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1, overflow: 'hidden' },
+  focusIndicator: { width: 4, height: 36, borderRadius: 2, marginRight: 14 },
+  focusContent: { flex: 1 },
+  focusTopic: { fontSize: 15, fontFamily: FONTS.semiBold, color: '#1A2E4A', marginBottom: 4 },
+  focusMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  focusStatusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  focusStatusText: { fontSize: 11, fontFamily: FONTS.semiBold },
+  focusScore: { fontSize: 12, fontFamily: FONTS.medium, color: '#8BA3BC' },
+  addFocusBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#DBEAFE', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#93C5FD', borderStyle: 'dashed' },
+  addFocusBtnText: { fontSize: 14, fontFamily: FONTS.medium, color: '#1E40AF' },
+  addFocusInput: { marginTop: 4 },
+  focusInput: { backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: FONTS.medium, color: '#1A2E4A', borderWidth: 1.5, borderColor: '#1E40AF' },
 
   sectionLabel: { fontSize: 18, fontFamily: FONTS.bold, color: '#1A2E4A', marginBottom: 14 },
 

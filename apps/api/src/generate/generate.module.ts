@@ -7,5 +7,6 @@ import { UsageModule } from '../usage/usage.module';
   imports: [UsageModule],
   controllers: [GenerateController],
   providers: [GenerateService],
+  exports: [GenerateService],
 })
 export class GenerateModule {}

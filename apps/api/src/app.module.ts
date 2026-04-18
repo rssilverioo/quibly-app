@@ -26,6 +26,8 @@ import { GamificationModule } from './gamification/gamification.module';
 import { OpenaiModule } from './openai/openai.module';
 import { AudioSessionsModule } from './audio-sessions/audio-sessions.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { DailyPlanModule } from './daily-plan/daily-plan.module';
+import { FocusAreasModule } from './focus-areas/focus-areas.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { OnboardingModule } from './onboarding/onboarding.module';
     OpenaiModule,
     AudioSessionsModule,
     OnboardingModule,
+    DailyPlanModule,
+    FocusAreasModule,
   ],
 })
 export class AppModule {}
