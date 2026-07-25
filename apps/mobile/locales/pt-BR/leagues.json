@@ -109,5 +109,8 @@
     "joinedTitle": "Entrou!",
     "joinedMessage": "Você entrou em \"{{name}}\".",
     "membersCount": "{{current}}/{{max}} membros"
-  }
+  },
+  "chatTitle": "Chat da liga",
+  "noMessages": "Nenhuma mensagem ainda",
+  "noMessagesSub": "Seja o primeiro a falar"
 }

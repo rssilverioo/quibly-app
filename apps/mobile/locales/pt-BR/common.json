@@ -17,6 +17,8 @@
   "private": "Privada",
   "tabs": {
     "home": "Início",
+    "lessons": "Aulas",
+    "study": "Estudar",
     "challenges": "Desafios",
     "library": "Biblioteca",
     "profile": "Perfil"

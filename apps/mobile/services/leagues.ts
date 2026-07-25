@@ -52,8 +52,19 @@ export async function getLeague(leagueId: string): Promise<League | null> {
   }
 }
 
-export async function getMyLeagues(_userId?: string): Promise<League[]> {
-  return api.get<League[]>('/leagues');
+/**
+ * `GET /leagues` decorates each league with the caller's standing in it —
+ * fields that don't exist on the bare `League` row.
+ */
+export type LeagueWithStanding = League & {
+  member_count?: number;
+  user_role?: string;
+  user_total_sp?: number;
+  user_rank?: number | null;
+};
+
+export async function getMyLeagues(_userId?: string): Promise<LeagueWithStanding[]> {
+  return api.get<LeagueWithStanding[]>('/leagues');
 }
 
 export async function getMyLeaguesByStatus(
@@ -62,6 +73,30 @@ export async function getMyLeaguesByStatus(
 ): Promise<League[]> {
   const leagues = await api.get<League[]>('/leagues');
   return leagues;
+}
+
+export interface LiveMember {
+  session_id: string;
+  user_id: string;
+  display_name: string;
+  handle: string;
+  avatar_url: string | null;
+  subject_name: string;
+  subject_color: string;
+  league_id: string;
+  league_name: string;
+  proof_mode: boolean;
+  started_at: string;
+  elapsed_minutes: number;
+}
+
+/** Everyone in your leagues who is in a study session right now. */
+export async function getLiveMembers(): Promise<LiveMember[]> {
+  try {
+    return await api.get<LiveMember[]>('/leagues/live');
+  } catch {
+    return [];
+  }
 }
 
 export async function getLeagueMembers(leagueId: string): Promise<LeagueMember[]> {

@@ -40,6 +40,13 @@ export interface AudioScriptFlashcardInput {
   explain?: string | null;
 }
 
+export interface StructuredLesson {
+  title: string;
+  summary: string;
+  keyPoints: { term: string; explanation: string }[];
+  openQuestions: string[];
+}
+
 const MODEL = 'gpt-4o-mini';
 
 @Injectable()
@@ -73,6 +80,46 @@ export class GeminiService {
     const text = response.choices[0]?.message?.content ?? '';
     this.logger.log(`AI response length: ${text.length} chars`);
     return JSON.parse(text) as T;
+  }
+
+  /**
+   * Turn a raw capture — a lecture transcript, an OCR'd notebook page, a PDF
+   * dump — into a note someone would actually reread.
+   *
+   * Transcripts are the hard case: they ramble, repeat, and carry filler and
+   * transcription errors. The prompt is written for that, and the same shape
+   * works fine on cleaner document text.
+   */
+  async structureLesson(
+    rawText: string,
+    language = 'pt-BR',
+  ): Promise<StructuredLesson> {
+    const content = rawText.slice(0, 50000);
+    this.logger.log(`Structuring lesson from ${content.length} chars, language=${language}`);
+
+    const prompt = `You are turning a raw capture of a class into study notes. The input may be a live lecture transcript (rambling, repetitive, with filler words and transcription errors), an OCR'd page of handwritten notes, or text pulled from a PDF.
+
+RULES:
+- "title": what this class was actually about. Max 8 words. No generic titles like "Class Notes" or "Lecture".
+- "summary": 3 to 5 sentences covering what was taught, in plain language. Explain the content — never describe the recording ("the professor said", "in this class").
+- "keyPoints": 4 to 10 entries. "term" is the concept, formula or date (max 6 words); "explanation" is one clear sentence. Order by how central it is, not by when it appeared.
+- "openQuestions": 2 to 4 things left unresolved — announced but not explained, contradictory, or flagged as coming next class. Return an empty array if the capture is self-contained. Do NOT invent gaps to fill the quota.
+- Ignore filler, greetings, roll call, and administrative chatter.
+- If a word is clearly a transcription error but the intended term is obvious from context, use the correct term.
+- Write everything in ${language}. If the capture is in another language, follow the capture's language instead.
+
+Return JSON: { "title": "...", "summary": "...", "keyPoints": [{ "term": "...", "explanation": "..." }], "openQuestions": ["..."] }
+
+Capture:
+${content}`;
+
+    const result = await this.chatJSON<StructuredLesson>(prompt);
+    return {
+      title: result.title?.trim() || 'Aula sem título',
+      summary: result.summary?.trim() || '',
+      keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints : [],
+      openQuestions: Array.isArray(result.openQuestions) ? result.openQuestions : [],
+    };
   }
 
   async generateFlashcards(

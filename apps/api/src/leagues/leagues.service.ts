@@ -12,6 +12,9 @@ import { UpdateLeagueDto } from './dto/update-league.dto';
 import { RematchDto } from './dto/rematch.dto';
 import type { LeagueStatus } from '@prisma/client';
 
+/** Beyond this, an `active` session is a zombie, not a person studying. */
+const LIVE_SESSION_MAX_HOURS = 12;
+
 @Injectable()
 export class LeaguesService {
   constructor(
@@ -148,6 +151,83 @@ export class LeaguesService {
     );
 
     return results;
+  }
+
+  /**
+   * Everyone in the caller's leagues who has a study session running right now.
+   *
+   * Sessions are matched by *member*, not by `leagueId`, because attaching a
+   * session to a league is optional — a friend studying without picking a
+   * league should still show up as present.
+   */
+  async findLiveMembers(userId: string) {
+    const memberships = await this.prisma.leagueMember.findMany({
+      where: { userId },
+      select: { leagueId: true },
+    });
+    if (memberships.length === 0) return [];
+
+    const leagueIds = memberships.map((m) => m.leagueId);
+
+    const peers = await this.prisma.leagueMember.findMany({
+      where: { leagueId: { in: leagueIds }, userId: { not: userId } },
+      select: {
+        userId: true,
+        displayName: true,
+        league: { select: { id: true, name: true } },
+      },
+    });
+    if (peers.length === 0) return [];
+
+    // A peer can share more than one league with the caller — keep the first.
+    const peerByUserId = new Map<string, (typeof peers)[number]>();
+    for (const peer of peers) {
+      if (!peerByUserId.has(peer.userId)) peerByUserId.set(peer.userId, peer);
+    }
+
+    // Sessions left `active` for longer than this are zombies (app killed
+    // mid-session), not people actually studying.
+    const cutoff = new Date(Date.now() - LIVE_SESSION_MAX_HOURS * 3600_000);
+
+    const sessions = await this.prisma.studySession.findMany({
+      where: {
+        userId: { in: [...peerByUserId.keys()] },
+        status: 'active',
+        startedAt: { gte: cutoff },
+      },
+      select: {
+        id: true,
+        userId: true,
+        startedAt: true,
+        proofMode: true,
+        subject: { select: { name: true, color: true } },
+        user: { select: { username: true, handle: true, avatarUrl: true } },
+      },
+      orderBy: { startedAt: 'asc' },
+    });
+
+    const now = Date.now();
+
+    return sessions.map((session) => {
+      const peer = peerByUserId.get(session.userId)!;
+      return {
+        session_id: session.id,
+        user_id: session.userId,
+        display_name: peer.displayName || session.user.username,
+        handle: session.user.handle,
+        avatar_url: session.user.avatarUrl,
+        subject_name: session.subject.name,
+        subject_color: session.subject.color,
+        league_id: peer.league.id,
+        league_name: peer.league.name,
+        proof_mode: session.proofMode,
+        started_at: session.startedAt.toISOString(),
+        elapsed_minutes: Math.max(
+          0,
+          Math.floor((now - session.startedAt.getTime()) / 60_000),
+        ),
+      };
+    });
   }
 
   async previewByInviteCode(inviteCode: string, userId: string) {

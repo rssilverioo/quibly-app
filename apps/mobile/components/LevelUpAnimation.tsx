@@ -10,15 +10,17 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import { staticDark as c } from '../theme';
+import { Mascot } from './mascot';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const COLORS = {
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  secondary: '#00D4AA',
-  text: '#FFFFFF',
-  gold: '#FFD700',
+  primary: c.accent,
+  primaryLight: c.accent,
+  secondary: c.accent,
+  text: c.fg,
+  gold: c.gold,
 };
 
 const FONTS = {
@@ -60,7 +62,7 @@ export default function LevelUpAnimation({ newLevel, onComplete }: LevelUpAnimat
   const ringOpacities = useRef(Array.from({ length: NUM_RINGS }, () => new Animated.Value(0.6))).current;
   const dismissOpacity = useRef(new Animated.Value(0)).current;
 
-  const particleColors = [COLORS.primary, COLORS.primaryLight, COLORS.gold, COLORS.secondary, '#FF6B6B', '#FFB84D'];
+  const particleColors = [COLORS.primary, COLORS.primaryLight, COLORS.gold, COLORS.secondary, c.danger, c.warning];
 
   const particles = useRef<Particle[]>(
     Array.from({ length: NUM_PARTICLES }, (_, i) => {
@@ -246,6 +248,7 @@ export default function LevelUpAnimation({ newLevel, onComplete }: LevelUpAnimat
             },
           ]}
         >
+          <Mascot state="celebrate" size={160} />
           <Text style={styles.labelText}>{t('levelUp.label')}</Text>
         </Animated.View>
 

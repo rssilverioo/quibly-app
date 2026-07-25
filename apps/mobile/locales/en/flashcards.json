@@ -12,5 +12,9 @@
   "emptyMessage": "Upload a document or generate by topic to create flashcards",
   "deleteConfirm": "Delete this flashcard set?",
   "deleteMessage": "This action cannot be undone.",
-  "xpEarned": "+{{xp}} XP"
+  "xpEarned": "+{{xp}} XP",
+  "explain": "Explain",
+  "showAnswer": "Show answer",
+  "simpleExplanation": "Simple explanation",
+  "memoryTrick": "Memory trick"
 }

@@ -6,7 +6,9 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { FONTS } from '@quibly/shared/constants';
 import { Lightbulb, Brain } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
+import { staticDark as c } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40;
@@ -15,12 +17,15 @@ const CARD_HEIGHT = CARD_WIDTH * 0.85;
 interface FlashcardCardProps {
   front: string;
   back: string;
-  explain?: string;
+  // Nullable, not just optional: these come straight off the API, where an
+  // absent value is null rather than undefined.
+  explain?: string | null;
   imageUrl?: string | null;
   onFlip?: () => void;
 }
 
 export default function FlashcardCard({ front, back, explain, imageUrl, onFlip }: FlashcardCardProps) {
+  const { t } = useTranslation('flashcards');
   const [isFlipped, setIsFlipped] = useState(false);
   const [aiExplain, setAiExplain] = useState<{ simple: string; mnemonic: string } | null>(null);
   const [loadingExplain, setLoadingExplain] = useState(false);
@@ -91,17 +96,17 @@ export default function FlashcardCard({ front, back, explain, imageUrl, onFlip }
         ) : (
           <View style={styles.aiExplainWrap}>
             {loadingExplain ? (
-              <ActivityIndicator color="#1E40AF" size="small" />
+              <ActivityIndicator color={c.accent} size="small" />
             ) : aiExplain ? (
               <>
                 <View style={styles.aiSection}>
-                  <Lightbulb size={16} color="#D97706" />
-                  <Text style={styles.aiSectionTitle}>Simple explanation</Text>
+                  <Lightbulb size={16} color={c.warning} />
+                  <Text style={styles.aiSectionTitle}>{t('simpleExplanation')}</Text>
                 </View>
                 <Text style={styles.aiText}>{aiExplain.simple}</Text>
                 <View style={[styles.aiSection, { marginTop: 12 }]}>
-                  <Brain size={16} color="#7C3AED" />
-                  <Text style={styles.aiSectionTitle}>Memory trick</Text>
+                  <Brain size={16} color={c.accent} />
+                  <Text style={styles.aiSectionTitle}>{t('memoryTrick')}</Text>
                 </View>
                 <Text style={styles.aiText}>{aiExplain.mnemonic}</Text>
               </>
@@ -116,9 +121,9 @@ export default function FlashcardCard({ front, back, explain, imageUrl, onFlip }
           activeOpacity={0.85}
           hitSlop={8}
         >
-          <Lightbulb size={14} color={showExplain ? '#FFFFFF' : '#D97706'} />
-          <Text style={[styles.explainBtnText, showExplain && { color: '#FFFFFF' }]}>
-            {showExplain ? 'Show answer' : 'Explain'}
+          <Lightbulb size={14} color={showExplain ? c.fgOnAccent : c.warning} />
+          <Text style={[styles.explainBtnText, showExplain && { color: c.fg }]}>
+            {showExplain ? t('showAnswer') : t('explain')}
           </Text>
         </TouchableOpacity>
       </Animated.View>
@@ -133,10 +138,10 @@ const styles = StyleSheet.create({
     borderRadius: 20, padding: 24, alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
-  frontCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DBEAFE', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  backCard: { backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  label: { position: 'absolute', top: 16, left: 20, fontSize: 11, fontFamily: FONTS.semiBold, color: '#8BA3BC', letterSpacing: 1, zIndex: 1 },
-  text: { fontSize: 18, fontFamily: FONTS.medium, color: '#1A2E4A', textAlign: 'center', lineHeight: 26 },
+  frontCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.accentSoft, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  backCard: { backgroundColor: c.surfaceRaised, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  label: { position: 'absolute', top: 16, left: 20, fontSize: 11, fontFamily: FONTS.semiBold, color: c.fgSubtle, letterSpacing: 1, zIndex: 1 },
+  text: { fontSize: 18, fontFamily: FONTS.medium, color: c.fg, textAlign: 'center', lineHeight: 26 },
   textWithImage: { fontSize: 16, marginTop: 8 },
   cardImage: {
     width: CARD_WIDTH - 80,
@@ -149,24 +154,24 @@ const styles = StyleSheet.create({
     bottom: 16,
     left: 20,
     right: 20,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: c.accentSoft,
     borderRadius: 10,
     padding: 10,
   },
-  explainText: { fontSize: 12, fontFamily: FONTS.regular, color: '#4A6580', textAlign: 'center', lineHeight: 16 },
+  explainText: { fontSize: 12, fontFamily: FONTS.regular, color: c.fgMuted, textAlign: 'center', lineHeight: 16 },
 
   // AI Explain
   aiExplainWrap: { width: '100%', alignItems: 'flex-start', paddingTop: 8 },
   aiSection: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  aiSectionTitle: { fontSize: 13, fontFamily: FONTS.bold, color: '#1A2E4A' },
-  aiText: { fontSize: 14, fontFamily: FONTS.regular, color: '#4A6580', lineHeight: 20 },
+  aiSectionTitle: { fontSize: 13, fontFamily: FONTS.bold, color: c.fg },
+  aiText: { fontSize: 14, fontFamily: FONTS.regular, color: c.fgMuted, lineHeight: 20 },
 
   // Explain button
   explainBtn: {
     position: 'absolute', top: 12, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: c.surfaceRaised, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
   },
-  explainBtnActive: { backgroundColor: '#D97706' },
-  explainBtnText: { fontSize: 12, fontFamily: FONTS.semiBold, color: '#D97706' },
+  explainBtnActive: { backgroundColor: c.warning },
+  explainBtnText: { fontSize: 12, fontFamily: FONTS.semiBold, color: c.warning },
 });

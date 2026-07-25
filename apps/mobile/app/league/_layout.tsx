@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { COLORS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
 
 export default function LeagueLayout() {
   return (

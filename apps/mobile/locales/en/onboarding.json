@@ -1,0 +1,49 @@
+{
+  "welcomeTitle": "Welcome to Quibly",
+  "welcomeSub": "Let's personalize your studying in a few quick steps.",
+  "nameTitle": "What's your name?",
+  "nameSub": "We use it to personalize your sessions.",
+  "namePlaceholder": "Your name",
+  "levelTitle": "What's your level?",
+  "levelSub": "This tunes the difficulty of your content.",
+  "goalTitle": "What's your goal?",
+  "goalSub": "We'll focus your study plan around it.",
+  "subjectsTitle": "Pick your subjects",
+  "subjectsSub": "Choose as many as you like. You can change this later.",
+  "dailyGoalTitle": "Daily goal",
+  "dailyGoalSub": "How much time can you commit each day?",
+  "continue": "Continue",
+  "start": "Start studying",
+  "education": {
+    "high_school": "High School",
+    "college": "College",
+    "graduate": "Graduate",
+    "professional": "Professional"
+  },
+  "goals": {
+    "exam_prep": "Exam preparation",
+    "school": "School subjects",
+    "certification": "Certification",
+    "fun": "Learning for fun"
+  },
+  "subjects": {
+    "Mathematics": "Mathematics",
+    "Biology": "Biology",
+    "Chemistry": "Chemistry",
+    "Physics": "Physics",
+    "History": "History",
+    "Geography": "Geography",
+    "English": "English",
+    "Computer Science": "Computer Science",
+    "Law": "Law",
+    "Medicine": "Medicine",
+    "Business": "Business",
+    "Art": "Art"
+  },
+  "time": {
+    "5": "Casual",
+    "15": "Regular",
+    "30": "Serious",
+    "60": "Intense"
+  }
+}

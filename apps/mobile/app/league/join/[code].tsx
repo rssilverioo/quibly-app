@@ -17,22 +17,24 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Users, Calendar, Shield } from 'lucide-react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLeaguePreview, joinLeague, type LeaguePreview } from '../../../services/leagues';
+import { staticDark as c } from '../../../theme';
+import { track } from '../../../lib/analytics';
 
 const COLORS = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1E1E2E',
-  border: '#2A2A3E',
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  secondary: '#00D4AA',
-  accent: '#FF6B6B',
-  warning: '#FFB84D',
-  success: '#00D4AA',
-  error: '#FF4757',
-  text: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
+  background: c.bg,
+  surface: c.bg,
+  surfaceLight: c.surface,
+  border: c.surfaceRaised,
+  primary: c.accent,
+  primaryLight: c.accent,
+  secondary: c.accent,
+  accent: c.danger,
+  warning: c.warning,
+  success: c.accent,
+  error: c.danger,
+  text: c.fg,
+  textSecondary: c.fgSubtle,
+  textMuted: c.fgMuted,
 };
 
 function formatDateRange(start: string, end: string): string {
@@ -82,6 +84,7 @@ export default function JoinLeagueScreen() {
     setJoining(true);
     try {
       const league = await joinLeague(user.uid, code, displayName.trim());
+      track('league_joined');
       Alert.alert(t('join.joinedTitle'), t('join.joinedMessage', { name: league.name }), [
         { text: t('common:ok'), onPress: () => router.replace(`/league/${league.id}`) },
       ]);

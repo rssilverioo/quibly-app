@@ -8,7 +8,8 @@ import {
   type TextStyle,
 } from 'react-native';
 
-import { COLORS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
+import { staticDark as c } from '../../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -60,7 +61,7 @@ export default function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? '#FFFFFF' : COLORS.primary}
+          color={variant === 'primary' ? c.fgOnAccent : COLORS.primary}
         />
       ) : (
         <Text style={textStyle}>{title}</Text>
@@ -98,7 +99,7 @@ const variantStyles: Record<
       backgroundColor: COLORS.primary,
     },
     text: {
-      color: '#FFFFFF',
+      color: c.fg,
     },
   },
   secondary: {

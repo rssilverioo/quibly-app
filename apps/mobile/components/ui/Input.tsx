@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { COLORS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   /** Label displayed above the input */

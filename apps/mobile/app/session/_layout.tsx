@@ -1,18 +1,19 @@
 import { Stack } from 'expo-router';
-import { COLORS } from '@quibly/shared/constants';
+import { useTheme } from '../../theme';
 
 export default function SessionLayout() {
+  const { c } = useTheme();
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#EEF5FF' },
+        contentStyle: { backgroundColor: c.bg },
         animation: 'slide_from_right',
       }}
     >
       <Stack.Screen name="setup" />
       <Stack.Screen name="active" />
-      <Stack.Screen name="audio" />
     </Stack>
   );
 }

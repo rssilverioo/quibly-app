@@ -2,7 +2,7 @@
   "expo": {
     "name": "Quibly",
     "slug": "quibly",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "scheme": "quibly",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0A0F"
+      "backgroundColor": "#0A0A0C"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -25,15 +25,19 @@
         "applinks:tryquibly.com"
       ],
       "infoPlist": {
-        "NSCameraUsageDescription": "Quibly needs camera access for proof-of-study verification photos.",
-        "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to select a profile picture.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Quibly uses the camera to photograph your notes and turn them into study material.",
+        "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to pick a profile picture and import class material.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Quibly needs the microphone to record your class and turn it into notes.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0A0F"
+        "backgroundColor": "#0A0A0C"
       },
       "package": "com.quibly.app",
       "googleServicesFile": "./google-services.json",
@@ -69,11 +73,12 @@
     },
     "newArchEnabled": true,
     "plugins": [
+      "@react-native-firebase/app",
       "expo-router",
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Quibly to access your camera for proof-of-study verification."
+          "cameraPermission": "Allow Quibly to photograph your notes and turn them into study material."
         }
       ],
       "expo-font",
@@ -82,7 +87,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#1E40AF"
+          "color": "#C8FF4D"
         }
       ],
       "@react-native-community/datetimepicker",
@@ -93,7 +98,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.419383312629-hl004370ib4ea9ni56daf3vu1k3g5ns2"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "./plugins/withFirebaseModularHeaders"
     ],
     "experiments": {
       "typedRoutes": true
@@ -105,6 +111,6 @@
       "router": {}
     },
     "owner": "rodrigosilverio",
-    "runtimeVersion": "1.1.0"
+    "runtimeVersion": "1.2.0"
   }
 }

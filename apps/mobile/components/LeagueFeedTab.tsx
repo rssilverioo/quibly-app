@@ -13,7 +13,7 @@ import {
 import { BookOpen, Camera, Plus, X, ChevronUp, ChevronDown, CheckCircle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { COLORS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { getFeedPosts, toggleReaction, addComment, getComments } from '../services/feed';
 import type { ReactionEmoji } from '@quibly/shared';

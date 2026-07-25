@@ -16,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { ImageSearchModule } from './image-search/image-search.module';
 import { DocumentsModule } from './documents/documents.module';
+import { LessonsModule } from './lessons/lessons.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { UsageModule } from './usage/usage.module';
@@ -50,6 +51,7 @@ import { FocusAreasModule } from './focus-areas/focus-areas.module';
     AchievementsModule,
     NotificationsModule,
     DocumentsModule,
+    LessonsModule,
     FlashcardsModule,
     QuizzesModule,
     UsageModule,

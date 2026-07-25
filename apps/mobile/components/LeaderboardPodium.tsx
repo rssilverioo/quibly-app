@@ -3,25 +3,26 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Crown } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import type { LeaderboardEntry } from '@quibly/shared';
+import { staticDark as c } from '../theme';
 
 const COLORS = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1E1E2E',
-  border: '#2A2A3E',
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  secondary: '#00D4AA',
-  accent: '#FF6B6B',
-  warning: '#FFB84D',
-  success: '#00D4AA',
-  error: '#FF4757',
-  text: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
-  gold: '#FFD700',
-  silver: '#C0C0C0',
-  bronze: '#CD7F32',
+  background: c.bg,
+  surface: c.bg,
+  surfaceLight: c.surface,
+  border: c.surfaceRaised,
+  primary: c.accent,
+  primaryLight: c.accent,
+  secondary: c.accent,
+  accent: c.danger,
+  warning: c.warning,
+  success: c.accent,
+  error: c.danger,
+  text: c.fg,
+  textSecondary: c.fgSubtle,
+  textMuted: c.fgMuted,
+  gold: c.gold,
+  silver: c.silver,
+  bronze: c.bronze,
 };
 
 const RANK_COLORS = [COLORS.gold, COLORS.silver, COLORS.bronze];

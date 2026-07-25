@@ -1,5 +1,5 @@
 import { api } from '../lib/api';
-import type { StudySession, TimerMode, ProofCheck } from '@quibly/shared';
+import type { StudySession, TimerMode } from '@quibly/shared';
 
 export interface StartSessionData {
   user_id: string;
@@ -8,7 +8,6 @@ export interface StartSessionData {
   timer_mode: TimerMode;
   work_duration: number;
   break_duration: number;
-  proof_mode: boolean;
 }
 
 export async function startSession(data: StartSessionData): Promise<StudySession> {
@@ -18,7 +17,6 @@ export async function startSession(data: StartSessionData): Promise<StudySession
     timer_mode: data.timer_mode,
     work_duration: data.work_duration,
     break_duration: data.break_duration,
-    proof_mode: data.proof_mode,
   });
 }
 
@@ -79,6 +77,3 @@ export async function abandonSession(sessionId: string): Promise<void> {
   await api.post(`/sessions/${sessionId}/abandon`);
 }
 
-export async function triggerProofCheck(sessionId: string): Promise<ProofCheck> {
-  return api.post<ProofCheck>(`/proof-checks/trigger/${sessionId}`);
-}

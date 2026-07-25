@@ -16,5 +16,9 @@
   "emptyMessage": "Envie um documento ou gere por tópico para criar quizzes",
   "deleteConfirm": "Excluir este quiz?",
   "deleteMessage": "Esta ação não pode ser desfeita.",
-  "xpEarned": "+{{xp}} XP"
+  "xpEarned": "+{{xp}} XP",
+  "bestStreak": "Melhor sequência",
+  "xpLabel": "XP ganho",
+  "correctOf": "{{correct}} de {{total}} certas",
+  "combo": "Combo! +10 XP de bônus"
 }

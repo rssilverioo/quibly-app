@@ -21,7 +21,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1.0</string>
+    <string>1.2.0</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -56,17 +56,21 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Allow Quibly to access your camera for proof-of-study verification.</string>
+    <string>Allow Quibly to photograph your notes and turn them into study material.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <string>Quibly needs the microphone to record your class and turn it into notes.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Quibly needs photo library access to select a profile picture.</string>
+    <string>Quibly needs photo library access to pick a profile picture and import class material.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
     </array>
     <key>RCTNewArchEnabled</key>
     <true/>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>audio</string>
+    </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

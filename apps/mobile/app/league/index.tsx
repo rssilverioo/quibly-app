@@ -8,9 +8,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FONTS } from '@quibly/shared/constants';
 import { useAuth } from '../../contexts/AuthContext';
-import { getMyLeagues } from '../../services/leagues';
+import { getMyLeagues, type LeagueWithStanding } from '../../services/leagues';
 import { Trophy, Users, Calendar, ArrowLeft } from 'lucide-react-native';
-import type { League } from '@quibly/shared';
+import { staticDark as c } from '../../theme';
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
@@ -23,7 +23,7 @@ export default function LeaguesListScreen() {
   const { t } = useTranslation('leagues');
   const router = useRouter();
   const { user } = useAuth();
-  const [leagues, setLeagues] = useState<League[]>([]);
+  const [leagues, setLeagues] = useState<LeagueWithStanding[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -37,16 +37,16 @@ export default function LeaguesListScreen() {
   const onRefresh = useCallback(() => { setRefreshing(true); fetch(); }, [fetch]);
 
   const statusColor = (s: string) => {
-    if (s === 'active') return { bg: '#D1FAE5', text: '#059669' };
-    if (s === 'upcoming') return { bg: '#DBEAFE', text: '#1E40AF' };
-    return { bg: '#F3F4F6', text: '#6B7280' };
+    if (s === 'active') return { bg: c.surfaceRaised, text: c.success };
+    if (s === 'upcoming') return { bg: c.accentSoft, text: c.accent };
+    return { bg: c.surfaceRaised, text: c.fgMuted };
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={22} color="#1A2E4A" />
+          <ArrowLeft size={22} color={c.fg} />
         </TouchableOpacity>
         <Text style={styles.title}>{t('title')}</Text>
         <View style={{ width: 40 }} />
@@ -62,7 +62,7 @@ export default function LeaguesListScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color="#1E40AF" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={c.accent} /></View>
       ) : (
         <FlatList
           data={leagues}
@@ -73,7 +73,7 @@ export default function LeaguesListScreen() {
               <TouchableOpacity style={styles.card} onPress={() => router.push(`/league/${item.id}`)} activeOpacity={0.85}>
                 <View style={styles.cardLeft}>
                   <View style={styles.trophyCircle}>
-                    <Trophy size={22} color="#D97706" />
+                    <Trophy size={22} color={c.warning} />
                   </View>
                 </View>
                 <View style={styles.cardBody}>
@@ -86,9 +86,9 @@ export default function LeaguesListScreen() {
                     </View>
                   </View>
                   <View style={styles.metaRow}>
-                    <Calendar size={13} color="#8BA3BC" />
+                    <Calendar size={13} color={c.fgSubtle} />
                     <Text style={styles.metaText}>{formatDateRange(item.start_date, item.end_date)}</Text>
-                    <Users size={13} color="#8BA3BC" style={{ marginLeft: 12 }} />
+                    <Users size={13} color={c.fgSubtle} style={{ marginLeft: 12 }} />
                     <Text style={styles.metaText}>{item.member_count ?? '?'} {t('common:members')}</Text>
                   </View>
                 </View>
@@ -97,10 +97,10 @@ export default function LeaguesListScreen() {
           }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1E40AF" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <View style={styles.emptyIcon}><Trophy size={40} color="#1E40AF" /></View>
+              <View style={styles.emptyIcon}><Trophy size={40} color={c.accent} /></View>
               <Text style={styles.emptyTitle}>{t('noLeaguesTitle')}</Text>
               <Text style={styles.emptySub}>{t('noLeaguesSubtitle')}</Text>
             </View>
@@ -112,33 +112,33 @@ export default function LeaguesListScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#EEF5FF' },
+  safe: { flex: 1, backgroundColor: c.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, fontSize: 22, fontFamily: FONTS.bold, color: '#1A2E4A', textAlign: 'center' },
+  title: { flex: 1, fontSize: 22, fontFamily: FONTS.bold, color: c.fg, textAlign: 'center' },
 
   actionRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 16 },
-  createBtn: { flex: 1, height: 48, backgroundColor: '#1E40AF', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  createText: { color: '#FFFFFF', fontSize: 15, fontFamily: FONTS.bold },
-  joinBtn: { flex: 1, height: 48, backgroundColor: '#FFFFFF', borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#1E40AF' },
-  joinText: { color: '#1E40AF', fontSize: 15, fontFamily: FONTS.bold },
+  createBtn: { flex: 1, height: 48, backgroundColor: c.accent, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  createText: { color: c.fgOnAccent, fontSize: 15, fontFamily: FONTS.bold },
+  joinBtn: { flex: 1, height: 48, backgroundColor: c.surface, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: c.accent },
+  joinText: { color: c.accent, fontSize: 15, fontFamily: FONTS.bold },
 
   list: { paddingHorizontal: 20, paddingBottom: 40 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  card: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  card: { flexDirection: 'row', backgroundColor: c.surface, borderRadius: 18, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   cardLeft: { marginRight: 14 },
-  trophyCircle: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
+  trophyCircle: { width: 48, height: 48, borderRadius: 14, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   cardBody: { flex: 1 },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  leagueName: { fontSize: 16, fontFamily: FONTS.bold, color: '#1A2E4A', flex: 1, marginRight: 8 },
+  leagueName: { fontSize: 16, fontFamily: FONTS.bold, color: c.fg, flex: 1, marginRight: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusText: { fontSize: 11, fontFamily: FONTS.semiBold, textTransform: 'uppercase', letterSpacing: 0.5 },
   metaRow: { flexDirection: 'row', alignItems: 'center' },
-  metaText: { fontSize: 12, fontFamily: FONTS.medium, color: '#8BA3BC', marginLeft: 4 },
+  metaText: { fontSize: 12, fontFamily: FONTS.medium, color: c.fgSubtle, marginLeft: 4 },
 
   empty: { alignItems: 'center', paddingTop: 80 },
-  emptyIcon: { width: 72, height: 72, borderRadius: 20, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontFamily: FONTS.bold, color: '#1A2E4A', marginBottom: 6 },
-  emptySub: { fontSize: 14, fontFamily: FONTS.regular, color: '#8BA3BC', textAlign: 'center', paddingHorizontal: 40 },
+  emptyIcon: { width: 72, height: 72, borderRadius: 20, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontFamily: FONTS.bold, color: c.fg, marginBottom: 6 },
+  emptySub: { fontSize: 14, fontFamily: FONTS.regular, color: c.fgSubtle, textAlign: 'center', paddingHorizontal: 40 },
 });

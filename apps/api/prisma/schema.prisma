@@ -34,6 +34,24 @@ enum SessionStatus {
   @@map("session_status")
 }
 
+/// How a Lesson was captured.
+enum LessonSource {
+  audio
+  document
+  photo
+
+  @@map("lesson_source")
+}
+
+enum LessonStatus {
+  /// Transcribing / extracting / structuring
+  processing
+  ready
+  failed
+
+  @@map("lesson_status")
+}
+
 enum ProofCheckStatus {
   pending
   passed
@@ -123,6 +141,7 @@ model Profile {
   userAchievements  UserAchievement[]
   pushTokens        PushToken[]
   documents         Document[]
+  lessons           Lesson[]
   flashcardSets     FlashcardSet[]
   quizzes           Quiz[]
   dailyUsage        DailyUsage[]
@@ -397,6 +416,7 @@ model Document {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessons       Lesson[]
   flashcardSets FlashcardSet[]
   quizzes       Quiz[]
 
@@ -404,20 +424,65 @@ model Document {
   @@map("documents")
 }
 
+/// A captured class: recording, PDF or photo of a notebook, turned into a
+/// structured note. This is the object the app is built around — flashcards
+/// and quizzes are derived from it, not the other way round.
+model Lesson {
+  id       String       @id @default(uuid()) @db.Uuid
+  userId   String       @map("user_id")
+  title    String
+  subject  String?
+  source   LessonSource
+  status   LessonStatus @default(processing)
+  language String       @default("pt-BR")
+
+  /// Transcript (audio) or extracted text (document/photo). The source of
+  /// truth everything else is generated from.
+  rawText String? @map("raw_text") @db.Text
+
+  /// Structured note, derived from rawText.
+  summary       String? @db.Text
+  keyPoints     Json    @default("[]") @map("key_points")
+  openQuestions Json    @default("[]") @map("open_questions")
+
+  /// Audio captures only.
+  audioKey    String? @map("audio_key")
+  durationSec Int?    @map("duration_sec")
+
+  /// Set when the capture came through the documents pipeline.
+  documentId   String? @map("document_id") @db.Uuid
+  errorMessage String? @map("error_message") @db.Text
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  processedAt DateTime? @map("processed_at") @db.Timestamptz()
+
+  user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document      Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  flashcardSets FlashcardSet[]
+  quizzes       Quiz[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([documentId])
+  @@map("lessons")
+}
+
 model FlashcardSet {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @map("user_id")
   documentId String?  @map("document_id") @db.Uuid
+  lessonId   String?  @map("lesson_id") @db.Uuid
   title      String
   language   String   @default("en")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   user       Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
   document   Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  lesson     Lesson?    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   flashcards Flashcard[]
 
   @@index([userId])
   @@index([documentId])
+  @@index([lessonId])
   @@map("flashcard_sets")
 }
 
@@ -440,6 +505,7 @@ model Quiz {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @map("user_id")
   documentId String?  @map("document_id") @db.Uuid
+  lessonId   String?  @map("lesson_id") @db.Uuid
   title      String
   language   String   @default("en")
   score      Int?
@@ -448,10 +514,12 @@ model Quiz {
 
   user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
   document  Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  lesson    Lesson?    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   questions Question[]
 
   @@index([userId])
   @@index([documentId])
+  @@index([lessonId])
   @@map("quizzes")
 }
 

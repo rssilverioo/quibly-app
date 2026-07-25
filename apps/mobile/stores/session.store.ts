@@ -1,35 +1,17 @@
 import { create } from 'zustand';
-import type {
-  TimerMode,
-  StudySession,
-  ProofCheck,
-} from '@quibly/shared';
-import { TIMER_PRESETS, PROOF_CHECK } from '@quibly/shared/constants';
+import type { TimerMode, StudySession } from '@quibly/shared';
+import { TIMER_PRESETS } from '@quibly/shared/constants';
 import * as sessionsService from '../services/sessions';
 import {
   schedulePhaseEndNotification,
-  scheduleProofCheckNotification,
   cancelSessionNotifications,
 } from '../lib/notifications';
-
-/**
- * Generate a random time (in seconds) within a work phase for a proof check.
- * Respects MIN_DELAY and END_BUFFER from constants.
- * Returns null if the phase is too short for a proof check.
- */
-function randomPhaseCheckSeconds(workDurationMinutes: number): number | null {
-  const earliest = PROOF_CHECK.MIN_DELAY_MINUTES * 60;
-  const latest = (workDurationMinutes - PROOF_CHECK.END_BUFFER_MINUTES) * 60;
-  if (latest <= earliest) return null;
-  return Math.round(earliest + Math.random() * (latest - earliest));
-}
 
 interface SessionState {
   currentSession: StudySession | null;
   timerMode: TimerMode;
   workDuration: number;
   breakDuration: number;
-  proofMode: boolean;
   elapsedSeconds: number;
   totalWorkSeconds: number;
   isRunning: boolean;
@@ -39,10 +21,6 @@ interface SessionState {
   subjectName: string | null;
   subjectColor: string | null;
   leagueId: string | null;
-  proofChecks: ProofCheck[];
-  pendingProofCheck: ProofCheck | null;
-  phaseProofCheckAt: number | null;
-  proofCheckTriggering: boolean;
   userId: string | null;
   streakDays: number;
   isPaused: boolean;
@@ -50,7 +28,6 @@ interface SessionState {
   setTimerMode: (mode: TimerMode) => void;
   setWorkDuration: (minutes: number) => void;
   setBreakDuration: (minutes: number) => void;
-  setProofMode: (enabled: boolean) => void;
   setSubjectId: (id: string) => void;
   setSubjectName: (name: string) => void;
   setSubjectColor: (color: string) => void;
@@ -63,19 +40,17 @@ interface SessionState {
     pomodorosCompleted: number;
     pointsEarned: number;
     xpEarned: number;
-    isVerified: boolean;
     score?: Record<string, number>;
     previousLevel?: number;
     newLevel?: number;
   }>;
   tick: () => void;
+  /** Catch the timer up after the app was backgrounded. */
+  fastForward: (seconds: number) => void;
   pause: () => void;
   resume: () => void;
   startBreak: () => void;
   startWork: () => void;
-  submitProof: (photoUrl: string) => Promise<void>;
-  setPendingProofCheck: (check: ProofCheck | null) => void;
-  fastForward: (seconds: number) => void;
   reset: () => void;
 }
 
@@ -84,7 +59,6 @@ const initialState = {
   timerMode: 'pomodoro' as TimerMode,
   workDuration: TIMER_PRESETS.pomodoro.work,
   breakDuration: TIMER_PRESETS.pomodoro.break,
-  proofMode: false,
   elapsedSeconds: 0,
   totalWorkSeconds: 0,
   isRunning: false,
@@ -94,10 +68,6 @@ const initialState = {
   subjectName: null,
   subjectColor: null,
   leagueId: null,
-  proofChecks: [] as ProofCheck[],
-  pendingProofCheck: null,
-  phaseProofCheckAt: null as number | null,
-  proofCheckTriggering: false,
   userId: null,
   streakDays: 0,
   isPaused: false,
@@ -126,7 +96,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   setWorkDuration: (minutes) => set({ workDuration: minutes }),
   setBreakDuration: (minutes) => set({ breakDuration: minutes }),
-  setProofMode: (enabled) => set({ proofMode: enabled }),
   setSubjectId: (id) => set({ subjectId: id }),
   setSubjectName: (name) => set({ subjectName: name }),
   setSubjectColor: (color) => set({ subjectColor: color }),
@@ -147,13 +116,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       timer_mode: state.timerMode,
       work_duration: state.workDuration,
       break_duration: state.breakDuration,
-      proof_mode: state.proofMode,
     });
-
-    // Generate random proof check time for first work phase
-    const checkAt = state.proofMode
-      ? randomPhaseCheckSeconds(state.workDuration)
-      : null;
 
     set({
       currentSession: session,
@@ -162,18 +125,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       totalWorkSeconds: 0,
       phase: 'work',
       pomodorosCompleted: 0,
-      proofChecks: [],
-      pendingProofCheck: null,
-      phaseProofCheckAt: checkAt,
-      proofCheckTriggering: false,
     });
 
-    // Schedule local notifications
-    const phaseSeconds = state.workDuration * 60;
-    schedulePhaseEndNotification(phaseSeconds, 'work').catch(() => {});
-    if (checkAt !== null && checkAt > 0) {
-      scheduleProofCheckNotification(checkAt).catch(() => {});
-    }
+    schedulePhaseEndNotification(state.workDuration * 60, 'work').catch(() => {});
   },
 
   endSession: async () => {
@@ -185,7 +139,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         pomodorosCompleted: 0,
         pointsEarned: 0,
         xpEarned: 0,
-        isVerified: false,
       };
     }
 
@@ -203,7 +156,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       pomodorosCompleted: state.pomodorosCompleted,
       pointsEarned: result.score?.total_sp ?? result.score?.totalSP ?? 0,
       xpEarned: result.score?.xp_earned ?? result.score?.xpEarned ?? 0,
-      isVerified: result.session?.is_verified ?? false,
       score: result.score,
       previousLevel: result.previous_level,
       newLevel: result.new_level,
@@ -214,57 +166,32 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const state = get();
     if (!state.isRunning) return;
 
-    const newElapsed = state.elapsedSeconds + 1;
-    const newTotalWork =
-      state.phase === 'work'
-        ? state.totalWorkSeconds + 1
-        : state.totalWorkSeconds;
+    set({
+      elapsedSeconds: state.elapsedSeconds + 1,
+      totalWorkSeconds:
+        state.phase === 'work' ? state.totalWorkSeconds + 1 : state.totalWorkSeconds,
+    });
+  },
+
+  fastForward: (seconds: number) => {
+    const state = get();
+    if (!state.isRunning || seconds <= 0) return;
+
+    const phaseDuration = state.phase === 'work' ? state.workDuration : state.breakDuration;
+    const totalPhaseSeconds = phaseDuration * 60;
+
+    // Cap at the phase boundary — the phase-end effect handles the rollover,
+    // so overshooting here would skip a break.
+    const newElapsed = Math.min(state.elapsedSeconds + seconds, totalPhaseSeconds);
+    const workedSeconds = newElapsed - state.elapsedSeconds;
 
     set({
       elapsedSeconds: newElapsed,
-      totalWorkSeconds: newTotalWork,
+      totalWorkSeconds:
+        state.phase === 'work'
+          ? state.totalWorkSeconds + workedSeconds
+          : state.totalWorkSeconds,
     });
-
-    // Check if proof check should trigger (per-phase)
-    if (
-      state.proofMode &&
-      state.phase === 'work' &&
-      !state.pendingProofCheck &&
-      !state.proofCheckTriggering &&
-      state.phaseProofCheckAt !== null &&
-      newElapsed >= state.phaseProofCheckAt
-    ) {
-      // Trigger proof check: create record on server, then show modal
-      set({ proofCheckTriggering: true, phaseProofCheckAt: null });
-
-      const sessionId = state.currentSession?.id;
-      if (sessionId) {
-        sessionsService.triggerProofCheck(sessionId)
-          .then((check) => {
-            set({ pendingProofCheck: check, proofCheckTriggering: false });
-          })
-          .catch(() => {
-            // Fallback: create local check (photo upload won't work but check counts)
-            set({
-              pendingProofCheck: {
-                id: `local_check_${Date.now()}`,
-                session_id: sessionId,
-                user_id: state.userId ?? '',
-                triggered_at: new Date().toISOString(),
-                responded_at: null,
-                photo_url: null,
-                status: 'pending',
-                deadline_at: new Date(
-                  Date.now() + PROOF_CHECK.RESPONSE_DEADLINE_SECONDS * 1000
-                ).toISOString(),
-              } as ProofCheck,
-              proofCheckTriggering: false,
-            });
-          });
-      } else {
-        set({ proofCheckTriggering: false });
-      }
-    }
   },
 
   pause: () => {
@@ -274,155 +201,31 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   resume: () => {
     const state = get();
-    const currentPhaseDuration = state.phase === 'work' ? state.workDuration : state.breakDuration;
-    const remainingSeconds = (currentPhaseDuration * 60) - state.elapsedSeconds;
+    const phaseDuration = state.phase === 'work' ? state.workDuration : state.breakDuration;
+    const remaining = phaseDuration * 60 - state.elapsedSeconds;
 
-    schedulePhaseEndNotification(remainingSeconds, state.phase).catch(() => {});
-
-    // Re-schedule proof check notification if not yet triggered in this phase
-    if (state.proofMode && state.phase === 'work' && state.phaseProofCheckAt !== null) {
-      const secondsUntilCheck = state.phaseProofCheckAt - state.elapsedSeconds;
-      if (secondsUntilCheck > 0) {
-        scheduleProofCheckNotification(secondsUntilCheck).catch(() => {});
-      }
-    }
-
+    schedulePhaseEndNotification(remaining, state.phase).catch(() => {});
     set({ isRunning: true, isPaused: false });
   },
 
   startBreak: () => {
     cancelSessionNotifications().catch(() => {});
     const state = get();
-    const breakSeconds = state.breakDuration * 60;
-    schedulePhaseEndNotification(breakSeconds, 'break').catch(() => {});
+    schedulePhaseEndNotification(state.breakDuration * 60, 'break').catch(() => {});
 
     set((s) => ({
       phase: 'break',
       elapsedSeconds: 0,
       pomodorosCompleted: s.pomodorosCompleted + 1,
-      phaseProofCheckAt: null,
     }));
   },
 
   startWork: () => {
     cancelSessionNotifications().catch(() => {});
     const state = get();
-    const workSeconds = state.workDuration * 60;
-    schedulePhaseEndNotification(workSeconds, 'work').catch(() => {});
+    schedulePhaseEndNotification(state.workDuration * 60, 'work').catch(() => {});
 
-    // Generate new random proof check time for this work phase
-    const checkAt = state.proofMode
-      ? randomPhaseCheckSeconds(state.workDuration)
-      : null;
-
-    if (checkAt !== null && checkAt > 0) {
-      scheduleProofCheckNotification(checkAt).catch(() => {});
-    }
-
-    set({ phase: 'work', elapsedSeconds: 0, phaseProofCheckAt: checkAt });
-  },
-
-  submitProof: async (photoUrl: string) => {
-    const state = get();
-    if (!state.pendingProofCheck) return;
-
-    const updatedCheck: ProofCheck = {
-      ...state.pendingProofCheck,
-      status: 'passed',
-      responded_at: new Date().toISOString(),
-      photo_url: photoUrl,
-    };
-
-    const updatedChecks = [...state.proofChecks, updatedCheck];
-
-    set({
-      proofChecks: updatedChecks,
-      pendingProofCheck: null,
-    });
-  },
-
-  setPendingProofCheck: (check) => {
-    if (check === null) {
-      const state = get();
-      if (state.pendingProofCheck) {
-        const missedCheck: ProofCheck = {
-          ...state.pendingProofCheck,
-          status: 'missed',
-          responded_at: new Date().toISOString(),
-        };
-        set({
-          proofChecks: [...state.proofChecks, missedCheck],
-          pendingProofCheck: null,
-        });
-      }
-    } else {
-      set({ pendingProofCheck: check });
-    }
-  },
-
-  fastForward: (seconds: number) => {
-    const state = get();
-    if (!state.isRunning || seconds <= 0) return;
-
-    const currentPhaseDuration = state.phase === 'work' ? state.workDuration : state.breakDuration;
-    const totalPhaseSeconds = currentPhaseDuration * 60;
-    let newElapsed = state.elapsedSeconds + seconds;
-    let newTotalWork = state.phase === 'work'
-      ? state.totalWorkSeconds + seconds
-      : state.totalWorkSeconds;
-
-    // If time exceeds current phase, cap at phase end
-    if (newElapsed > totalPhaseSeconds) {
-      const overflowSeconds = newElapsed - totalPhaseSeconds;
-      newElapsed = totalPhaseSeconds;
-      if (state.phase === 'work') {
-        newTotalWork = state.totalWorkSeconds + (seconds - overflowSeconds);
-      }
-    }
-
-    set({
-      elapsedSeconds: newElapsed,
-      totalWorkSeconds: newTotalWork,
-    });
-
-    // Check proof trigger after fast-forward (per-phase)
-    if (
-      state.proofMode &&
-      state.phase === 'work' &&
-      !state.pendingProofCheck &&
-      !state.proofCheckTriggering &&
-      state.phaseProofCheckAt !== null &&
-      newElapsed >= state.phaseProofCheckAt
-    ) {
-      set({ proofCheckTriggering: true, phaseProofCheckAt: null });
-
-      const sessionId = state.currentSession?.id;
-      if (sessionId) {
-        sessionsService.triggerProofCheck(sessionId)
-          .then((check) => {
-            set({ pendingProofCheck: check, proofCheckTriggering: false });
-          })
-          .catch(() => {
-            set({
-              pendingProofCheck: {
-                id: `local_check_${Date.now()}`,
-                session_id: sessionId,
-                user_id: state.userId ?? '',
-                triggered_at: new Date().toISOString(),
-                responded_at: null,
-                photo_url: null,
-                status: 'pending',
-                deadline_at: new Date(
-                  Date.now() + PROOF_CHECK.RESPONSE_DEADLINE_SECONDS * 1000
-                ).toISOString(),
-              } as ProofCheck,
-              proofCheckTriggering: false,
-            });
-          });
-      } else {
-        set({ proofCheckTriggering: false });
-      }
-    }
+    set({ phase: 'work', elapsedSeconds: 0 });
   },
 
   reset: () => {

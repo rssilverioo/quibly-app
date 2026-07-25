@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Linking,
@@ -7,8 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { FONTS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
 import { ArrowLeft, Check, Crown, RotateCcw } from 'lucide-react-native';
+import { Mascot } from '../../components/mascot';
+import { track } from '../../lib/analytics';
 import { useUsage } from '../../hooks/useUsage';
 import { useIAP } from '../../hooks/useIAP';
 import i18n from '../../lib/i18n';
@@ -24,6 +27,10 @@ export default function PricingScreen() {
   const [restoring, setRestoring] = useState(false);
 
   const isPro = usage?.plan === 'PRO';
+
+  useEffect(() => {
+    track('paywall_viewed', { trigger: 'settings' });
+  }, []);
   const isBrl = i18n.language === 'pt-BR';
   const selectedPackage = billing === 'monthly' ? monthlyPackage : yearlyPackage;
 
@@ -43,6 +50,7 @@ export default function PricingScreen() {
     }
     try {
       await purchase(selectedPackage);
+      track('subscription_started', { plan: billing });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('common:done'), t('subscribed'));
       refreshUsage();

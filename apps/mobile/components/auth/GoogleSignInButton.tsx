@@ -56,7 +56,7 @@ export default function GoogleSignInButton({ onError }: Props) {
     <View style={styles.wrapper}>
       <TouchableOpacity style={styles.button} onPress={handlePress} activeOpacity={0.85} disabled={loading}>
         {loading ? (
-          <ActivityIndicator color="#1F1F1F" />
+          <ActivityIndicator color={GOOGLE_DARK.text} />
         ) : (
           <>
             <GoogleLogo />
@@ -68,17 +68,30 @@ export default function GoogleSignInButton({ onError }: Props) {
   );
 }
 
+/**
+ * Google's official dark-theme button. These values are prescribed by their
+ * branding guidelines, so they stay literal rather than going through the
+ * palette — same reason the "G" keeps its four brand colours.
+ */
+const GOOGLE_DARK = {
+  surface: '#131314',
+  text: '#E3E3E3',
+  border: '#8E918F',
+};
+
 const styles = StyleSheet.create({
   wrapper: { width: '100%' },
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GOOGLE_DARK.surface,
+    borderWidth: 1,
+    borderColor: GOOGLE_DARK.border,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
   },
-  label: { color: '#1F1F1F', fontSize: 16, fontWeight: '600' },
+  label: { color: GOOGLE_DARK.text, fontSize: 16, fontWeight: '600' },
 });

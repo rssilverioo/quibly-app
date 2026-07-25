@@ -17,18 +17,19 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateProfile } from '../../services/auth';
+import { staticDark as c } from '../../theme';
 
 const COLORS = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1E1E2E',
-  border: '#2A2A3E',
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  text: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
-  error: '#FF4757',
+  background: c.bg,
+  surface: c.bg,
+  surfaceLight: c.surface,
+  border: c.surfaceRaised,
+  primary: c.accent,
+  primaryLight: c.accent,
+  text: c.fg,
+  textSecondary: c.fgSubtle,
+  textMuted: c.fgMuted,
+  error: c.danger,
 };
 
 export default function EditProfileScreen() {

@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Flame, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { FONTS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../theme';
 import { getStudyDates, type StudyDate } from '../services/sessions';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;

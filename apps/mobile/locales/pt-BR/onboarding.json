@@ -1,0 +1,49 @@
+{
+  "welcomeTitle": "Bem-vindo ao Quibly",
+  "welcomeSub": "Vamos personalizar seus estudos em alguns passos rápidos.",
+  "nameTitle": "Como você se chama?",
+  "nameSub": "Usamos para personalizar suas sessões.",
+  "namePlaceholder": "Seu nome",
+  "levelTitle": "Qual seu nível?",
+  "levelSub": "Isso ajusta a dificuldade do conteúdo.",
+  "goalTitle": "Qual seu objetivo?",
+  "goalSub": "Focamos seu plano de estudo nisso.",
+  "subjectsTitle": "Escolha suas matérias",
+  "subjectsSub": "Selecione quantas quiser. Dá pra mudar depois.",
+  "dailyGoalTitle": "Meta diária",
+  "dailyGoalSub": "Quanto tempo você consegue dedicar por dia?",
+  "continue": "Continuar",
+  "start": "Começar a estudar",
+  "education": {
+    "high_school": "Ensino Médio",
+    "college": "Graduação",
+    "graduate": "Pós-graduação",
+    "professional": "Profissional"
+  },
+  "goals": {
+    "exam_prep": "Preparação para prova",
+    "school": "Matérias da escola",
+    "certification": "Certificação",
+    "fun": "Aprender por prazer"
+  },
+  "subjects": {
+    "Mathematics": "Matemática",
+    "Biology": "Biologia",
+    "Chemistry": "Química",
+    "Physics": "Física",
+    "History": "História",
+    "Geography": "Geografia",
+    "English": "Inglês",
+    "Computer Science": "Computação",
+    "Law": "Direito",
+    "Medicine": "Medicina",
+    "Business": "Administração",
+    "Art": "Artes"
+  },
+  "time": {
+    "5": "Tranquilo",
+    "15": "Regular",
+    "30": "Sério",
+    "60": "Intenso"
+  }
+}

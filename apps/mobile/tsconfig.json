@@ -4,7 +4,12 @@
     "strict": true,
     "paths": {
       "@quibly/shared": ["../../packages/shared/src"],
-      "@quibly/shared/*": ["../../packages/shared/src/*"]
+      "@quibly/shared/*": ["../../packages/shared/src/*"],
+      // npm workspaces hoists lucide-react-native to the root but leaves
+      // react-native-svg here, so lucide's own `import { SvgProps } from
+      // 'react-native-svg'` fails to resolve and LucideProps silently loses
+      // every SVG prop — including `color`. Point TS at the real location.
+      "react-native-svg": ["./node_modules/react-native-svg"]
     }
   },
   "include": [

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { FONTS } from '@quibly/shared/constants';
+import { staticDark as c } from '../../theme';
 
 interface QuizProgressProps {
   total: number;
@@ -22,6 +23,6 @@ export default function QuizProgress({ total, current, answers }: QuizProgressPr
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 20, paddingVertical: 8 },
-  barTrack: { height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: '100%', backgroundColor: '#1E40AF', borderRadius: 4 },
+  barTrack: { height: 8, backgroundColor: c.border, borderRadius: 4, overflow: 'hidden' },
+  barFill: { height: '100%', backgroundColor: c.accent, borderRadius: 4 },
 });

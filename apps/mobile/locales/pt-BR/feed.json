@@ -21,5 +21,7 @@
   },
   "podium": {
     "noRankings": "Sem ranking ainda"
-  }
+  },
+  "loading": "Carregando feed...",
+  "verified": "Verificado"
 }

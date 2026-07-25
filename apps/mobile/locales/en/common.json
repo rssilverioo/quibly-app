@@ -17,6 +17,8 @@
   "private": "Private",
   "tabs": {
     "home": "Home",
+    "lessons": "Lessons",
+    "study": "Study",
     "challenges": "Challenges",
     "library": "Library",
     "profile": "Profile"

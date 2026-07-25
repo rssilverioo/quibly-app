@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { FONTS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -31,5 +32,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontFamily: FONTS.semiBold, color: COLORS.text, textAlign: 'center', marginBottom: 8 },
   message: { fontSize: 14, fontFamily: FONTS.regular, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
   cta: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  ctaText: { fontSize: 14, fontFamily: FONTS.bold, color: COLORS.text },
+  ctaText: { fontSize: 14, fontFamily: FONTS.bold, color: COLORS.onPrimary },
 });

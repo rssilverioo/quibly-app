@@ -16,5 +16,9 @@
   "emptyMessage": "Upload a document or generate by topic to create quizzes",
   "deleteConfirm": "Delete this quiz?",
   "deleteMessage": "This action cannot be undone.",
-  "xpEarned": "+{{xp}} XP"
+  "xpEarned": "+{{xp}} XP",
+  "bestStreak": "Best streak",
+  "xpLabel": "XP earned",
+  "correctOf": "{{correct}} of {{total}} correct",
+  "combo": "Combo! +10 bonus XP"
 }

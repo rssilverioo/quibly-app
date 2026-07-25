@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { StyleSheet, Dimensions } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import { staticDark as c } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,7 +30,7 @@ export default function ConfettiOverlay({ trigger, count = 150 }: ConfettiOverla
       fadeOut
       explosionSpeed={350}
       fallSpeed={3000}
-      colors={['#FFD700', '#1E40AF', '#00D4AA', '#FF6B6B', '#FFB84D', '#2B53D8']}
+      colors={[c.gold, c.accent, c.accent, c.danger, c.warning, c.accent]}
     />
   );
 }

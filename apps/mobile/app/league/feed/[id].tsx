@@ -13,28 +13,30 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, BookOpen, Camera, Plus, X, ChevronUp, ChevronDown, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getFeedPosts, toggleReaction, addComment, getComments } from '../../../services/feed';
 import type { ReactionEmoji } from '@quibly/shared';
+import { staticDark as c } from '../../../theme';
 
 // ─── Theme ───
 
 const COLORS = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1E1E2E',
-  border: '#2A2A3E',
-  primary: '#1E40AF',
-  primaryLight: '#2B53D8',
-  secondary: '#00D4AA',
-  accent: '#FF6B6B',
-  warning: '#FFB84D',
-  success: '#00D4AA',
-  error: '#FF4757',
-  text: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
+  background: c.bg,
+  surface: c.bg,
+  surfaceLight: c.surface,
+  border: c.surfaceRaised,
+  primary: c.accent,
+  primaryLight: c.accent,
+  secondary: c.accent,
+  accent: c.danger,
+  warning: c.warning,
+  success: c.accent,
+  error: c.danger,
+  text: c.fg,
+  textSecondary: c.fgSubtle,
+  textMuted: c.fgMuted,
 };
 
 const REACTION_EMOJIS: ReactionEmoji[] = ['🔥', '🧠', '💀', '👑', '⚡'];
@@ -94,6 +96,7 @@ function getInitials(name: string): string {
 // ─── Main Screen ───
 
 export default function LeagueFeedScreen() {
+  const { t } = useTranslation('feed');
   const { id: leagueId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -208,7 +211,7 @@ export default function LeagueFeedScreen() {
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading feed...</Text>
+          <Text style={styles.loadingText}>{t('loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -226,8 +229,8 @@ export default function LeagueFeedScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <FlatList
           data={posts}
@@ -248,7 +251,7 @@ export default function LeagueFeedScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <BookOpen size={48} color={COLORS.primary} style={{ marginBottom: 16 }} />
-              <Text style={styles.emptyTitle}>No posts yet</Text>
+              <Text style={styles.emptyTitle}>{t('emptyTitle')}</Text>
               <Text style={styles.emptySubtitle}>
                 Start a study session to post to the league feed!
               </Text>
@@ -277,6 +280,7 @@ function FeedPostCard({
   onReaction,
   onAddComment,
 }: FeedPostCardProps) {
+  const { t } = useTranslation('feed');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -369,7 +373,7 @@ function FeedPostCard({
         {isVerified && (
           <View style={styles.verifiedPill}>
             <CheckCircle size={13} color={COLORS.success} style={{ marginRight: 4 }} />
-            <Text style={styles.verifiedText}>Verified</Text>
+            <Text style={styles.verifiedText}>{t('verified')}</Text>
           </View>
         )}
 
@@ -378,7 +382,7 @@ function FeedPostCard({
           <View style={styles.proofPhotoContainer}>
             <View style={styles.proofPhotoBlur}>
               <Camera size={18} color={COLORS.textSecondary} style={{ marginRight: 8 }} />
-              <Text style={styles.proofPhotoLabel}>Proof submitted</Text>
+              <Text style={styles.proofPhotoLabel}>{t('proofSubmitted')}</Text>
             </View>
           </View>
         )}

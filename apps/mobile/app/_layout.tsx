@@ -11,8 +11,8 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
-import { COLORS } from '@quibly/shared/constants';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { useTheme, hydrateTheme } from '../theme';
 import {
   configureNotifications,
   requestNotificationPermissions,
@@ -22,6 +22,7 @@ import {
 import { registerPushToken } from '../services/notifications';
 import { initRevenueCat } from '../services/iap';
 import '../lib/i18n';
+import { initAnalytics } from '../lib/analytics';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,6 +49,7 @@ function extractJoinPath(url: string | null): string | null {
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, user, profile } = useAuth();
+  const { c } = useTheme();
   const segments = useSegments();
   const router = useRouter();
   const pendingDeepLink = useRef<string | null>(null);
@@ -91,10 +93,15 @@ function RootLayoutNav() {
     const subscription = addNotificationResponseListener(
       (response) => {
         const data = response.notification.request.content.data;
-        if (data?.type === 'chat_message' && data?.leagueId) {
+        const isLeagueEvent =
+          data?.type === 'chat_message' ||
+          data?.type === 'feed_reaction' ||
+          data?.type === 'feed_comment';
+
+        // Every one of these originates in a league. The old code sent feed
+        // events to `/(tabs)/challenges`, a tab that doesn't exist.
+        if (isLeagueEvent && data?.leagueId) {
           router.push(`/league/${data.leagueId}` as any);
-        } else if (data?.type === 'feed_reaction' || data?.type === 'feed_comment') {
-          router.push('/(tabs)/challenges' as any);
         }
       },
     );
@@ -153,7 +160,7 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#EEF5FF' },
+        contentStyle: { backgroundColor: c.bg },
         animation: 'slide_from_right',
       }}
     >
@@ -166,8 +173,7 @@ function RootLayoutNav() {
         name="session"
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="upload" options={{ headerShown: false }} />
-      <Stack.Screen name="generate" options={{ headerShown: false }} />
+      <Stack.Screen name="lesson" options={{ headerShown: false }} />
       <Stack.Screen name="flashcards" options={{ headerShown: false }} />
       <Stack.Screen name="quizzes" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
@@ -176,12 +182,19 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const { mode } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // Restore the saved theme before the first paint of any screen.
+  useEffect(() => {
+    hydrateTheme();
+    initAnalytics();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -193,7 +206,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <StatusBar style="dark" />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <RootLayoutNav />
     </AuthProvider>
   );

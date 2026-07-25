@@ -109,5 +109,8 @@
     "joinedTitle": "Joined!",
     "joinedMessage": "You joined \"{{name}}\".",
     "membersCount": "{{current}}/{{max}} members"
-  }
+  },
+  "chatTitle": "League chat",
+  "noMessages": "No messages yet",
+  "noMessagesSub": "Be the first to send a message"
 }

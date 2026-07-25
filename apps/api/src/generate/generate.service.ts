@@ -144,6 +144,116 @@ export class GenerateService {
     return quiz;
   }
 
+  /**
+   * Look up illustrations for generated items, 5 at a time so the image
+   * provider doesn't rate-limit us.
+   */
+  private async attachImages<T extends { imageQuery?: string }>(
+    items: T[],
+  ): Promise<(T & { imageUrl: string | null; sortOrder: number })[]> {
+    const out: (T & { imageUrl: string | null; sortOrder: number })[] = [];
+
+    for (let i = 0; i < items.length; i += 5) {
+      const batch = items.slice(i, i + 5);
+      const results = await Promise.all(
+        batch.map(async (item, batchIndex) => {
+          const imageUrl = item.imageQuery
+            ? await this.imageSearchService.searchImage(item.imageQuery)
+            : null;
+          return { ...item, imageUrl, sortOrder: i + batchIndex };
+        }),
+      );
+      out.push(...results);
+    }
+
+    return out;
+  }
+
+  /**
+   * Derive study material from a captured lesson.
+   *
+   * Generates from the lesson's raw capture rather than its summary — the
+   * summary is deliberately lossy, and flashcards built from it inherit the
+   * loss.
+   */
+  async generateFromLesson(
+    userId: string,
+    lessonId: string,
+    type: 'flashcards' | 'quiz',
+  ) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    if (lesson.userId !== userId) throw new ForbiddenException();
+    if (!lesson.rawText?.trim()) {
+      throw new BadRequestException('Lesson has not been processed yet');
+    }
+
+    const usageType = type === 'flashcards' ? 'flashcard_sets' : 'quizzes';
+    const usage = await this.usageService.checkUsageLimit(userId, usageType);
+    if (!usage.allowed) {
+      throw new BadRequestException(
+        `Daily ${usageType} limit reached (${usage.used}/${usage.limit}). Upgrade to PRO for unlimited.`,
+      );
+    }
+
+    const { language, title } = lesson;
+
+    if (type === 'flashcards') {
+      const cards = await this.geminiService.generateFlashcards(lesson.rawText, language);
+      const withImages = await this.attachImages(cards);
+
+      const set = await this.prisma.flashcardSet.create({
+        data: {
+          userId,
+          lessonId,
+          documentId: lesson.documentId,
+          title,
+          language,
+          flashcards: {
+            create: withImages.map((card) => ({
+              front: card.front,
+              back: card.back,
+              explain: card.explain,
+              imageUrl: card.imageUrl,
+              sortOrder: card.sortOrder,
+            })),
+          },
+        },
+        include: { flashcards: { orderBy: { sortOrder: 'asc' } } },
+      });
+
+      await this.usageService.incrementUsage(userId, 'flashcard_sets');
+      return set;
+    }
+
+    const questions = await this.geminiService.generateQuiz(lesson.rawText, language);
+    const withImages = await this.attachImages(questions);
+
+    const quiz = await this.prisma.quiz.create({
+      data: {
+        userId,
+        lessonId,
+        documentId: lesson.documentId,
+        title,
+        language,
+        totalQ: withImages.length,
+        questions: {
+          create: withImages.map((q) => ({
+            question: q.question,
+            options: q.options,
+            correctIndex: q.correctIndex,
+            imageUrl: q.imageUrl,
+            sortOrder: q.sortOrder,
+          })),
+        },
+      },
+      include: { questions: { orderBy: { sortOrder: 'asc' } } },
+    });
+
+    await this.usageService.incrementUsage(userId, 'quizzes');
+    return quiz;
+  }
+
   async generateFromTopic(
     userId: string,
     topic: string,

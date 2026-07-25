@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { FONTS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
 
 interface XPToastProps {
   xp: number;

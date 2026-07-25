@@ -13,7 +13,9 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { useTranslation } from 'react-i18next';
+import { FONTS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../../theme';
 import { ArrowLeft, Send } from 'lucide-react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
@@ -129,6 +131,7 @@ function MessageBubble({
 // ─── Main Screen ───
 
 export default function LeagueChatScreen() {
+  const { t } = useTranslation('leagues');
   const { id: leagueId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user, profile } = useAuth();
@@ -210,8 +213,8 @@ export default function LeagueChatScreen() {
     if (isLoading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No messages yet</Text>
-        <Text style={styles.emptySubtext}>Be the first to send a message!</Text>
+        <Text style={styles.emptyText}>{t('noMessages')}</Text>
+        <Text style={styles.emptySubtext}>{t('noMessagesSub')}</Text>
       </View>
     );
   }, [isLoading]);
@@ -225,7 +228,7 @@ export default function LeagueChatScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
             <ArrowLeft size={22} color={COLORS.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chat</Text>
+          <Text style={styles.headerTitle}>{t('chatTitle')}</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingContainer}>
@@ -242,14 +245,14 @@ export default function LeagueChatScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
           <Text style={styles.backButtonText}>{'\u2039'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>League Chat</Text>
+        <Text style={styles.headerTitle}>{t('chatTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Message List */}
         <FlatList
@@ -530,7 +533,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
   },
   sendButtonText: {
-    color: COLORS.text,
+    color: COLORS.onPrimary,
     fontSize: 15,
     fontFamily: FONTS.semiBold,
   },

@@ -34,6 +34,12 @@ export class LeaguesController {
     return this.leaguesService.findUserLeagues(user.userId);
   }
 
+  /** Must stay above `@Get(':id')` or Nest matches "live" as a league id. */
+  @Get('live')
+  findLiveMembers(@CurrentUser() user: { userId: string; email: string }) {
+    return this.leaguesService.findLiveMembers(user.userId);
+  }
+
   @Get('invite/:code')
   previewByInviteCode(
     @CurrentUser() user: { userId: string; email: string },

@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@quibly/shared/constants';
+import { FONTS } from '@quibly/shared/constants';
+import { legacyColors as COLORS } from '../../theme';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import type { FlashcardSet, Flashcard } from '@quibly/shared';
 import { getFlashcardSet } from '../../services/flashcards';
@@ -14,6 +15,8 @@ import { useGamification } from '../../hooks/useGamification';
 import FlashcardCard from '../../components/flashcards/FlashcardCard';
 import XPToast from '../../components/common/XPToast';
 import ConfettiOverlay from '../../components/common/ConfettiOverlay';
+import { Mascot } from '../../components/mascot';
+import { track } from '../../lib/analytics';
 
 export default function FlashcardPlayerScreen() {
   const router = useRouter();
@@ -64,6 +67,7 @@ export default function FlashcardPlayerScreen() {
       setCurrentIndex(currentIndex + 1);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
+      track('flashcards_completed', { cards: cards.length });
       setIsComplete(true);
       setShowConfetti(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -101,6 +105,7 @@ export default function FlashcardPlayerScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
+          <Mascot state="worried" size={120} />
           <Text style={styles.emptyText}>{error ?? t('empty')}</Text>
           <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.surface, borderRadius: 10 }}
             onPress={() => router.back()}>
@@ -132,6 +137,7 @@ export default function FlashcardPlayerScreen() {
 
       {isComplete ? (
         <View style={styles.completeContainer}>
+          <Mascot state="graduate" size={132} />
           <Text style={styles.completeTitle}>{t('complete')}</Text>
           <Text style={styles.completeMessage}>{t('completeMessage', { count: cards.length })}</Text>
           <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8} onPress={handleReviewAgain}>
@@ -191,12 +197,12 @@ const styles = StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
   navBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
   navBtnNext: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, backgroundColor: COLORS.primary, borderRadius: 16, gap: 4 },
-  navBtnNextText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.text },
+  navBtnNextText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.onPrimary },
   completeContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   completeTitle: { fontSize: 28, fontFamily: FONTS.bold, color: COLORS.text, marginBottom: 8 },
   completeMessage: { fontSize: 15, fontFamily: FONTS.regular, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 32 },
   primaryButton: { width: '100%', backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 12 },
-  primaryButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.text },
+  primaryButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.onPrimary },
   secondaryButton: { width: '100%', backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   secondaryButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.textSecondary },
 });

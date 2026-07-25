@@ -12,5 +12,9 @@
   "emptyMessage": "Envie um documento ou gere por tópico para criar flashcards",
   "deleteConfirm": "Excluir este set de flashcards?",
   "deleteMessage": "Esta ação não pode ser desfeita.",
-  "xpEarned": "+{{xp}} XP"
+  "xpEarned": "+{{xp}} XP",
+  "explain": "Explicar",
+  "showAnswer": "Ver resposta",
+  "simpleExplanation": "Em palavras simples",
+  "memoryTrick": "Truque pra lembrar"
 }

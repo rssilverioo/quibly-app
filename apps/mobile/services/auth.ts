@@ -12,6 +12,7 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { auth } from '../lib/firebase';
+import { track } from '../lib/analytics';
 import { api } from '../lib/api';
 import type { Profile } from '@quibly/shared';
 
@@ -66,6 +67,7 @@ export async function signInWithApple(): Promise<{ user: User; isNewUser: boolea
   const handle = displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 30);
   await api.post<Profile>('/auth/profile', { username: displayName, handle });
 
+  track('login_succeeded', { method: 'apple' });
   return { user, isNewUser: true };
 }
 
@@ -90,6 +92,7 @@ export async function signInWithGoogle(): Promise<{ user: User; isNewUser: boole
   const handle = displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 30);
   await api.post<Profile>('/auth/profile', { username: displayName, handle });
 
+  track('login_succeeded', { method: 'google' });
   return { user, isNewUser: true };
 }
 

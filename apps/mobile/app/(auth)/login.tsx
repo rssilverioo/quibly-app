@@ -22,6 +22,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import AppleSignInButton from '../../components/auth/AppleSignInButton';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
+import { staticDark as c, NIGHT_GRADIENT } from '../../theme';
+import { track } from '../../lib/analytics';
 
 const { width: W, height: H } = Dimensions.get('window');
 const LOGO_SIZE = 88;
@@ -51,7 +53,7 @@ function GhostSymbol({
     <Animated.Text
       style={[{
         position: 'absolute', left: x, top: y, fontSize: size, fontWeight: '300',
-        color: '#FFFFFF', transform: [{ rotate: `${rotate}deg` }], letterSpacing: 1,
+        color: c.fg, transform: [{ rotate: `${rotate}deg` }], letterSpacing: 1,
       }, style]}
     >{text}</Animated.Text>
   );
@@ -72,7 +74,7 @@ function Particle({ x, y, size, delay }: { x: number; y: number; size: number; d
   return (
     <Animated.View style={[{
       position: 'absolute', left: x, top: y, width: size, height: size,
-      borderRadius: size / 2, backgroundColor: '#FFFFFF',
+      borderRadius: size / 2, backgroundColor: c.fg,
     }, style]} />
   );
 }
@@ -96,10 +98,10 @@ function DriftingCloud({ y, delay, speed, opacity: maxOp, scale = 1 }: {
   const bw = W * 0.35;
   return (
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: y, width: W * 0.7, height: bw * 0.35, opacity: maxOp }, style]}>
-      <View style={{ position: 'absolute', bottom: 0, left: 0, width: bw, height: bw * 0.28, borderRadius: bw, backgroundColor: '#FFFFFF' }} />
-      <View style={{ position: 'absolute', bottom: bw * 0.1, left: bw * 0.15, width: bw * 0.5, height: bw * 0.4, borderRadius: bw, backgroundColor: '#FFFFFF' }} />
-      <View style={{ position: 'absolute', bottom: bw * 0.08, left: bw * 0.4, width: bw * 0.55, height: bw * 0.35, borderRadius: bw, backgroundColor: '#FFFFFF' }} />
-      <View style={{ position: 'absolute', bottom: bw * 0.12, left: bw * 0.25, width: bw * 0.4, height: bw * 0.45, borderRadius: bw, backgroundColor: '#FFFFFF' }} />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, width: bw, height: bw * 0.28, borderRadius: bw, backgroundColor: c.fg }} />
+      <View style={{ position: 'absolute', bottom: bw * 0.1, left: bw * 0.15, width: bw * 0.5, height: bw * 0.4, borderRadius: bw, backgroundColor: c.fg }} />
+      <View style={{ position: 'absolute', bottom: bw * 0.08, left: bw * 0.4, width: bw * 0.55, height: bw * 0.35, borderRadius: bw, backgroundColor: c.fg }} />
+      <View style={{ position: 'absolute', bottom: bw * 0.12, left: bw * 0.25, width: bw * 0.4, height: bw * 0.45, borderRadius: bw, backgroundColor: c.fg }} />
     </Animated.View>
   );
 }
@@ -144,11 +146,11 @@ function ShineOverlay() {
     <>
       <Animated.View pointerEvents="none" style={[{
         position: 'absolute', top: 0, left: -30, right: -30, height: 24,
-        borderRadius: 12, backgroundColor: '#FFFFFF',
+        borderRadius: 12, backgroundColor: c.fg,
       }, style1]} />
       <Animated.View pointerEvents="none" style={[{
         position: 'absolute', top: 0, left: -30, right: -30, height: 10,
-        borderRadius: 5, backgroundColor: '#FFFFFF',
+        borderRadius: 5, backgroundColor: c.fg,
       }, style2]} />
     </>
   );
@@ -162,6 +164,10 @@ export default function LoginScreen() {
   /* ── splash → login transition ── */
   const phase = useSharedValue(0); // 0 = splash centered, 1 = login position
   const uiOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    track('login_viewed');
+  }, []);
 
   useEffect(() => {
     // Hold splash, then transition
@@ -192,7 +198,9 @@ export default function LoginScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={['#3A7BD5', '#4A90D9', '#6BB3E0', '#9DD0EE', '#D6EEFA']}
+        // Night sky rather than day: the login screen is the first impression
+        // and has to agree with the dark app behind it.
+        colors={[c.bg, ...NIGHT_GRADIENT, c.surfaceRaised]}
         locations={[0, 0.2, 0.45, 0.72, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -324,7 +332,7 @@ const styles = StyleSheet.create({
   brandImage: {
     width: 160,
     height: 44,
-    tintColor: '#FFFFFF',
+    tintColor: c.fg,
     marginBottom: 14,
   },
   taglinePill: {
@@ -337,7 +345,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: c.fg,
     fontWeight: '600',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -354,7 +362,7 @@ const styles = StyleSheet.create({
   },
   ctaLabel: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: c.fg,
     textAlign: 'center',
     fontWeight: '500',
     lineHeight: 22,
@@ -393,7 +401,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   bannerText: {
-    color: '#FFFFFF',
+    color: c.fg,
     fontSize: 14,
     textAlign: 'center',
     fontWeight: '600',

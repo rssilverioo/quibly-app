@@ -1,6 +1,19 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
+import * as firebaseAuth from 'firebase/auth';
+import { initializeAuth, getAuth, type Persistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+/**
+ * `getReactNativePersistence` ships in the React Native build of
+ * `firebase/auth`, but the package's published type declarations describe the
+ * browser build and omit it. Reaching for it through the namespace keeps the
+ * runtime behaviour identical while staying type-safe.
+ */
+const getReactNativePersistence = (
+  firebaseAuth as unknown as {
+    getReactNativePersistence: (storage: unknown) => Persistence;
+  }
+).getReactNativePersistence;
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'YOUR_API_KEY',
