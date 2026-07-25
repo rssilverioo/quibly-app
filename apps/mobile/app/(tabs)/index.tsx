@@ -21,6 +21,7 @@ import LiveDot from '../../components/ui/LiveDot';
 import Avatar from '../../components/ui/Avatar';
 import { MascotBlock } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
+import { TAB_BAR_CLEARANCE } from './_layout';
 
 const SOURCE_ICON = { audio: Mic, document: FileText, photo: Camera } as const;
 
@@ -271,7 +272,7 @@ export default function LessonsScreen() {
           )}
 
           {/* Clears the absolute, glass tab bar. */}
-          <View style={{ height: 84 + space.xl }} />
+          <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
       </SafeAreaView>
 

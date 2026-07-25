@@ -12,6 +12,7 @@ import { useSessionStore } from '../../stores/session.store';
 import { listFlashcardSets } from '../../services/flashcards';
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius } from '../../theme';
+import { TAB_BAR_CLEARANCE } from './_layout';
 
 export default function StudyScreen() {
   const router = useRouter();
@@ -150,7 +151,7 @@ export default function StudyScreen() {
           )}
 
           {/* Clears the absolute, glass tab bar. */}
-          <View style={{ height: 84 + space.xl }} />
+          <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
       </SafeAreaView>
     </View>
