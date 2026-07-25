@@ -149,7 +149,8 @@ export default function StudyScreen() {
             </Animated.View>
           )}
 
-          <View style={{ height: space.xxxl }} />
+          {/* Clears the absolute, glass tab bar. */}
+          <View style={{ height: 84 + space.xl }} />
         </ScrollView>
       </SafeAreaView>
     </View>

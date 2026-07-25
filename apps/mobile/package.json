@@ -18,6 +18,7 @@
     "submit:ios": "eas submit --platform ios"
   },
   "dependencies": {
+    "@callstack/liquid-glass": "^0.8.0",
     "@expo-google-fonts/inter": "^0.2.3",
     "@quibly/shared": "file:../../packages/shared",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -33,6 +34,7 @@
     "expo-apple-authentication": "~8.0.8",
     "expo-application": "~7.0.8",
     "expo-audio": "~1.1.1",
+    "expo-blur": "~15.0.8",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
@@ -74,6 +76,7 @@
     "@types/react-native": "~0.73.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-preset-expo": "~54.0.12",
+    "eas-cli": "^21.2.0",
     "typescript": "^5.3.0"
   }
 }

@@ -8,30 +8,30 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		17C5AE1962F4E75E1BBC7994 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12B8E91820880BAC29BF26C /* ExpoModulesProvider.swift */; };
+		2D1A797CE28B4D8EF482E0AE /* libPods-Quibly.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 52F0A670678F353D9EF72C58 /* libPods-Quibly.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		4B833DB210B6885F5F302FFE /* libPods-Quibly.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EBCD6FC06DC07CCE186E6816 /* libPods-Quibly.a */; };
-		9C3551EC21F848ABB59B2409 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5BCA2EC06C544B92A2432764 /* GoogleService-Info.plist */; };
+		4E6255533C44459AE3499D15 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40CEBBC79E4C00D72DE2C005 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		E523723099038F3C1B4E26EC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 75F5928B854C30BA19540DF4 /* PrivacyInfo.xcprivacy */; };
+		D4011DB5F7674AA19414134C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A0DC3AC9B1A4CCC81BB7FF5 /* GoogleService-Info.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		FC6E1B2EBE0FE905E953F5AE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9F29152B97F28F6F75C63AC7 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* Quibly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Quibly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Quibly/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Quibly/Info.plist; sourceTree = "<group>"; };
-		42AFD6D491123079626B4CBD /* Pods-Quibly.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Quibly.debug.xcconfig"; path = "Target Support Files/Pods-Quibly/Pods-Quibly.debug.xcconfig"; sourceTree = "<group>"; };
-		5BCA2EC06C544B92A2432764 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Quibly/GoogleService-Info.plist"; sourceTree = "<group>"; };
-		75F5928B854C30BA19540DF4 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Quibly/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		A12B8E91820880BAC29BF26C /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Quibly/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		40CEBBC79E4C00D72DE2C005 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Quibly/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		52F0A670678F353D9EF72C58 /* libPods-Quibly.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Quibly.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A0DC3AC9B1A4CCC81BB7FF5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Quibly/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		9F29152B97F28F6F75C63AC7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Quibly/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Quibly/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		DEA0DA41F90C868648253AA6 /* Pods-Quibly.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Quibly.release.xcconfig"; path = "Target Support Files/Pods-Quibly/Pods-Quibly.release.xcconfig"; sourceTree = "<group>"; };
-		EBCD6FC06DC07CCE186E6816 /* libPods-Quibly.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Quibly.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D07C885CA6B782E84DBC4C32 /* Pods-Quibly.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Quibly.release.xcconfig"; path = "Target Support Files/Pods-Quibly/Pods-Quibly.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Quibly/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Quibly-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Quibly-Bridging-Header.h"; path = "Quibly/Quibly-Bridging-Header.h"; sourceTree = "<group>"; };
+		F2E768F079D0FEB1013DB950 /* Pods-Quibly.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Quibly.debug.xcconfig"; path = "Target Support Files/Pods-Quibly/Pods-Quibly.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,21 +39,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B833DB210B6885F5F302FFE /* libPods-Quibly.a in Frameworks */,
+				2D1A797CE28B4D8EF482E0AE /* libPods-Quibly.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		08080F5A9E3C1D5A92B46841 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				522B11B708C4CD868220AEDB /* Quibly */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
 		13B07FAE1A68108700A75B9A /* Quibly */ = {
 			isa = PBXGroup;
 			children = (
@@ -63,8 +55,8 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				5BCA2EC06C544B92A2432764 /* GoogleService-Info.plist */,
-				75F5928B854C30BA19540DF4 /* PrivacyInfo.xcprivacy */,
+				5A0DC3AC9B1A4CCC81BB7FF5 /* GoogleService-Info.plist */,
+				9F29152B97F28F6F75C63AC7 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Quibly;
 			sourceTree = "<group>";
@@ -73,17 +65,19 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				EBCD6FC06DC07CCE186E6816 /* libPods-Quibly.a */,
+				52F0A670678F353D9EF72C58 /* libPods-Quibly.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		522B11B708C4CD868220AEDB /* Quibly */ = {
+		7E733DECD38B9D3F2ED77FD9 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				A12B8E91820880BAC29BF26C /* ExpoModulesProvider.swift */,
+				F2E768F079D0FEB1013DB950 /* Pods-Quibly.debug.xcconfig */,
+				D07C885CA6B782E84DBC4C32 /* Pods-Quibly.release.xcconfig */,
 			);
-			name = Quibly;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -100,8 +94,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				FEAF67CCF517F3C87C0AF21A /* Pods */,
-				08080F5A9E3C1D5A92B46841 /* ExpoModulesProviders */,
+				7E733DECD38B9D3F2ED77FD9 /* Pods */,
+				8F6D6AB2D8A2EEB77B94F994 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -116,6 +110,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		8F6D6AB2D8A2EEB77B94F994 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				E11BE3D73161A48A8871761B /* Quibly */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -125,14 +127,12 @@
 			path = Quibly/Supporting;
 			sourceTree = "<group>";
 		};
-		FEAF67CCF517F3C87C0AF21A /* Pods */ = {
+		E11BE3D73161A48A8871761B /* Quibly */ = {
 			isa = PBXGroup;
 			children = (
-				42AFD6D491123079626B4CBD /* Pods-Quibly.debug.xcconfig */,
-				DEA0DA41F90C868648253AA6 /* Pods-Quibly.release.xcconfig */,
+				40CEBBC79E4C00D72DE2C005 /* ExpoModulesProvider.swift */,
 			);
-			name = Pods;
-			path = Pods;
+			name = Quibly;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -143,14 +143,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Quibly" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				594F3B99A13E6CB92C595DEF /* [Expo] Configure project */,
+				42E084C6F8DB709BECAD68DD /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				5A95A2345EE32AEB83F36560 /* [CP] Embed Pods Frameworks */,
-				7852A631C7DD608A98109356 /* [CP-User] [RNFB] Core Configuration */,
+				6C877F5F5DC2EAB670E26471 /* [CP] Embed Pods Frameworks */,
+				7A94E7AD234BE56DBDA0F39B /* [CP-User] [RNFB] Core Configuration */,
 			);
 			buildRules = (
 			);
@@ -202,8 +202,8 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				9C3551EC21F848ABB59B2409 /* GoogleService-Info.plist in Resources */,
-				E523723099038F3C1B4E26EC /* PrivacyInfo.xcprivacy in Resources */,
+				D4011DB5F7674AA19414134C /* GoogleService-Info.plist in Resources */,
+				FC6E1B2EBE0FE905E953F5AE /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,7 +249,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		594F3B99A13E6CB92C595DEF /* [Expo] Configure project */ = {
+		42E084C6F8DB709BECAD68DD /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -273,7 +273,7 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Quibly/expo-configure-project.sh\"\n";
 		};
-		5A95A2345EE32AEB83F36560 /* [CP] Embed Pods Frameworks */ = {
+		6C877F5F5DC2EAB670E26471 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -295,7 +295,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Quibly/Pods-Quibly-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		7852A631C7DD608A98109356 /* [CP-User] [RNFB] Core Configuration */ = {
+		7A94E7AD234BE56DBDA0F39B /* [CP-User] [RNFB] Core Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -382,7 +382,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				17C5AE1962F4E75E1BBC7994 /* ExpoModulesProvider.swift in Sources */,
+				4E6255533C44459AE3499D15 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -391,7 +391,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 42AFD6D491123079626B4CBD /* Pods-Quibly.debug.xcconfig */;
+			baseConfigurationReference = F2E768F079D0FEB1013DB950 /* Pods-Quibly.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -430,7 +430,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DEA0DA41F90C868648253AA6 /* Pods-Quibly.release.xcconfig */;
+			baseConfigurationReference = D07C885CA6B782E84DBC4C32 /* Pods-Quibly.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

@@ -1,6 +1,9 @@
 import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { Timer, Layers, User } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+
+import Glass from '../../components/ui/Glass';
 import { useTheme, text } from '../../theme';
 
 export default function TabsLayout() {
@@ -23,18 +26,20 @@ export default function TabsLayout() {
         headerShown: false,
         lazy: true,
         sceneStyle: { backgroundColor: c.bg },
+        // The bar must be see-through for the glass to have anything to
+        // refract; an opaque background would defeat the whole effect.
         tabBarStyle: {
-          backgroundColor: c.bg,
-          borderTopColor: c.border,
-          borderTopWidth: 1,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
           height: 84,
           paddingBottom: 22,
           paddingTop: 10,
-          // The old bar leaned on a shadow to separate from content. On a
-          // near-black ground a shadow is invisible — the hairline does it.
           elevation: 0,
-          shadowOpacity: 0,
         },
+        tabBarBackground: () => (
+          <Glass variant="chrome" cornerRadius={0} style={StyleSheet.absoluteFill} />
+        ),
         tabBarActiveTintColor: c.fg,
         tabBarInactiveTintColor: c.fgSubtle,
         tabBarLabelStyle: { ...text.caption, fontSize: 11 },

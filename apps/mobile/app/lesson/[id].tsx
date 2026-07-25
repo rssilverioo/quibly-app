@@ -13,6 +13,7 @@ import {
 } from 'lucide-react-native';
 
 import Press from '../../components/ui/Press';
+import Glass from '../../components/ui/Glass';
 import { Mascot } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
 import { track } from '../../lib/analytics';
@@ -146,15 +147,15 @@ export default function LessonScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Header: floats over the scrolling note, so it earns the glass. */}
+        <Glass variant="chrome" cornerRadius={0} style={styles.header}>
           <Press haptic={false} scale={0.9} onPress={() => router.back()} style={styles.iconBtn}>
             <ArrowLeft size={22} color={c.fgMuted} />
           </Press>
           <Press haptic="light" scale={0.9} onPress={confirmDelete} style={styles.iconBtn}>
             <Trash2 size={19} color={c.fgSubtle} />
           </Press>
-        </View>
+        </Glass>
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(320)}>
@@ -222,15 +223,16 @@ export default function LessonScreen() {
                   <Text style={{ ...t.overline, color: c.fgSubtle }}>{tr('keyPoints')}</Text>
                   <View style={{ gap: space.md, marginTop: space.md }}>
                     {lesson.key_points.map((point, i) => (
-                      <View
+                      <Glass
                         key={`${point.term}-${i}`}
-                        style={[styles.pointCard, { backgroundColor: c.surface, borderColor: c.border }]}
+                        variant="surface"
+                        style={[styles.pointCard, { borderColor: c.border }]}
                       >
                         <Text style={{ ...t.bodyStrong, color: c.fg }}>{point.term}</Text>
                         <Text style={{ ...t.label, color: c.fgMuted, marginTop: 4 }}>
                           {point.explanation}
                         </Text>
-                      </View>
+                      </Glass>
                     ))}
                   </View>
                 </Animated.View>

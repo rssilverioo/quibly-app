@@ -16,6 +16,7 @@ import { getLiveMembers, type LiveMember } from '../../services/leagues';
 
 import StreakCalendarModal from '../../components/StreakCalendarModal';
 import Press from '../../components/ui/Press';
+import Glass from '../../components/ui/Glass';
 import LiveDot from '../../components/ui/LiveDot';
 import Avatar from '../../components/ui/Avatar';
 import { MascotBlock } from '../../components/mascot';
@@ -180,12 +181,8 @@ export default function LessonsScreen() {
                   key={mode.key}
                   entering={FadeInDown.duration(300).delay(160 + i * 60)}
                 >
-                  <Press
-                    haptic="medium"
-                    scale={0.97}
-                    onPress={() => router.push('/lesson/capture')}
-                    style={[styles.modeCard, { backgroundColor: c.surface, borderColor: c.border }]}
-                  >
+                  <Press haptic="medium" scale={0.97} onPress={() => router.push('/lesson/capture')}>
+                    <Glass variant="surface" interactive style={[styles.modeCard, { borderColor: c.border }]}>
                     <View style={[styles.modeIcon, { backgroundColor: mode.tint + '22' }]}>
                       <mode.Icon size={19} color={mode.tint} strokeWidth={2.2} />
                     </View>
@@ -195,7 +192,8 @@ export default function LessonsScreen() {
                         {tr(mode.subKey)}
                       </Text>
                     </View>
-                    <ChevronRight size={17} color={c.fgSubtle} />
+                      <ChevronRight size={17} color={c.fgSubtle} />
+                    </Glass>
                   </Press>
                 </Animated.View>
               ))}
@@ -213,11 +211,8 @@ export default function LessonsScreen() {
                     key={lesson.id}
                     entering={FadeInDown.duration(300).delay(120 + Math.min(i, 6) * 40)}
                   >
-                    <Press
-                      scale={0.98}
-                      onPress={() => router.push(`/lesson/${lesson.id}`)}
-                      style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}
-                    >
+                    <Press scale={0.98} onPress={() => router.push(`/lesson/${lesson.id}`)}>
+                      <Glass variant="surface" style={[styles.card, { borderColor: c.border }]}>
                       <View style={styles.cardTop}>
                         <View style={[styles.cardIcon, { backgroundColor: c.surfaceRaised }]}>
                           {isFailed ? (
@@ -267,6 +262,7 @@ export default function LessonsScreen() {
                           )}
                         </View>
                       )}
+                      </Glass>
                     </Press>
                   </Animated.View>
                 );
@@ -274,7 +270,8 @@ export default function LessonsScreen() {
             </View>
           )}
 
-          <View style={{ height: space.xxxl }} />
+          {/* Clears the absolute, glass tab bar. */}
+          <View style={{ height: 84 + space.xl }} />
         </ScrollView>
       </SafeAreaView>
 

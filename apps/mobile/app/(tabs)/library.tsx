@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   segmentBtn: { flex: 1, paddingVertical: space.md, alignItems: 'center', borderRadius: radius.sm },
 
-  listContent: { paddingHorizontal: space.xl, paddingBottom: 40, gap: space.sm },
+  listContent: { paddingHorizontal: space.xl, paddingBottom: 84 + space.xl, gap: space.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   card: {
