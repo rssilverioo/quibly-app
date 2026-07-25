@@ -12,12 +12,13 @@ import { useSessionStore } from '../../stores/session.store';
 import { listFlashcardSets } from '../../services/flashcards';
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius } from '../../theme';
-import { TAB_BAR_CLEARANCE } from './_layout';
+import { useTabBarClearance } from './_layout';
 
 export default function StudyScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('home');
   const { c } = useTheme();
+  const tabBarClearance = useTabBarClearance();
   const { profile } = useAuth();
   const { isPaused, subjectName: pausedSubjectName } = useSessionStore();
 
@@ -150,8 +151,8 @@ export default function StudyScreen() {
             </Animated.View>
           )}
 
-          {/* Clears the absolute, glass tab bar. */}
-          <View style={{ height: TAB_BAR_CLEARANCE }} />
+          {/* The native tab bar floats over the content — leave room for it. */}
+          <View style={{ height: tabBarClearance }} />
         </ScrollView>
       </SafeAreaView>
     </View>

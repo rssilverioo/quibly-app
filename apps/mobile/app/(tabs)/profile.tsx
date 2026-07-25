@@ -20,6 +20,7 @@ import {
   Crown, Users, Award, GraduationCap, Skull, Shield, Lock, Pencil, Globe, Trash2,
 } from 'lucide-react-native';
 import i18n from '../../lib/i18n';
+import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
 import { getMyLeagues } from '../../services/leagues';
 import type { League } from '@quibly/shared';
@@ -45,6 +46,7 @@ const ACHIEVEMENT_ICONS: Record<string, any> = {
 
 export default function ProfileScreen() {
   const { t } = useTranslation('profile');
+  const tabBarClearance = useTabBarClearance();
   const { user, profile, refreshProfile, setProfile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [achievements, setAchievements] = useState<AchievementWithStatus[]>([]);
@@ -150,7 +152,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarClearance }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}>
 

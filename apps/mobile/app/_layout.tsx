@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -23,6 +23,13 @@ import { registerPushToken } from '../services/notifications';
 import { initRevenueCat } from '../services/iap';
 import '../lib/i18n';
 import { initAnalytics } from '../lib/analytics';
+
+// Raised by expo-router's own ErrorBoundary/Toast/Sitemap views, which still
+// use React Native's SafeAreaView. Every screen we own already imports it from
+// react-native-safe-area-context, so there is nothing here to act on — and a
+// permanent warning trains you to ignore the ones that matter.
+// Scoped to this single message on purpose: never ignoreAllLogs.
+LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
 SplashScreen.preventAutoHideAsync();
 

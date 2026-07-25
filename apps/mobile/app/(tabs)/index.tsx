@@ -21,7 +21,7 @@ import LiveDot from '../../components/ui/LiveDot';
 import Avatar from '../../components/ui/Avatar';
 import { MascotBlock } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
-import { TAB_BAR_CLEARANCE } from './_layout';
+import { useTabBarClearance } from './_layout';
 
 const SOURCE_ICON = { audio: Mic, document: FileText, photo: Camera } as const;
 
@@ -47,6 +47,7 @@ export default function LessonsScreen() {
   const router = useRouter();
   const { t: tr, i18n } = useTranslation('lessons');
   const { c } = useTheme();
+  const tabBarClearance = useTabBarClearance();
   const { user, profile, refreshProfile } = useAuth();
 
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
@@ -271,8 +272,8 @@ export default function LessonsScreen() {
             </View>
           )}
 
-          {/* Clears the absolute, glass tab bar. */}
-          <View style={{ height: TAB_BAR_CLEARANCE }} />
+          {/* The native tab bar floats over the content — leave room for it. */}
+          <View style={{ height: tabBarClearance }} />
         </ScrollView>
       </SafeAreaView>
 

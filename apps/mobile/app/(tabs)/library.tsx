@@ -16,7 +16,7 @@ import EmptyState from '../../components/common/EmptyState';
 import Press from '../../components/ui/Press';
 import { Mascot } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
-import { TAB_BAR_CLEARANCE } from './_layout';
+import { useTabBarClearance } from './_layout';
 
 type Tab = 'flashcards' | 'quizzes';
 
@@ -24,6 +24,7 @@ export default function LibraryScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('library');
   const { c } = useTheme();
+  const tabBarClearance = useTabBarClearance();
 
   const [activeTab, setActiveTab] = useState<Tab>('flashcards');
   const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
@@ -151,7 +152,7 @@ export default function LibraryScreen() {
             data={activeTab === 'flashcards' ? flashcardSets : quizzes}
             keyExtractor={(item) => item.id}
             renderItem={renderItem(activeTab)}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: tabBarClearance }]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.fgMuted} />
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
   segmentBtn: { flex: 1, paddingVertical: space.md, alignItems: 'center', borderRadius: radius.sm },
 
-  listContent: { paddingHorizontal: space.xl, paddingBottom: TAB_BAR_CLEARANCE, gap: space.sm },
+  listContent: { paddingHorizontal: space.xl, gap: space.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   card: {

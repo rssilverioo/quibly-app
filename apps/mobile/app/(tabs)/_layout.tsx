@@ -1,82 +1,83 @@
-import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Timer, Layers, User } from 'lucide-react-native';
+import { Platform } from 'react-native';
+import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Glass from '../../components/ui/Glass';
-import { useTheme, text, space } from '../../theme';
+import { useTheme, space } from '../../theme';
 
 /**
- * Geometry of the floating bar. iOS 26 tab bars are a capsule inset from the
- * edges, not a full-bleed strip pinned to the bottom — that shape is most of
- * what makes the glass read as glass, because content is visible around it as
- * well as through it.
+ * The tab bar is a real UIKit `UITabBar`, not a React view.
+ *
+ * A previous version drew the bar in JS and put glass views on top of it. That
+ * cannot reach what iOS 26 does: the system glass refracts what scrolls behind
+ * it, and the bar shrinks to a pill as you scroll down, with physics. Neither
+ * is reproducible from JS — and the JS bar also swallowed taps, because a
+ * floating absolute view is not where UIKit expects a tab bar to be.
+ *
+ * Handing the bar back to the system gets both effects for free, plus the
+ * platform's own hit-testing, accessibility and scroll-to-top behaviour.
+ * On Android this renders the Material bottom bar.
  */
-export const TAB_BAR = {
-  height: 64,
-  inset: 16,
-  /** Gap between the capsule and the safe-area edge. */
-  lift: 10,
-};
-
-/** What a screen must leave clear at the bottom so the bar covers nothing. */
-export const TAB_BAR_CLEARANCE = TAB_BAR.height + TAB_BAR.lift + space.xl;
-
 export default function TabsLayout() {
   const { t: tr } = useTranslation();
   const { c } = useTheme();
-  const insets = useSafeAreaInsets();
-
-  const icon =
-    (Icon: typeof Timer) =>
-    ({ focused }: { focused: boolean }) => (
-      <Icon
-        size={22}
-        color={focused ? c.fg : c.fgSubtle}
-        strokeWidth={focused ? 2.4 : 1.9}
-      />
-    );
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        lazy: true,
-        sceneStyle: { backgroundColor: c.bg },
-        tabBarStyle: {
-          position: 'absolute',
-          left: TAB_BAR.inset,
-          right: TAB_BAR.inset,
-          bottom: insets.bottom + TAB_BAR.lift,
-          height: TAB_BAR.height,
-          borderRadius: TAB_BAR.height / 2,
-          // The capsule's fill is the Glass view behind it; anything opaque
-          // here would sit on top of the effect and flatten it.
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          elevation: 0,
-          paddingTop: 8,
-          paddingBottom: 8,
-        },
-        tabBarItemStyle: { height: TAB_BAR.height - 16 },
-        tabBarBackground: () => (
-          <Glass
-            variant="chrome"
-            cornerRadius={TAB_BAR.height / 2}
-            style={StyleSheet.absoluteFill}
-          />
-        ),
-        tabBarActiveTintColor: c.fg,
-        tabBarInactiveTintColor: c.fgSubtle,
-        tabBarLabelStyle: { ...text.caption, fontSize: 10, marginTop: 2 },
+    <NativeTabs
+      // Shrinks the bar into a floating pill on scroll-down and restores it on
+      // scroll-up — the Instagram/WhatsApp behaviour. iOS 26 only; older
+      // versions ignore it and keep a normal bar.
+      minimizeBehavior="onScrollDown"
+      tintColor={c.accent}
+      iconColor={{ default: c.fgSubtle, selected: c.accent }}
+      // Given as a pair rather than one style: a flat `color` would apply to
+      // the selected item too and cancel the tint.
+      labelStyle={{
+        default: { color: c.fgSubtle },
+        selected: { color: c.accent },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: tr('tabs.lessons', { defaultValue: 'Aulas' }), tabBarIcon: icon(Layers) }} />
-      <Tabs.Screen name="study" options={{ title: tr('tabs.study', { defaultValue: 'Estudar' }), tabBarIcon: icon(Timer) }} />
-      <Tabs.Screen name="profile" options={{ title: tr('tabs.profile'), tabBarIcon: icon(User) }} />
+      <NativeTabs.Trigger name="index">
+        <Icon sf={{ default: 'square.stack', selected: 'square.stack.fill' }} />
+        <Label>{tr('tabs.lessons', { defaultValue: 'Aulas' })}</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="study">
+        <Icon sf="timer" />
+        <Label>{tr('tabs.study', { defaultValue: 'Estudar' })}</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
+        <Label>{tr('tabs.profile')}</Label>
+      </NativeTabs.Trigger>
+
       {/* Reachable via "see all" from Estudar — one tab less to scan. */}
-      <Tabs.Screen name="library" options={{ href: null }} />
-    </Tabs>
+      <NativeTabs.Trigger name="library" hidden />
+    </NativeTabs>
   );
+}
+
+/**
+ * How much the tab bar covers above the home-indicator inset.
+ *
+ * The bar floats over the content and — measured, not assumed — UIKit does not
+ * add its height to the safe-area inset that `react-native-safe-area-context`
+ * reports: that stays at the home indicator's 34pt. Neither expo-router nor
+ * react-native-screens exposes the height either, so it has to be a constant.
+ *
+ * Taken from a screenshot on an iPhone 17 Pro / iOS 26.5: the bar's top edge
+ * sits 83pt above the bottom of the screen, and 83 − 34 is the 49pt a UITabBar
+ * has measured for as long as it has existed.
+ */
+const TAB_BAR_HEIGHT = Platform.select({
+  ios: 49,
+  // Material 3's navigation bar, from the spec — this app ships iOS only, so
+  // re-measure the way the iOS value was before trusting it.
+  default: 80,
+});
+
+/** Bottom space a screen must leave so the tab bar covers nothing. */
+export function useTabBarClearance(): number {
+  return useSafeAreaInsets().bottom + TAB_BAR_HEIGHT + space.lg;
 }
