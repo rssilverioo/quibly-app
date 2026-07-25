@@ -11,7 +11,7 @@ ALTER TABLE "flashcard_sets" ADD COLUMN     "lesson_id" UUID;
 ALTER TABLE "quizzes" ADD COLUMN     "lesson_id" UUID;
 
 -- CreateTable
-CREATE TABLE "lessons" (
+CREATE TABLE "captured_lessons" (
     "id" UUID NOT NULL,
     "user_id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -30,14 +30,14 @@ CREATE TABLE "lessons" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "processed_at" TIMESTAMPTZ,
 
-    CONSTRAINT "lessons_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "captured_lessons_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE INDEX "lessons_user_id_created_at_idx" ON "lessons"("user_id", "created_at" DESC);
+CREATE INDEX "captured_lessons_user_id_created_at_idx" ON "captured_lessons"("user_id", "created_at" DESC);
 
 -- CreateIndex
-CREATE INDEX "lessons_document_id_idx" ON "lessons"("document_id");
+CREATE INDEX "captured_lessons_document_id_idx" ON "captured_lessons"("document_id");
 
 -- CreateIndex
 CREATE INDEX "flashcard_sets_lesson_id_idx" ON "flashcard_sets"("lesson_id");
@@ -46,14 +46,14 @@ CREATE INDEX "flashcard_sets_lesson_id_idx" ON "flashcard_sets"("lesson_id");
 CREATE INDEX "quizzes_lesson_id_idx" ON "quizzes"("lesson_id");
 
 -- AddForeignKey
-ALTER TABLE "lessons" ADD CONSTRAINT "lessons_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "captured_lessons" ADD CONSTRAINT "captured_lessons_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "lessons" ADD CONSTRAINT "lessons_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "captured_lessons" ADD CONSTRAINT "captured_lessons_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "flashcard_sets" ADD CONSTRAINT "flashcard_sets_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "lessons"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "flashcard_sets" ADD CONSTRAINT "flashcard_sets_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "captured_lessons"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "quizzes" ADD CONSTRAINT "quizzes_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "lessons"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "quizzes" ADD CONSTRAINT "quizzes_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "captured_lessons"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

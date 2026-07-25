@@ -463,7 +463,9 @@ model Lesson {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([documentId])
-  @@map("lessons")
+  // Not "lessons": that name belongs to another product's table in the shared
+  // production database, and it has dependents.
+  @@map("captured_lessons")
 }
 
 model FlashcardSet {
