@@ -100,7 +100,8 @@
       ],
       "expo-audio",
       "./plugins/withFirebaseModularHeaders",
-      "./plugins/withLiveActivity"
+      "./plugins/withLiveActivity",
+      "./plugins/withResourceBundleSigning"
     ],
     "experiments": {
       "typedRoutes": true
