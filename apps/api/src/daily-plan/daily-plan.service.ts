@@ -195,7 +195,7 @@ Return JSON: { "tasks": [ { "id": "1", "type": "...", "title": "...", "descripti
 
     // Pomodoro
     tasks.push({
-      id: String(id++),
+      id: String(id),
       type: 'pomodoro',
       title: 'Focus session',
       description: `${Math.min(minutes, 25)} min focused study`,
@@ -205,7 +205,7 @@ Return JSON: { "tasks": [ { "id": "1", "type": "...", "title": "...", "descripti
     return tasks;
   }
 
-  private newUserTasks(subjects: string[], minutes: number): DailyTask[] {
+  private newUserTasks(subjects: string[], _minutes: number): DailyTask[] {
     const tasks: DailyTask[] = [];
     let id = 1;
 
@@ -229,7 +229,7 @@ Return JSON: { "tasks": [ { "id": "1", "type": "...", "title": "...", "descripti
     });
 
     tasks.push({
-      id: String(id++),
+      id: String(id),
       type: 'pomodoro',
       title: 'First study session',
       description: 'Start a 25-minute focus session',

@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same PR/branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  # `prisma validate` only needs the env var to exist to resolve the
+  # datasource URL — it does not open a connection. No real DB in CI.
+  DATABASE_URL: 'postgresql://user:pass@localhost:5432/quibly'
+
+jobs:
+  # ── apps/api + packages/shared ────────────────────────────────────────
+  # This is the blocking gate for Fase 0 / Bloco 1: lint, typecheck, test,
+  # and `prisma validate` must all be green before a PR touching the
+  # backend or the shared package can merge.
+  backend:
+    name: api + shared (lint, typecheck, test, prisma validate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies (whole workspace — npm workspaces requires a root install)
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Build @quibly/shared
+        run: npm run build --workspace=packages/shared
+
+      - name: Lint — packages/shared
+        run: npm run lint --workspace=packages/shared
+
+      - name: Lint — apps/api
+        run: npm run lint:ci --workspace=apps/api
+
+      - name: Typecheck — packages/shared
+        run: npm run typecheck --workspace=packages/shared
+
+      - name: Typecheck — apps/api
+        run: npm run typecheck --workspace=apps/api
+
+      - name: Test — packages/shared (vitest)
+        run: npm run test --workspace=packages/shared
+
+      - name: Test — apps/api (jest)
+        run: npm run test --workspace=apps/api
+
+      - name: prisma validate
+        run: npx prisma validate --schema=apps/api/prisma/schema.prisma
+
+  # ── apps/web + apps/mobile ──────────────────────────────────────────────
+  # Informational only, on purpose: as of Fase 0 neither app has a working
+  # lint setup (apps/web's `next lint` has no eslint config/deps installed;
+  # apps/mobile has no lint or typecheck script at all yet). That's a
+  # pre-existing gap outside apps/api/packages/shared, owned by the
+  # mobile/web squads — see the Fase 0 handoff report. This job surfaces
+  # status without blocking merges until they wire it up; flip
+  # `continue-on-error` off once it's green.
+  web-mobile:
+    name: web + mobile (lint — informational until fixed)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: turbo run lint (web, mobile)
+        run: npx turbo run lint --filter=@quibly/web --filter=@quibly/mobile

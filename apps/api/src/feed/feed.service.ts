@@ -82,7 +82,7 @@ export class FeedService {
         }
       }
 
-      const { reactions, ...postWithoutReactions } = post;
+      const { reactions: _reactions, ...postWithoutReactions } = post;
       return {
         ...postWithoutReactions,
         user: {

@@ -12,6 +12,8 @@ export class ImageSearchService {
     // TODO: Enable when Google Custom Search billing is configured or Unsplash is integrated
     return null;
 
+    // Real implementation below, kept for when the TODO above is resolved.
+    // eslint-disable-next-line no-unreachable
     try {
       const apiKey = this.configService.get<string>('GOOGLE_API_KEY', '');
       const cseId = this.configService.get<string>('GOOGLE_CSE_ID', '');
