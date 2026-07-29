@@ -71,5 +71,16 @@
     "grantPermission": "Conceder Permissão",
     "retake": "Tirar Novamente",
     "submit": "Enviar"
+  },
+  "milestone": {
+    "focused": "Sentando",
+    "reading": "No material",
+    "working": "Fundo nisso",
+    "cool": "No ritmo",
+    "streak": "Uma hora",
+    "star": "Uma hora e meia",
+    "medal": "Duas horas",
+    "crowned": "Três horas e contando",
+    "toNext": "{{minutes}} min para o próximo"
   }
 }

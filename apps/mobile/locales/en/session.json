@@ -71,5 +71,16 @@
     "grantPermission": "Grant Permission",
     "retake": "Retake",
     "submit": "Submit"
+  },
+  "milestone": {
+    "focused": "Settling in",
+    "reading": "In the material",
+    "working": "Deep in it",
+    "cool": "Hitting stride",
+    "streak": "One hour in",
+    "star": "Ninety minutes",
+    "medal": "Two hours",
+    "crowned": "Three hours and counting",
+    "toNext": "{{minutes}} min to the next"
   }
 }

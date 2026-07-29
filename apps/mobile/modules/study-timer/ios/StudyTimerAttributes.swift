@@ -45,6 +45,21 @@ public struct StudyTimerAttributes: ActivityAttributes {
       self.baseElapsedSeconds = baseElapsedSeconds
       self.isRunning = isRunning
     }
+
+    /**
+     Minutos decorridos, para escolher o marco do mascote.
+
+     Enquanto corre, extrapola a partir de `startedAt` — o widget não recebe
+     atualização a cada minuto, então o marco precisa ser derivável do estado
+     que ele já tem. É a única contagem feita fora do servidor em todo o
+     sistema, e ela só escolhe um desenho: nada de tempo creditado depende
+     dela.
+     */
+    public var totalMinutes: Int {
+      guard isRunning else { return baseElapsedSeconds / 60 }
+      let since = Int(Date().timeIntervalSince(startedAt))
+      return (baseElapsedSeconds + max(0, since)) / 60
+    }
   }
 
   public var subjectName: String

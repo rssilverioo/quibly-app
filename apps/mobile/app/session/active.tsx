@@ -15,6 +15,7 @@ import { Mascot } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
 import { track } from '../../lib/analytics';
 import { onLiveTimerAction } from '../../services/study-timer';
+import { mascotForSession, milestoneForMinutes, minutesToNextMilestone } from '@quibly/shared';
 
 const { width: SW } = Dimensions.get('window');
 const TIMER_SIZE = Math.min(SW * 0.72, 300);
@@ -77,6 +78,14 @@ export default function ActiveSessionScreen() {
   // Work is the accent; break drops to muted so the two phases are legible
   // at a glance from across a desk.
   const activeColor = phase === 'work' ? c.accent : c.fgMuted;
+
+  // The mascot climbs a ladder as the session runs — see
+  // packages/shared/src/session-milestones.ts. Driven by *credited* minutes
+  // (the server's number), not by the phase countdown, so it reflects real
+  // study time rather than where you are inside one pomodoro block.
+  const creditedMinutes = Math.floor(displayedElapsedSeconds() / 60);
+  const milestone = milestoneForMinutes(creditedMinutes);
+  const toNext = minutesToNextMilestone(creditedMinutes);
 
   // Coming back to the foreground is exactly when the local picture is most
   // likely to be stale, so ask the server rather than extrapolating. The old
@@ -225,7 +234,7 @@ export default function ActiveSessionScreen() {
             break. It's the one screen people stare at for 25 minutes. */}
         <View style={styles.timerTextWrap}>
           <Mascot
-            state={phase === 'work' ? 'focused' : 'break'}
+            state={mascotForSession(creditedMinutes, isRunning && phase === 'work')}
             size={92}
             animate={isRunning}
           />
@@ -248,6 +257,18 @@ export default function ActiveSessionScreen() {
           <Text style={{ ...t.label, color: c.fgMuted }}>{subjectName}</Text>
         </View>
       )}
+
+      {/* The rung, and how far the next one is. The countdown is the point:
+          "13 min para o próximo" lands exactly when someone is deciding
+          whether to stop, which is the only moment it can change anything. */}
+      <View style={styles.milestoneRow}>
+        <Text style={{ ...t.label, color: c.accent }}>{tr(milestone.labelKey)}</Text>
+        {toNext !== null && isRunning && (
+          <Text style={{ ...t.caption, color: c.fgSubtle }}>
+            {tr('milestone.toNext', { minutes: toNext })}
+          </Text>
+        )}
+      </View>
 
       {/* Cycle dots are meaningless without a target duration. */}
       {!isStopwatch && (
@@ -321,6 +342,7 @@ const styles = StyleSheet.create({
   timerTextWrap: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
 
   subjectRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  milestoneRow: { alignItems: 'center', gap: 2, marginTop: space.sm },
   subjectDot: { width: 8, height: 8, borderRadius: 4 },
 
   dotsRow: { flexDirection: 'row', gap: space.sm, marginTop: space.lg, marginBottom: space.xxl },
