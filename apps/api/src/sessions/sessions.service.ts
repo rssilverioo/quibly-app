@@ -366,12 +366,42 @@ export class SessionsService {
    * Close a session because the user asked. The duration is measured here and
    * nowhere else — see docs/API-SESSIONS.md §3.
    */
-  async endSession(userId: string, sessionId: string) {
-    return this.finalizeSession(userId, sessionId, {
+  async endSession(userId: string, sessionId: string, topicIds: string[] = []) {
+    const result = await this.finalizeSession(userId, sessionId, {
       endAt: new Date(),
       status: 'completed',
       endReason: 'user',
     });
+
+    if (topicIds.length > 0) {
+      await this.tagTopics(sessionId, topicIds);
+    }
+
+    return result;
+  }
+
+  /**
+   * Grava o que o usuário marcou ter estudado.
+   *
+   * Isto é a razão de o tagging começar na Fase 1 e não na Fase 6: sem
+   * histórico, o gerador de plano nasce cego e precisa de um backfill de dados
+   * que ninguém guardou (ARCHITECTURE.md §2, "regra inegociável").
+   *
+   * Nunca lança. Um tópico inválido — currículo reseedado, cliente velho — não
+   * pode desfazer o encerramento de uma sessão que já foi pontuada e creditada.
+   * Perder a tag é ruim; perder as três horas de estudo é inaceitável.
+   */
+  private async tagTopics(sessionId: string, topicIds: string[]): Promise<void> {
+    try {
+      await this.prisma.sessionTopic.createMany({
+        data: [...new Set(topicIds)].map((topicId) => ({ sessionId, topicId })),
+        skipDuplicates: true,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to tag topics on session ${sessionId}: ${err instanceof Error ? err.message : err}`,
+      );
+    }
   }
 
   /**

@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
 
 /**
  * Body of `POST /sessions/:id/end` — intentionally empty.
@@ -8,7 +8,21 @@ import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
  * pauses, and the pomodoro cycle count is derived from that duration. Nothing
  * the client could say about time is believed.
  */
-export class EndSessionDto {}
+export class EndSessionDto {
+  /**
+   * O que o usuário marcou ter estudado. Opcional: ninguém preenche formulário
+   * depois de três horas de estudo, e forçar isso faria as pessoas pararem de
+   * encerrar sessões — o que custaria muito mais do que a tag vale.
+   *
+   * O teto de 20 é sanidade, não regra de produto: uma sessão que tocou vinte
+   * tópicos não está dizendo nada útil sobre nenhum deles.
+   */
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayMaxSize(20)
+  @IsOptional()
+  topic_ids?: string[];
+}
 
 /**
  * Body of the deprecated `POST /sessions/end`.

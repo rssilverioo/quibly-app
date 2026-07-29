@@ -34,6 +34,7 @@ import { DailyPlanModule } from './daily-plan/daily-plan.module';
 import { FocusAreasModule } from './focus-areas/focus-areas.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { AiRouterModule } from './ai-router/ai-router.module';
+import { CurriculumModule } from './curriculum/curriculum.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AiRouterModule } from './ai-router/ai-router.module';
     StorageModule,
     EntitlementsModule,
     AiRouterModule,
+    CurriculumModule,
     GeminiModule,
     ImageSearchModule,
     AuthModule,

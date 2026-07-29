@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 import { StartSessionDto } from './dto/start-session.dto';
-import { LegacyEndSessionDto } from './dto/end-session.dto';
+import { EndSessionDto, LegacyEndSessionDto } from './dto/end-session.dto';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -52,10 +52,17 @@ export class SessionsController {
     return this.sessionsService.resumeSession(user.userId, id);
   }
 
-  /** Finish and score. Body is empty — the server owns every number. */
+  /**
+   * Finish and score. The only thing the body may carry is which topics were
+   * studied — every number still comes from the server.
+   */
   @Post(':id/end')
-  endSession(@CurrentUser() user: AuthedUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.sessionsService.endSession(user.userId, id);
+  endSession(
+    @CurrentUser() user: AuthedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EndSessionDto,
+  ) {
+    return this.sessionsService.endSession(user.userId, id, dto.topic_ids ?? []);
   }
 
   /** Throw the session away. Scores nothing, unlike `end`. */
