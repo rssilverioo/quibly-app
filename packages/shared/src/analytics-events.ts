@@ -96,10 +96,35 @@ export interface AnalyticsEventProps {
   // ── Hábito ───────────────────────────────────────────────────────────────
   session_started: { timer_mode: string; work_minutes: number };
   /** [SERVER] Duration, points and verification are computed server-side. */
-  session_completed: { minutes: number; points_earned: number; xp_earned: number; is_verified: boolean };
-  /** [SERVER] `implicit_restart` = a stale active session got superseded by
-   *  a new one server-side; `explicit` = the user tapped "end" early. */
-  session_abandoned: { reason: 'explicit' | 'implicit_restart' };
+  session_completed: {
+    minutes: number;
+    points_earned: number;
+    xp_earned: number;
+    is_verified: boolean;
+    /** Since Fase 1: `stopwatch` is a mode, and how much it gets used decides whether the fixed pomodoro stays the default. */
+    timer_mode?: string;
+  };
+  /**
+   * [SERVER] Why a session ended without the user finishing it:
+   *
+   * - `explicit` — the user tapped "discard". Scores nothing.
+   * - `abandoned_no_heartbeat` — the heartbeat went quiet past the grace
+   *   window and the sweeper closed it. Still scored, credited up to the last
+   *   beat. The rate of this is the metric that tells us whether the Fase 1
+   *   mobile work (Live Activity / Foreground Service) actually fixed the
+   *   "timer dies with the app" bug — watch it fall after that ships.
+   * - `implicit_restart` — retired in Fase 1. Starting a second session now
+   *   returns 409 instead of silently killing the first. Kept in the union so
+   *   historical rows still typecheck.
+   */
+  session_abandoned: {
+    reason: 'explicit' | 'implicit_restart' | 'abandoned_no_heartbeat';
+    minutes?: number;
+    points_earned?: number;
+    xp_earned?: number;
+    is_verified?: boolean;
+    timer_mode?: string;
+  };
   /** [SERVER] Fired from the same code path that mutates `currentStreak`. */
   streak_extended: { days: number };
   /** [SERVER] */

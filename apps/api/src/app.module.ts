@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { StorageModule } from './storage/storage.module';
@@ -50,6 +51,9 @@ import { AiRouterModule } from './ai-router/ai-router.module';
         limit: 200,
       },
     ]),
+    // Runs the stale-session sweeper (sessions/sessions.sweeper.ts). No other
+    // cron lives here yet.
+    ScheduleModule.forRoot(),
     PrismaModule,
     FirebaseModule,
     StorageModule,
