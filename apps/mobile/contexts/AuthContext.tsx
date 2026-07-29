@@ -4,6 +4,7 @@ import { auth } from '../lib/firebase';
 import { getProfile, ensureProfile } from '../services/auth';
 import type { Profile } from '@quibly/shared';
 import { identify, setAnalyticsContext, setUserProperties } from '../lib/analytics';
+import { identifyForSentry } from '../lib/sentry';
 
 interface AuthContextType {
   user: User | null;
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       identify(firebaseUser?.uid ?? null);
+      identifyForSentry(firebaseUser?.uid ?? null);
       if (firebaseUser) {
         try {
           let p = await fetchProfile();

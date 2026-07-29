@@ -15,6 +15,7 @@ import { track } from '../../lib/analytics';
 import { useUsage } from '../../hooks/useUsage';
 import { useIAP } from '../../hooks/useIAP';
 import i18n from '../../lib/i18n';
+import { captureException } from '../../lib/sentry';
 
 type Billing = 'monthly' | 'yearly';
 
@@ -59,6 +60,9 @@ export default function PricingScreen() {
     } catch (err: any) {
       if (err?.userCancelled || err?.message?.includes('canceled')) return;
       console.error('[Pricing] error:', err?.message ?? err);
+      // A failed purchase is the one error in this app with direct revenue
+      // impact — worth its own report, not just a log line nobody reads.
+      captureException(err, { where: 'purchase', billing });
       track('purchase_failed', { selected_plan: billing, reason: err?.message ?? 'unknown' });
       Alert.alert(t('common:error'), err?.message ?? 'Purchase failed');
     }
@@ -76,6 +80,7 @@ export default function PricingScreen() {
         Alert.alert(t('restoreEmpty'));
       }
     } catch (err: any) {
+      captureException(err, { where: 'restorePurchases' });
       Alert.alert(t('common:error'), err?.message ?? 'Restore failed');
     } finally {
       setRestoring(false);

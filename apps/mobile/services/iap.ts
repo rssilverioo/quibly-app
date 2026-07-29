@@ -3,6 +3,7 @@ import Purchases, {
   type PurchasesPackage,
   type CustomerInfo,
 } from 'react-native-purchases';
+import { captureException } from '../lib/sentry';
 
 const REVENUECAT_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '';
 const REVENUECAT_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID ?? '';
@@ -27,6 +28,7 @@ export async function getOfferings(): Promise<PurchasesOfferings | null> {
     return offerings;
   } catch (err) {
     console.warn('[RevenueCat] getOfferings error:', err);
+    captureException(err, { where: 'RevenueCat.getOfferings' });
     return null;
   }
 }
