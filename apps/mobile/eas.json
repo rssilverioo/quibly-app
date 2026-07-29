@@ -27,12 +27,13 @@
     "device": {
       "extends": "development",
       "developmentClient": false,
-      "distribution": "internal",
-      "ios": {
-        "simulator": false
-      },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "distribution": "internal"
+      },
+      "ios": {
+        "simulator": false,
+        "distribution": "store"
       }
     },
     "preview": {
