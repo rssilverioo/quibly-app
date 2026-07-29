@@ -2,18 +2,25 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
-interface GeneratedFlashcard {
+export interface GeneratedFlashcard {
   front: string;
   back: string;
   explain: string;
   imageQuery: string;
 }
 
-interface GeneratedQuestion {
+export interface GeneratedQuestion {
   question: string;
   options: string[];
   correctIndex: number;
   imageQuery: string;
+}
+
+/** Result of any *WithUsage call — real provider token counts, for AiRouter's ledger. */
+export interface WithUsage<T> {
+  result: T;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export type AudioScriptSegmentType =
@@ -66,6 +73,17 @@ export class GeminiService {
   }
 
   async chatJSON<T>(prompt: string): Promise<T> {
+    const { result } = await this.chatJSONWithUsage<T>(prompt);
+    return result;
+  }
+
+  /**
+   * Same call as `chatJSON`, but also surfaces the provider's real token
+   * counts — `chatJSON` stays the thin, back-compat wrapper every existing
+   * caller keeps using unchanged. `AiRouter` calls this directly so the AI
+   * cost ledger records actual tokens instead of a heuristic estimate.
+   */
+  async chatJSONWithUsage<T>(prompt: string): Promise<WithUsage<T>> {
     const client = this.getClient();
     const response = await client.chat.completions.create({
       model: MODEL,
@@ -79,7 +97,11 @@ export class GeminiService {
 
     const text = response.choices[0]?.message?.content ?? '';
     this.logger.log(`AI response length: ${text.length} chars`);
-    return JSON.parse(text) as T;
+    return {
+      result: JSON.parse(text) as T,
+      inputTokens: response.usage?.prompt_tokens ?? 0,
+      outputTokens: response.usage?.completion_tokens ?? 0,
+    };
   }
 
   /**
@@ -94,6 +116,14 @@ export class GeminiService {
     rawText: string,
     language = 'pt-BR',
   ): Promise<StructuredLesson> {
+    const { result } = await this.structureLessonWithUsage(rawText, language);
+    return result;
+  }
+
+  async structureLessonWithUsage(
+    rawText: string,
+    language = 'pt-BR',
+  ): Promise<WithUsage<StructuredLesson>> {
     const content = rawText.slice(0, 50000);
     this.logger.log(`Structuring lesson from ${content.length} chars, language=${language}`);
 
@@ -113,12 +143,16 @@ Return JSON: { "title": "...", "summary": "...", "keyPoints": [{ "term": "...", 
 Capture:
 ${content}`;
 
-    const result = await this.chatJSON<StructuredLesson>(prompt);
+    const { result, inputTokens, outputTokens } = await this.chatJSONWithUsage<StructuredLesson>(prompt);
     return {
-      title: result.title?.trim() || 'Aula sem título',
-      summary: result.summary?.trim() || '',
-      keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints : [],
-      openQuestions: Array.isArray(result.openQuestions) ? result.openQuestions : [],
+      result: {
+        title: result.title?.trim() || 'Aula sem título',
+        summary: result.summary?.trim() || '',
+        keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints : [],
+        openQuestions: Array.isArray(result.openQuestions) ? result.openQuestions : [],
+      },
+      inputTokens,
+      outputTokens,
     };
   }
 
@@ -126,6 +160,14 @@ ${content}`;
     content: string,
     language = 'en',
   ): Promise<GeneratedFlashcard[]> {
+    const { result } = await this.generateFlashcardsWithUsage(content, language);
+    return result;
+  }
+
+  async generateFlashcardsWithUsage(
+    content: string,
+    language = 'en',
+  ): Promise<WithUsage<GeneratedFlashcard[]>> {
     const textContent = content.slice(0, 50000);
     this.logger.log(`Generating flashcards from ${textContent.length} chars, language=${language}`);
 
@@ -147,16 +189,24 @@ Return a JSON object with shape: { "flashcards": [ { "front": "...", "back": "..
 Content to study:
 ${textContent}`;
 
-    const result = await this.chatJSON<{ flashcards: GeneratedFlashcard[] }>(prompt);
+    const { result, inputTokens, outputTokens } = await this.chatJSONWithUsage<{ flashcards: GeneratedFlashcard[] }>(prompt);
     const flashcards = result.flashcards ?? [];
     this.logger.log(`Generated ${flashcards.length} flashcards`);
-    return flashcards;
+    return { result: flashcards, inputTokens, outputTokens };
   }
 
   async generateQuiz(
     content: string,
     language = 'en',
   ): Promise<GeneratedQuestion[]> {
+    const { result } = await this.generateQuizWithUsage(content, language);
+    return result;
+  }
+
+  async generateQuizWithUsage(
+    content: string,
+    language = 'en',
+  ): Promise<WithUsage<GeneratedQuestion[]>> {
     const textContent = content.slice(0, 50000);
     this.logger.log(`Generating quiz from ${textContent.length} chars, language=${language}`);
 
@@ -179,12 +229,12 @@ Return a JSON object with shape: { "questions": [ { "question": "...", "options"
 Content to quiz on:
 ${textContent}`;
 
-    const result = await this.chatJSON<{ questions: GeneratedQuestion[] }>(prompt);
+    const { result, inputTokens, outputTokens } = await this.chatJSONWithUsage<{ questions: GeneratedQuestion[] }>(prompt);
     const questions = result.questions ?? [];
     this.logger.log(`Generated ${questions.length} questions, pre-shuffle distribution: ${JSON.stringify(this.getDistribution(questions))}`);
     const shuffled = this.shuffleAnswers(questions);
     this.logger.log(`Post-shuffle distribution: ${JSON.stringify(this.getDistribution(shuffled))}`);
-    return shuffled;
+    return { result: shuffled, inputTokens, outputTokens };
   }
 
   private shuffleAnswers(questions: GeneratedQuestion[]): GeneratedQuestion[] {
@@ -220,6 +270,16 @@ ${textContent}`;
     language = 'en',
     userName?: string,
   ): Promise<AudioScriptSegment[]> {
+    const { result } = await this.planAudioScriptWithUsage(flashcards, durationMinutes, language, userName);
+    return result;
+  }
+
+  async planAudioScriptWithUsage(
+    flashcards: AudioScriptFlashcardInput[],
+    durationMinutes: number,
+    language = 'en',
+    userName?: string,
+  ): Promise<WithUsage<AudioScriptSegment[]>> {
     this.logger.log(`Planning audio script: ${flashcards.length} cards, ${durationMinutes}min, lang=${language}`);
 
     const cardsPreview = flashcards
@@ -251,14 +311,14 @@ ${cardsPreview}
 
 Return a JSON object with shape: { "segments": [ ... ] }`;
 
-    const result = await this.chatJSON<{ segments: AudioScriptSegment[] }>(prompt);
+    const { result, inputTokens, outputTokens } = await this.chatJSONWithUsage<{ segments: AudioScriptSegment[] }>(prompt);
 
     if (!result?.segments || !Array.isArray(result.segments)) {
       throw new Error('AI returned invalid audio script shape');
     }
 
     this.logger.log(`Generated ${result.segments.length} audio segments`);
-    return result.segments;
+    return { result: result.segments, inputTokens, outputTokens };
   }
 
   async extractTextFromImage(buffer: Buffer): Promise<string> {

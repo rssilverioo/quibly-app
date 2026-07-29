@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
 import { AchievementsModule } from '../achievements/achievements.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
-  imports: [AchievementsModule],
+  imports: [AchievementsModule, AnalyticsModule],
   controllers: [SessionsController],
   providers: [SessionsService],
   exports: [SessionsService],

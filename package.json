@@ -15,5 +15,11 @@
   },
   "devDependencies": {
     "turbo": "^2.3.0"
+  },
+  "overrides": {
+    "jest-mock": "30.4.1",
+    "jest-environment-node": "30.4.1",
+    "@jest/environment": "30.4.1",
+    "@jest/fake-timers": "30.4.1"
   }
 }

@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { getProfile, ensureProfile } from '../services/auth';
 import type { Profile } from '@quibly/shared';
-import { identify, setUserProperties, track } from '../lib/analytics';
+import { identify, setAnalyticsContext, setUserProperties } from '../lib/analytics';
+import { identifyForSentry } from '../lib/sentry';
 
 interface AuthContextType {
   user: User | null;
@@ -28,24 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * The streak is computed server-side, so the client only ever sees the
-   * result. Watching the value across refreshes is the one place we can tell
-   * "kept it" from "lost it" — and losing it is the retention signal worth
-   * having.
-   */
-  const lastStreak = useRef<number | null>(null);
-
-  const noteStreakChange = (p: Profile | null) => {
-    const next = p?.current_streak ?? null;
-    const prev = lastStreak.current;
-    lastStreak.current = next;
-
-    if (prev === null || next === null || next === prev) return;
-    if (next > prev) track('streak_continued', { days: next });
-    else if (next < prev) track('streak_broken', { previous_days: prev });
-  };
-
   const fetchProfile = async (): Promise<Profile | null> => {
     return getProfile();
   };
@@ -54,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       const p = await fetchProfile();
       setProfile(p);
-      noteStreakChange(p);
+      if (p?.plan) setAnalyticsContext({ plan: p.plan });
     }
   };
 
@@ -62,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       identify(firebaseUser?.uid ?? null);
+      identifyForSentry(firebaseUser?.uid ?? null);
       if (firebaseUser) {
         try {
           let p = await fetchProfile();
@@ -70,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             p = await ensureProfile(firebaseUser);
           }
           setProfile(p);
-          lastStreak.current = p?.current_streak ?? null;
+          if (p?.plan) setAnalyticsContext({ plan: p.plan });
           setUserProperties({
             plan: p?.plan,
             education_level: p?.education_level ?? undefined,

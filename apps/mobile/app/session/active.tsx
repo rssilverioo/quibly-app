@@ -108,10 +108,13 @@ export default function ActiveSessionScreen() {
           pause();
           try {
             const result = await endSession();
-            track('study_session_ended', {
-              minutes: result.durationMinutes,
-              completed_pomodoros: result.pomodorosCompleted,
-            });
+            // session_completed is server-sourced (ARCHITECTURE.md §3: the
+            // server, not the client, owns duration/points). This one is a
+            // pure activation milestone the server has no reason to know
+            // about — it's about *this device's* funnel, not money.
+            if (result.isFirstSession) {
+              track('first_session_completed', { minutes: result.durationMinutes });
+            }
             if (result.previousLevel && result.newLevel && result.newLevel > result.previousLevel) {
               setLevelUpTo(result.newLevel);
               setShowLevelUp(true);

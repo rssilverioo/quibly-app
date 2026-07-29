@@ -4,16 +4,24 @@ import {
   BadRequestException,
   ForbiddenException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AchievementsService } from '../achievements/achievements.service';
 import { CreateLeagueDto } from './dto/create-league.dto';
 import { UpdateLeagueDto } from './dto/update-league.dto';
 import { RematchDto } from './dto/rematch.dto';
-import type { LeagueStatus } from '@prisma/client';
+import { Prisma, type LeagueStatus } from '@prisma/client';
 
 /** Beyond this, an `active` session is a zombie, not a person studying. */
 const LIVE_SESSION_MAX_HOURS = 12;
+
+const INVITE_CODE_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const INVITE_CODE_LENGTH = 8;
+/** `inviteCode` is the only `@unique` field this ever collides on. */
+const MAX_INVITE_CODE_ATTEMPTS = 5;
 
 @Injectable()
 export class LeaguesService {
@@ -22,14 +30,59 @@ export class LeaguesService {
     private readonly achievementsService: AchievementsService,
   ) {}
 
+  /**
+   * Cryptographically random invite code. `Math.random()` isn't just
+   * predictable — with only ~2^31 internal states it lets an attacker
+   * enumerate/guess codes for private leagues far faster than the 62^8
+   * keyspace size suggests. `crypto.randomBytes` closes that.
+   *
+   * The `% alphabet.length` step has a very slight modulo bias (256 isn't a
+   * multiple of 62), which is irrelevant here: this is a join code, not a
+   * secret requiring uniform distribution guarantees.
+   */
   private generateInviteCode(): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const bytes = randomBytes(INVITE_CODE_LENGTH);
     let result = '';
-    for (let i = 0; i < 8; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+      result += INVITE_CODE_ALPHABET[bytes[i] % INVITE_CODE_ALPHABET.length];
     }
     return result;
+  }
+
+  private isInviteCodeCollision(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
+  }
+
+  /**
+   * Runs `attempt` with a freshly generated invite code, retrying with a new
+   * code if the `@unique` constraint on `inviteCode` collides — instead of
+   * letting Prisma's error bubble up as a bare 500. A relaunch of `attempt`
+   * on retry is safe because both callers wrap it in `$transaction`: a
+   * collision means nothing committed, so there's nothing to unwind.
+   */
+  private async withUniqueInviteCode<T>(
+    attempt: (inviteCode: string) => Promise<T>,
+  ): Promise<T> {
+    for (let i = 0; i < MAX_INVITE_CODE_ATTEMPTS; i++) {
+      const inviteCode = this.generateInviteCode();
+      try {
+        return await attempt(inviteCode);
+      } catch (error) {
+        const isLastAttempt = i === MAX_INVITE_CODE_ATTEMPTS - 1;
+        if (!this.isInviteCodeCollision(error) || isLastAttempt) {
+          throw error;
+        }
+        // Collision on a non-final attempt — loop and try a new code.
+      }
+    }
+    // Unreachable: the loop always returns or throws. Satisfies TS control
+    // flow analysis without an `any`/`!` escape hatch.
+    throw new InternalServerErrorException(
+      'Could not generate a unique invite code',
+    );
   }
 
   private async sendSystemChat(
@@ -47,38 +100,39 @@ export class LeaguesService {
   }
 
   async create(userId: string, dto: CreateLeagueDto) {
-    const inviteCode = this.generateInviteCode();
     const today = new Date().toISOString().split('T')[0];
     const status: LeagueStatus =
       dto.start_date <= today ? 'active' : 'upcoming';
 
-    const league = await this.prisma.$transaction(async (tx) => {
-      const l = await tx.league.create({
-        data: {
-          name: dto.name,
-          description: dto.description || null,
-          ownerId: userId,
-          startDate: new Date(dto.start_date),
-          endDate: new Date(dto.end_date),
-          privacy: dto.privacy,
-          mode: dto.mode,
-          status,
-          inviteCode,
-          maxMembers: dto.max_members || 50,
-        },
-      });
+    const league = await this.withUniqueInviteCode((inviteCode) =>
+      this.prisma.$transaction(async (tx) => {
+        const l = await tx.league.create({
+          data: {
+            name: dto.name,
+            description: dto.description || null,
+            ownerId: userId,
+            startDate: new Date(dto.start_date),
+            endDate: new Date(dto.end_date),
+            privacy: dto.privacy,
+            mode: dto.mode,
+            status,
+            inviteCode,
+            maxMembers: dto.max_members || 50,
+          },
+        });
 
-      await tx.leagueMember.create({
-        data: {
-          leagueId: l.id,
-          userId,
-          role: 'owner',
-          displayName: dto.display_name,
-        },
-      });
+        await tx.leagueMember.create({
+          data: {
+            leagueId: l.id,
+            userId,
+            role: 'owner',
+            displayName: dto.display_name,
+          },
+        });
 
-      return l;
-    });
+        return l;
+      }),
+    );
 
     await this.achievementsService.checkSocialAchievement(
       userId,
@@ -419,9 +473,7 @@ export class LeaguesService {
       select: { userId: true, displayName: true },
     });
 
-    const inviteCode = this.generateInviteCode();
-
-    return this.prisma.$transaction(async (tx) => {
+    return this.withUniqueInviteCode((inviteCode) => this.prisma.$transaction(async (tx) => {
       const newLeague = await tx.league.create({
         data: {
           name: `${league.name} (Rematch)`,
@@ -449,7 +501,7 @@ export class LeaguesService {
       }
 
       return newLeague;
-    });
+    }));
   }
 
   async updateLeague(

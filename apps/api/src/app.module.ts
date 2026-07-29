@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { StorageModule } from './storage/storage.module';
@@ -29,15 +31,30 @@ import { AudioSessionsModule } from './audio-sessions/audio-sessions.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { DailyPlanModule } from './daily-plan/daily-plan.module';
 import { FocusAreasModule } from './focus-areas/focus-areas.module';
+import { EntitlementsModule } from './entitlements/entitlements.module';
+import { AiRouterModule } from './ai-router/ai-router.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // Global default: generous enough for normal REST/polling traffic, tight
+    // enough to blunt basic scripted abuse. Routes that call an LLM (money
+    // per request) layer a much stricter @Throttle() on top — see
+    // generate/lessons/audio-sessions controllers.
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 200,
+      },
+    ]),
     PrismaModule,
     FirebaseModule,
     StorageModule,
+    EntitlementsModule,
+    AiRouterModule,
     GeminiModule,
     ImageSearchModule,
     AuthModule,
@@ -64,6 +81,12 @@ import { FocusAreasModule } from './focus-areas/focus-areas.module';
     OnboardingModule,
     DailyPlanModule,
     FocusAreasModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

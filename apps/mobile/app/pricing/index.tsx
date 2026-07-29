@@ -15,6 +15,7 @@ import { track } from '../../lib/analytics';
 import { useUsage } from '../../hooks/useUsage';
 import { useIAP } from '../../hooks/useIAP';
 import i18n from '../../lib/i18n';
+import { captureException } from '../../lib/sentry';
 
 type Billing = 'monthly' | 'yearly';
 
@@ -48,15 +49,21 @@ export default function PricingScreen() {
       Alert.alert(t('common:error'), t('packageNotAvailable'));
       return;
     }
+    track('purchase_started', { selected_plan: billing });
     try {
       await purchase(selectedPackage);
-      track('subscription_started', { plan: billing });
+      // purchase_completed is server-sourced — it fires from the RevenueCat
+      // webhook, the only signal that actually confirms money moved.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('common:done'), t('subscribed'));
       refreshUsage();
     } catch (err: any) {
       if (err?.userCancelled || err?.message?.includes('canceled')) return;
       console.error('[Pricing] error:', err?.message ?? err);
+      // A failed purchase is the one error in this app with direct revenue
+      // impact — worth its own report, not just a log line nobody reads.
+      captureException(err, { where: 'purchase', billing });
+      track('purchase_failed', { selected_plan: billing, reason: err?.message ?? 'unknown' });
       Alert.alert(t('common:error'), err?.message ?? 'Purchase failed');
     }
   };
@@ -73,6 +80,7 @@ export default function PricingScreen() {
         Alert.alert(t('restoreEmpty'));
       }
     } catch (err: any) {
+      captureException(err, { where: 'restorePurchases' });
       Alert.alert(t('common:error'), err?.message ?? 'Restore failed');
     } finally {
       setRestoring(false);
@@ -81,6 +89,11 @@ export default function PricingScreen() {
 
   const handleManageSubscription = () => {
     Linking.openURL(getManageSubscriptionUrl());
+  };
+
+  const handleSelectBilling = (next: Billing) => {
+    setBilling(next);
+    track('plan_selected', { selected_plan: next });
   };
 
   const freeFeatures = ['flashcards', 'quizzes', 'documents', 'leagues'] as const;
@@ -120,13 +133,13 @@ export default function PricingScreen() {
           <View style={styles.billingToggle}>
             <TouchableOpacity
               style={[styles.billingBtn, billing === 'monthly' && styles.billingActive]}
-              onPress={() => setBilling('monthly')}
+              onPress={() => handleSelectBilling('monthly')}
             >
               <Text style={[styles.billingText, billing === 'monthly' && styles.billingTextActive]}>{t('monthly')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.billingBtn, billing === 'yearly' && styles.billingActive]}
-              onPress={() => setBilling('yearly')}
+              onPress={() => handleSelectBilling('yearly')}
             >
               <Text style={[styles.billingText, billing === 'yearly' && styles.billingTextActive]}>{t('yearly')}</Text>
               {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: 17 })}</Text>}

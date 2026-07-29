@@ -62,6 +62,7 @@ export default function QuizPlayerScreen() {
         const sorted = data.questions?.sort((a: Question, b: Question) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) ?? [];
         setQuestions(sorted);
         setAnswers(new Array(sorted.length).fill(null));
+        if (sorted.length > 0) track('quiz_started', { questions: sorted.length });
       } catch (err: any) {
         setError(err?.message ?? 'Failed to load quiz');
       }

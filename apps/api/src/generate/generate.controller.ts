@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { IsString, IsOptional } from 'class-validator';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -15,6 +16,9 @@ class ExplainDto {
 
 @Controller('generate')
 @UseGuards(FirebaseAuthGuard)
+// Every route here calls an LLM — each request costs real money, so the
+// per-route limit is far tighter than the app-wide default.
+@Throttle({ default: { limit: 10, ttl: 60_000 } })
 export class GenerateController {
   constructor(private readonly generateService: GenerateService) {}
 

@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { USAGE_LIMITS } from '@quibly/shared';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 @Injectable()
 export class UsageService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   async checkUsageLimit(
     userId: string,
@@ -16,7 +19,7 @@ export class UsageService {
     });
 
     const plan = profile?.plan || 'FREE';
-    const limit = USAGE_LIMITS[plan][type];
+    const limit = await this.entitlements.getLimit(plan, type);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -64,7 +67,7 @@ export class UsageService {
     });
 
     const plan = profile?.plan || 'FREE';
-    const limits = USAGE_LIMITS[plan];
+    const limits = await this.entitlements.getLimits(plan);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

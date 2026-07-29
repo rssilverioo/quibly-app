@@ -11,6 +11,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { LessonsService } from './lessons.service';
@@ -28,6 +29,8 @@ export class LessonsController {
 
   /** Audio recording, PDF or photo — the service routes on mime type. */
   @Post('capture')
+  // Transcription/OCR of a whole file: the most expensive route in the app.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @UseInterceptors(FileInterceptor('file'))
   capture(
     @CurrentUser() user: { userId: string },
@@ -72,6 +75,7 @@ export class LessonsController {
   }
 
   @Post(':id/ask')
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   ask(
     @CurrentUser() user: { userId: string },
     @Param('id', ParseUUIDPipe) id: string,

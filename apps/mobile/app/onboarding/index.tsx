@@ -64,6 +64,10 @@ export default function OnboardingScreen() {
   const [dailyMinutes, setDailyMinutes] = useState(15);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    track('onboarding_started');
+  }, []);
+
   const canContinue = () => {
     if (step === 0) return name.trim().length >= 2;
     if (step === 1) return !!education;
@@ -90,9 +94,9 @@ export default function OnboardingScreen() {
       });
       completed.current = true;
       track('onboarding_completed', {
-        education,
-        goal,
-        subjects: subjects.length,
+        education_level: education,
+        study_goal: goal,
+        subjects_count: subjects.length,
       });
       await refreshProfile();
       router.replace('/(tabs)');

@@ -130,7 +130,6 @@ export default function CreateLeagueScreen() {
 
     setCreating(true);
     try {
-      track('league_created');
       const league = await createLeague(user.uid, {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -142,6 +141,7 @@ export default function CreateLeagueScreen() {
         display_name: displayName.trim(),
       });
       setCreatedLeague(league);
+      track('room_created', { mode, privacy });
     } catch (err: any) {
       Alert.alert(t('common:error'), err?.message ?? t('create.createError'));
     } finally {
@@ -152,7 +152,8 @@ export default function CreateLeagueScreen() {
   const handleCopyCode = async () => {
     if (!createdLeague) return;
     try {
-      await Share.share({ message: inviteUrl(createdLeague.invite_code) });
+      const result = await Share.share({ message: inviteUrl(createdLeague.invite_code) });
+      if (result.action === Share.sharedAction) track('invite_shared', { room_id: createdLeague.id });
     } catch {
       // User cancelled
     }
@@ -161,9 +162,10 @@ export default function CreateLeagueScreen() {
   const handleShare = async () => {
     if (!createdLeague) return;
     try {
-      await Share.share({
+      const result = await Share.share({
         message: t('create.shareMessage', { name: createdLeague.name, url: inviteUrl(createdLeague.invite_code) }),
       });
+      if (result.action === Share.sharedAction) track('invite_shared', { room_id: createdLeague.id });
     } catch {
       // User cancelled share
     }

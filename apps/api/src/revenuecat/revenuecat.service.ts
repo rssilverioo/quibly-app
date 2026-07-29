@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { Plan } from '@prisma/client';
 
 interface RevenueCatEvent {
@@ -25,6 +26,7 @@ export class RevenueCatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly analytics: AnalyticsService,
   ) {
     this.webhookAuthKey = this.config.getOrThrow('REVENUECAT_WEBHOOK_AUTH_KEY');
   }
@@ -47,6 +49,21 @@ export class RevenueCatService {
 
     switch (type) {
       case 'INITIAL_PURCHASE':
+        await this.activateSubscription(userId, platform, expirationDate);
+        // [SERVER] purchase_completed — the only authoritative signal that
+        // money actually moved. Scoped to INITIAL_PURCHASE only: renewals
+        // and plan changes aren't the "did the paywall convert" question
+        // the monetization funnel cares about.
+        this.analytics.track(
+          'purchase_completed',
+          { userId, plan: Plan.PRO },
+          {
+            selected_plan: this.billingCycleFrom(event.product_id),
+            store: platform === 'apple' || platform === 'google' ? platform : 'unknown',
+          },
+        );
+        break;
+
       case 'RENEWAL':
       case 'PRODUCT_CHANGE':
       case 'UNCANCELLATION':
@@ -122,5 +139,19 @@ export class RevenueCatService {
       default:
         return null;
     }
+  }
+
+  /**
+   * Best-effort read of the billing cycle out of the store product id (e.g.
+   * `quibly_pro_yearly`). RevenueCat doesn't give us a cleaner signal in the
+   * webhook payload — if the naming convention ever changes, this quietly
+   * falls back to `'monthly'` rather than throwing.
+   */
+  private billingCycleFrom(productId?: string): 'monthly' | 'yearly' | 'unknown' {
+    if (!productId) return 'unknown';
+    const id = productId.toLowerCase();
+    if (id.includes('year') || id.includes('annual')) return 'yearly';
+    if (id.includes('month')) return 'monthly';
+    return 'unknown';
   }
 }

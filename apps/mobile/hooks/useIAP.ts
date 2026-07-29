@@ -22,7 +22,6 @@ export function useIAP() {
         if (!mounted) return;
 
         const current = offerings?.current;
-        console.log('[useIAP] offerings:', JSON.stringify(offerings, null, 2));
         if (current) {
           setMonthlyPackage(current.monthly ?? null);
           setYearlyPackage(current.annual ?? null);
@@ -30,6 +29,9 @@ export function useIAP() {
           console.warn('[useIAP] No current offering found');
         }
       } catch (err) {
+        // getOfferings() (services/iap.ts) already catches RevenueCat errors
+        // and reports them; this only guards against a bug in this effect
+        // itself.
         console.warn('[useIAP] load offerings error:', err);
       } finally {
         if (mounted) setLoading(false);

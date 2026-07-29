@@ -39,10 +39,6 @@ export default function CaptureScreen() {
 
   const [mode, setMode] = useState<Mode>('choose');
 
-  useEffect(() => {
-    track('capture_opened', { from: 'lessons' });
-  }, []);
-
   // LOW_QUALITY is the right call for speech: HIGH_QUALITY blows past
   // Whisper's 25MB ceiling in about ten minutes.
   const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
@@ -64,7 +60,7 @@ export default function CaptureScreen() {
         language: i18n.language,
         durationSec,
       });
-      track('capture_uploaded', { source, seconds: durationSec });
+      track('lesson_captured', { source, seconds: durationSec });
       router.replace(`/lesson/${lesson.id}`);
     } catch (err: any) {
       setMode('choose');
@@ -81,13 +77,11 @@ export default function CaptureScreen() {
     }
     await recorder.prepareToRecordAsync();
     recorder.record();
-    track('capture_started', { source: 'audio' });
     setMode('recording');
   };
 
   const stopRecording = async () => {
     const durationSec = Math.round((recorderState.durationMillis ?? 0) / 1000);
-    track('capture_recording_stopped', { seconds: durationSec });
     await recorder.stop();
     const uri = recorder.uri;
     if (!uri) {
@@ -109,7 +103,6 @@ export default function CaptureScreen() {
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.[0]) return;
-    track('capture_started', { source: 'document' });
     const asset = result.assets[0];
     await send({
       uri: asset.uri,
@@ -124,7 +117,6 @@ export default function CaptureScreen() {
 
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (result.canceled || !result.assets?.[0]) return;
-    track('capture_started', { source: 'photo' });
     const asset = result.assets[0];
     await send({
       uri: asset.uri,

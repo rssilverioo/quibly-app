@@ -603,3 +603,78 @@ model DailyPlan {
   @@index([userId])
   @@map("daily_plans")
 }
+
+// ─── Entitlements & AI cost control (Fase 0, Bloco 3/4) ───
+//
+// New tables only, all `@@map`-prefixed with "quibly_" so they can't collide
+// with the neighboring product's tables in the shared production Postgres —
+// same reason `Lesson` maps to "captured_lessons" instead of "lessons".
+// None of these carry a Prisma `@relation` to `Profile`: `userId` is a plain
+// indexed string. That's deliberate — it avoids touching the `Profile` model
+// (contended by every squad right now) just to add a back-relation array
+// field, at the cost of no DB-level referential integrity for these rows.
+
+/// Per-plan limits, resolved by `EntitlementService` instead of a hardcoded
+/// constant. A missing (plan, key) row — including "table not seeded yet" —
+/// resolves to Infinity in the service layer, which is the Fase 0 launch
+/// state: everything unlocked. Turning a limit on in Fase 7 is an UPDATE
+/// here, not a deploy.
+model Entitlement {
+  id         String   @id @default(uuid()) @db.Uuid
+  plan       Plan
+  /// 'flashcard_sets' | 'quizzes' | 'audio_sessions' | 'ai_daily_tokens' — see
+  /// EntitlementKey in apps/api/src/entitlements/entitlements.constants.ts
+  key        String
+  /// NULL = unlimited. Present so "no row" and "explicitly unlimited" are
+  /// both expressible without magic numbers.
+  limitValue Int?     @map("limit_value")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([plan, key])
+  @@map("quibly_entitlements")
+}
+
+/// One row per AI call, for cost visibility and the per-user daily token
+/// budget in `AiRouterService`. `inputTokens`/`outputTokens` hold real LLM
+/// token counts for chat-completion tasks; for audio tasks (transcription,
+/// tts) they hold a documented proxy unit (seconds, characters) instead of
+/// tokens — see MODEL_PRICING in ai-router.constants.ts for which is which.
+model AiUsageLedger {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id")
+  /// Calendar day the call was billed against (server local midnight),
+  /// mirrors the DailyUsage pattern — makes "cost today" a plain equality.
+  date             DateTime @db.Date
+  /// 'flashcards' | 'quiz' | 'lesson_structuring' | 'lesson_qa' | 'ocr' |
+  /// 'transcription' | 'audio_script' | 'tts' | 'explain'
+  task             String
+  provider         String
+  model            String
+  inputTokens      Int      @default(0) @map("input_tokens")
+  outputTokens     Int      @default(0) @map("output_tokens")
+  estimatedCostUsd Decimal  @default(0) @map("estimated_cost_usd") @db.Decimal(10, 6)
+  /// True when this call was served from AiContentCache / AudioClip and cost
+  /// nothing — kept in the ledger anyway so cache hit-rate is visible.
+  cacheHit         Boolean  @default(false) @map("cache_hit")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([userId, date])
+  @@index([date])
+  @@map("quibly_ai_usage_ledger")
+}
+
+/// Generalizes the `AudioClip.textHash` pattern to deterministic content
+/// generation (flashcards/quiz from the same document+language). Keyed by a
+/// hash of (task, language, source content) so a re-request never re-pays
+/// for the same LLM call.
+model AiContentCache {
+  id          String   @id @default(uuid()) @db.Uuid
+  contentHash String   @unique @map("content_hash")
+  task        String
+  language    String
+  result      Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([task])
+  @@map("quibly_ai_content_cache")
+}

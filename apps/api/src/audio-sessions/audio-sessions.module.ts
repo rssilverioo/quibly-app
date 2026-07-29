@@ -8,6 +8,7 @@ import { StorageModule } from '../storage/storage.module';
 import { UsageModule } from '../usage/usage.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { AuthModule } from '../auth/auth.module';
+import { AiRouterModule } from '../ai-router/ai-router.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from '../auth/auth.module';
     UsageModule,
     SessionsModule,
     AuthModule,
+    AiRouterModule,
   ],
   controllers: [AudioSessionsController],
   providers: [AudioSessionsService],

@@ -23,6 +23,7 @@ import { registerPushToken } from '../services/notifications';
 import { initRevenueCat } from '../services/iap';
 import '../lib/i18n';
 import { initAnalytics } from '../lib/analytics';
+import { initSentry, captureException } from '../lib/sentry';
 
 // Raised by expo-router's own ErrorBoundary/Toast/Sitemap views, which still
 // use React Native's SafeAreaView. Every screen we own already imports it from
@@ -32,6 +33,10 @@ import { initAnalytics } from '../lib/analytics';
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
 SplashScreen.preventAutoHideAsync();
+
+// As early as possible, before anything else has a chance to throw. No-ops
+// entirely without EXPO_PUBLIC_SENTRY_DSN — see lib/sentry.ts.
+initSentry();
 
 function extractJoinPath(url: string | null): string | null {
   if (!url) return null;
@@ -70,9 +75,10 @@ function RootLayoutNav() {
   // Initialize RevenueCat when authenticated
   useEffect(() => {
     if (!isAuthenticated || !user?.uid) return;
-    initRevenueCat(user.uid).catch((err) =>
-      console.warn('Failed to init RevenueCat:', err),
-    );
+    initRevenueCat(user.uid).catch((err) => {
+      console.warn('Failed to init RevenueCat:', err);
+      captureException(err, { where: 'initRevenueCat' });
+    });
   }, [isAuthenticated, user?.uid]);
 
   // Register FCM push token when authenticated
@@ -91,6 +97,7 @@ function RootLayoutNav() {
         pushTokenRegistered.current = true;
       } catch (err) {
         console.warn('Failed to register push token:', err);
+        captureException(err, { where: 'registerPushToken' });
       }
     })();
   }, [isAuthenticated]);
