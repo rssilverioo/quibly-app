@@ -12,6 +12,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { useSessionStore } from '../stores/session.store';
 import { useTheme, hydrateTheme } from '../theme';
 import {
   configureNotifications,
@@ -71,6 +72,29 @@ function RootLayoutNav() {
   useEffect(() => {
     configureNotifications();
   }, []);
+
+  // Pick a live session back up on launch.
+  //
+  // This is where "the timer survived the app being killed" becomes visible.
+  // The server kept measuring the whole time; all the app has to do is ask what
+  // is live and adopt it, elapsed count and all. Without this the session would
+  // still be safe server-side, but the user would reopen the app to an empty
+  // home screen and reasonably conclude it was lost.
+  const sessionRestored = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated || sessionRestored.current) return;
+    sessionRestored.current = true;
+
+    useSessionStore
+      .getState()
+      .restoreFromServer()
+      .catch((err) => {
+        // A failure here costs the user nothing — the session stays open on the
+        // server and the sweeper will settle it — so never block startup on it.
+        console.warn('Failed to restore active session:', err);
+        captureException(err, { where: 'restoreActiveSession' });
+      });
+  }, [isAuthenticated]);
 
   // Initialize RevenueCat when authenticated
   useEffect(() => {

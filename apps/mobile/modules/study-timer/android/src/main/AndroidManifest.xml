@@ -1,0 +1,19 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    POST_NOTIFICATIONS (API 33+) is what makes the persistent timer visible at
+    all. FOREGROUND_SERVICE_DATA_SYNC is required from API 34 to match the
+    service type declared below — a study timer keeping heartbeats flowing to
+    the server is a data-sync workload, not media or location.
+  -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <service
+      android:name="com.quibly.studytimer.StudyTimerService"
+      android:foregroundServiceType="dataSync"
+      android:exported="false"
+      android:stopWithTask="false" />
+  </application>
+</manifest>

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Modal, TextInput,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -14,9 +15,14 @@ import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../../stores/session.store';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSubjects, createSubject as createSubjectService } from '../../services/subjects';
+import { SessionAlreadyLiveError } from '../../services/sessions';
+import { getBatteryWarning, openBatterySettings } from '../../services/study-timer';
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius, SUBJECT_COLORS } from '../../theme';
 import { track } from '../../lib/analytics';
+
+/** One prompt per install, not per session. */
+const BATTERY_PROMPT_KEY = '@quibly/battery-optimization-prompted';
 
 export default function SessionSetupScreen() {
   const { t: tr } = useTranslation('session');
@@ -33,7 +39,11 @@ export default function SessionSetupScreen() {
   const [newSubjectColor, setNewSubjectColor] = useState<string>(SUBJECT_COLORS[0]);
   const [creatingSubject, setCreatingSubject] = useState(false);
 
+  // Stopwatch sits first on purpose: it is the default mode in YPT and the one
+  // most used by people who study for hours, for whom a fixed 25-minute block
+  // is friction rather than structure.
   const timerModes = useMemo(() => [
+    { mode: 'stopwatch' as TimerMode, label: tr('setup.stopwatch'), subtitle: tr('setup.stopwatchSubtitle') },
     { mode: 'pomodoro' as TimerMode, label: tr('setup.pomodoro'), subtitle: tr('setup.pomodoroSubtitle') },
     { mode: 'deep_focus' as TimerMode, label: tr('setup.deepFocus'), subtitle: tr('setup.deepFocusSubtitle') },
     { mode: 'custom' as TimerMode, label: tr('setup.custom'), subtitle: tr('setup.customSubtitle') },
@@ -76,10 +86,49 @@ export default function SessionSetupScreen() {
     } catch {} finally { setCreatingSubject(false); }
   };
 
+  /**
+   * Ask once, before the first session, whether the user wants to exempt the app
+   * from battery optimisation.
+   *
+   * On Xiaomi, Samsung and friends the system stops foreground services
+   * regardless of the documented contract, which means the heartbeat dies and
+   * the server credits only up to the last beat. The user experiences that as
+   * "the app lost my three hours" — so it is worth one prompt.
+   *
+   * Deliberately not blocking: they can decline and still study. And it fires
+   * before `startSession`, not after, so the dialog never lands on top of a
+   * timer that is already running.
+   */
+  const maybeWarnAboutBattery = async () => {
+    const warning = getBatteryWarning();
+    if (!warning) return;
+
+    const alreadyAsked = await AsyncStorage.getItem(BATTERY_PROMPT_KEY);
+    if (alreadyAsked) return;
+    await AsyncStorage.setItem(BATTERY_PROMPT_KEY, '1');
+
+    await new Promise<void>((resolve) => {
+      Alert.alert(
+        tr('setup.batteryTitle'),
+        warning.isAggressive
+          ? tr('setup.batteryBodyAggressive', { manufacturer: warning.manufacturer })
+          : tr('setup.batteryBody'),
+        [
+          { text: tr('common:notNow'), style: 'cancel', onPress: () => resolve() },
+          {
+            text: tr('setup.batteryOpenSettings'),
+            onPress: () => { void openBatterySettings(); resolve(); },
+          },
+        ],
+      );
+    });
+  };
+
   const handleStart = async () => {
     if (!store.subjectId) return;
     setStarting(true);
     try {
+      await maybeWarnAboutBattery();
       const isFirstSession = (profile?.total_study_minutes ?? 0) === 0;
       store.setIsFirstSession(isFirstSession);
       await store.startSession();
@@ -93,6 +142,18 @@ export default function SessionSetupScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       router.replace('/session/active');
     } catch (err) {
+      // A live session already exists. This is not an error the user caused —
+      // it is what "the app was killed mid-session and reopened" looks like now
+      // that the server refuses overlapping sessions instead of silently
+      // killing the first. Pick the old one back up.
+      if (err instanceof SessionAlreadyLiveError) {
+        const restored = await store.restoreFromServer();
+        if (restored) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          router.replace('/session/active');
+          return;
+        }
+      }
       console.error('[StartSession]', err);
       setStarting(false);
     }

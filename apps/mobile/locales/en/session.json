@@ -19,7 +19,13 @@
     "startSession": "START SESSION",
     "newSubject": "New Subject",
     "subjectNamePlaceholder": "Subject name",
-    "color": "Color"
+    "color": "Color",
+    "stopwatch": "Stopwatch",
+    "stopwatchSubtitle": "Counts up. No target.",
+    "batteryTitle": "Keep your timer running",
+    "batteryBody": "Android may stop the timer in the background. Allowing Quibly to run without battery restrictions keeps your study time accurate.",
+    "batteryBodyAggressive": "{{manufacturer}} devices stop background timers aggressively. Without an exemption, Quibly may lose track of your study time. It takes one tap.",
+    "batteryOpenSettings": "Open settings"
   },
   "active": {
     "work": "WORK",
@@ -29,7 +35,9 @@
     "endSession": "End Session",
     "ending": "Ending...",
     "endConfirmTitle": "End Session",
-    "endConfirmMessage": "Are you sure?"
+    "endConfirmMessage": "Are you sure?",
+    "stopwatch": "STUDYING",
+    "disconnected": "Connection lost. Your time up to the last sync was saved."
   },
   "complete": {
     "title": "Session Complete!",
@@ -63,5 +71,16 @@
     "grantPermission": "Grant Permission",
     "retake": "Retake",
     "submit": "Submit"
+  },
+  "milestone": {
+    "focused": "Settling in",
+    "reading": "In the material",
+    "working": "Deep in it",
+    "cool": "Hitting stride",
+    "streak": "One hour in",
+    "star": "Ninety minutes",
+    "medal": "Two hours",
+    "crowned": "Three hours and counting",
+    "toNext": "{{minutes}} min to the next"
   }
 }

@@ -34,7 +34,13 @@ export interface Subject {
   created_at: string;
 }
 
-export type TimerMode = 'pomodoro' | 'deep_focus' | 'custom';
+/**
+ * `stopwatch` counts up with no target duration — start, run, stop. It is the
+ * default mode in YPT and the most used one there, because a fixed pomodoro is
+ * too rigid for someone sitting down for six hours. It earns no pomodoro cycles
+ * and never takes the hardcore early-exit penalty (docs/API-SESSIONS.md §6).
+ */
+export type TimerMode = 'pomodoro' | 'deep_focus' | 'custom' | 'stopwatch';
 export type SessionStatus = 'active' | 'paused' | 'completed' | 'abandoned';
 
 export interface StudySession {

@@ -30,5 +30,6 @@
   "xp": "XP",
   "unknown": "Unknown",
   "optional": "(optional)",
-  "verified": "Verified"
+  "verified": "Verified",
+  "notNow": "Not now"
 }

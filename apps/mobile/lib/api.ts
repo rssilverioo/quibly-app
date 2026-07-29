@@ -1,4 +1,8 @@
 import { auth } from './firebase';
+import { ApiError, NetworkError } from './http-errors';
+
+// Re-exported so callers keep importing error types from `lib/api` as before.
+export { ApiError, NetworkError } from './http-errors';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com';
 
@@ -32,14 +36,22 @@ async function request<T>(
     ...((options.headers as Record<string, string>) || {}),
   };
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    // `fetch` rejects only when the request never completed. Distinguishing
+    // this from an HTTP error is what lets the heartbeat queue hold a beat for
+    // later instead of discarding it.
+    throw new NetworkError(err);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || `Request failed: ${res.status}`);
+    throw new ApiError(res.status, body.message || `Request failed: ${res.status}`, body);
   }
 
   const text = await res.text();
