@@ -142,6 +142,14 @@ const withWidgetTarget = (config) =>
     // combinação possível: quebra em outro lugar, muito depois.
     const target = project.addTarget(TARGET_NAME, 'app_extension', TARGET_NAME);
 
+    // Deduplicar AGORA, antes de pendurar qualquer coisa. A ordem importa: se
+    // o dedupe rodar no fim, ele apaga um target que as build phases e a
+    // dependência já referenciam, e o projeto fica com ponteiros para o nada —
+    // a EAS falha com "Could not find target with id 'undefined'", que não diz
+    // absolutamente nada sobre a causa. Mantém-se o target que `addTarget`
+    // devolveu, porque é o único cujo uuid o resto deste código conhece.
+    dedupeNativeTargets(project, TARGET_NAME, target.uuid);
+
     const groups = project.hash.project.objects.PBXGroup;
     const groupUuid = Object.keys(groups).find(
       (key) => groups[key].name === TARGET_NAME || groups[key].path === TARGET_NAME,
@@ -200,7 +208,6 @@ const withWidgetTarget = (config) =>
     // roda duas vezes e produz dois targets com o mesmo nome. Um projeto com
     // target duplicado ainda compila localmente e quebra no EAS, que é o pior
     // modo de falha possível. Idempotência por construção, então.
-    dedupeNativeTargets(project, TARGET_NAME);
     dedupeEmbedPhases(project);
 
     const configurations = project.pbxXCBuildConfigurationSection();
@@ -236,7 +243,7 @@ const withWidgetTarget = (config) =>
  * Mantém um único `PBXNativeTarget` com este nome, e limpa a lista de targets
  * do projeto. O primeiro vence — é o que tem as build phases e os arquivos.
  */
-function dedupeNativeTargets(project, name) {
+function dedupeNativeTargets(project, name, keepUuid) {
   // Os nomes chegam aqui entre aspas (`"QuiblyWidget"`) enquanto o projeto está
   // em memória, e sem aspas depois de escrito e relido. Comparar cru falha
   // silenciosamente — e um dedupe que não dedupa é pior que nenhum.
@@ -247,7 +254,8 @@ function dedupeNativeTargets(project, name) {
   );
   if (uuids.length <= 1) return;
 
-  const [keep, ...extras] = uuids;
+  const keep = uuids.includes(keepUuid) ? keepUuid : uuids[0];
+  const extras = uuids.filter((uuid) => uuid !== keep);
   for (const uuid of extras) {
     delete section[uuid];
     delete section[`${uuid}_comment`];
@@ -382,6 +390,41 @@ function dedupeProductsGroup(project, target) {
   });
 }
 
+/**
+ * ## Estado: DESLIGADO por padrão. Ligue com QUIBLY_LIVE_ACTIVITY=1.
+ *
+ * Criar o target da extensão manipulando o `.pbxproj` não fechou. Foram
+ * corrigidos, em ordem, um target duplicado, duas phases de embed, um `.appex`
+ * duplicado em Products, uma dependência ausente, seções PBX que não existiam,
+ * e um ciclo de build com o script do react-native-firebase. A build local do
+ * workspace inteiro chegou a passar.
+ *
+ * O que não fecha é mais fundo: a Expo aplica este mod duas vezes por prebuild,
+ * e as duas passagens não enxergam uma à outra. Cada uma cria o seu target e
+ * escreve por cima da outra, então a dependência gravada aponta para um target
+ * que não está no arquivo final. A EAS morre com "Could not find target with id
+ * 'undefined'". Deduplicar depois não resolve, porque o problema não é o
+ * resultado — é que há dois resultados.
+ *
+ * A saída certa não é continuar operando o pbxproj na mão: é `@bacons/apple-
+ * targets`, o plugin que a comunidade mantém exatamente para isto e que já
+ * lida com esse ciclo de vida. Fica como próximo passo.
+ *
+ * Enquanto isso, ligar isto quebra **toda** a build de iOS, não só a Live
+ * Activity. E o produto não depende dela: o cronômetro é medido no servidor, a
+ * sessão sobrevive por causa do heartbeat, e no iOS a Live Activity sempre foi
+ * mostrador, nunca mecanismo (ver modules/study-timer/README.md). Sem ela o
+ * usuário perde o cronômetro na tela de bloqueio e não perde um minuto de
+ * estudo. Bloquear o release por causa disso seria trocar o essencial pelo
+ * acessório.
+ *
+ * O Swift do widget continua no repo, compilando e testado — `CasteloMark`,
+ * `StudyTimerAttributes` e `StudyTimerLiveActivity` passam por `swiftc
+ * -typecheck`, e há uma prévia do desenho. Só a criação do target está parada.
+ */
+const ENABLED = process.env.QUIBLY_LIVE_ACTIVITY === '1';
+
 module.exports = function withLiveActivity(config) {
+  if (!ENABLED) return config;
   return withWidgetTarget(withWidgetFiles(withLiveActivityFlag(config)));
 };
