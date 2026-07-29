@@ -52,7 +52,22 @@ existe, e nesses aparelhos ela costuma vir desligada.
 vez por instalação**, antes da primeira sessão. Errar para o lado de perguntar é
 barato; o silêncio num Xiaomi custa horas de estudo e a culpa cai no app.
 
-## O que não foi verificado
+## O que foi verificado
+
+Compila. `expo prebuild -p ios` gera o target `QuiblyWidget`, o Xcode lê o
+projeto (`xcodebuild -list` mostra os dois targets) e
+`xcodebuild -scheme QuiblyWidget -sdk iphonesimulator` produz o `.appex`.
+
+Dois bugs reais saíram desse teste, que revisão de código não tinha pego:
+
+1. `.foregroundStyle(.quiblyLime)` não compila — em `foregroundStyle` o
+   compilador infere `ShapeStyle`, não `Color`, e não acha a extensão estática.
+   Precisa ser `Color.quiblyLime`.
+2. O plugin prefixava o caminho das fontes com o nome do target, mas o grupo do
+   Xcode já carrega esse path. Resultado: `QuiblyWidget/QuiblyWidget/Foo.swift`
+   e `Build input files cannot be found`.
+
+## O que continua não verificado
 
 Nada aqui foi executado em aparelho. O comportamento que este módulo existe para
 garantir — a sessão sobreviver ao app ser morto, o cronômetro aparecer na tela de
@@ -65,21 +80,18 @@ Falta, e precisa de aparelho físico com dev build:
 1. Android: sessão sobrevive a trocar de app e voltar depois de 10+ minutos
 2. Android: notificação com cronômetro correndo e ações funcionando
 3. Android: comportamento num Xiaomi ou Samsung real, com e sem a isenção
-4. iOS: Live Activity aparece, o timer corre sozinho, as ações chegam
-5. iOS: a extensão de widget precisa ser criada como target do Xcode — ver abaixo
+4. iOS: Live Activity aparece na tela de bloqueio, o timer corre sozinho
+5. iOS: Dynamic Island (só do iPhone 14 Pro para cima) e as ações de deep link
 
-## Pendência conhecida: o target da Live Activity no iOS
+## Risco conhecido: o tipo compilado duas vezes
 
-`StudyTimerModule.swift` e `StudyTimerAttributes.swift` compilam junto com o app.
-Mas a Live Activity só **renderiza** se existir uma Widget Extension declarando
-uma `ActivityConfiguration` para `StudyTimerAttributes`, e uma extensão é um
-target novo no Xcode — não um arquivo solto.
+`StudyTimerAttributes.swift` é compilado no app (via o Pod do módulo Expo) **e**
+na extensão. O ActivityKit casa os dois lados pelo *nome* do tipo, não pelo
+módulo, então na prática funciona — é o arranjo que a maioria dos projetos usa.
 
-Criar esse target por config plugin (para sobreviver ao `prebuild`, como o prompt
-exige) significa manipular o `.pbxproj`. Não fiz, porque não tenho como compilar
-e verificar o resultado, e um plugin de pbxproj quebrado é pior que a ausência
-dele: quebra o build inteiro em vez de só a Live Activity.
+Mas é frágil: se as duas cópias divergirem em um campo, o sistema recusa a
+atividade **em silêncio, sem erro de compilação**. Se a Live Activity não
+aparecer no aparelho, é o primeiro lugar para olhar.
 
-Enquanto isso não existe, no iOS o comportamento é: a sessão continua correta
-(servidor + heartbeat), `Activity.request` falha silenciosamente e o usuário
-simplesmente não vê o cronômetro na tela de bloqueio. Degrada, não quebra.
+A alternativa robusta é um framework compartilhado entre os dois targets. Vale
+fazer se este arranjo der problema, não antes.

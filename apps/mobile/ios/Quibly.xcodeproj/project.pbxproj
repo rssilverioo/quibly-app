@@ -15,6 +15,13 @@
 		D4011DB5F7674AA19414134C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A0DC3AC9B1A4CCC81BB7FF5 /* GoogleService-Info.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		FC6E1B2EBE0FE905E953F5AE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9F29152B97F28F6F75C63AC7 /* PrivacyInfo.xcprivacy */; };
+		27340EBA55D34C099082D992 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DD5286F55E9947F7BB3AC4C2 /* Info.plist */; };
+		5D6E6F0EEA3D423C9D36DB20 /* QuiblyWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 2E03CB36595D4F089ED09F27 /* QuiblyWidget.appex */; };
+		69A3919A7C0D48C292CB0946 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EEF302E944BE49D3A38F23B2 /* WidgetKit.framework */; };
+		5DD35F56D9BF4868B673110A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9E4B5BAECE545B6800F868C /* SwiftUI.framework */; };
+		BCD267ABF2E04354BE2FF8E7 /* StudyTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C2E40F4F2AA41D0BA141F2D /* StudyTimerAttributes.swift */; };
+		D6DE860FDC1546F0BB919C84 /* CasteloMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = E97773B84BFC4F1EA3608E56 /* CasteloMark.swift */; };
+		B8BA22C2FF0545C29A72BE32 /* StudyTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F699EC492A4F4129B3E37A59 /* StudyTimerLiveActivity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +39,13 @@
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Quibly/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Quibly-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Quibly-Bridging-Header.h"; path = "Quibly/Quibly-Bridging-Header.h"; sourceTree = "<group>"; };
 		F2E768F079D0FEB1013DB950 /* Pods-Quibly.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Quibly.debug.xcconfig"; path = "Target Support Files/Pods-Quibly/Pods-Quibly.debug.xcconfig"; sourceTree = "<group>"; };
+		DD5286F55E9947F7BB3AC4C2 /* Info.plist */ = {isa = PBXFileReference; name = "Info.plist"; path = "Info.plist"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = text.plist.xml; explicitFileType = undefined; includeInIndex = 0; };
+		2E03CB36595D4F089ED09F27 /* QuiblyWidget.appex */ = {isa = PBXFileReference; name = "QuiblyWidget.appex"; path = "QuiblyWidget.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
+		EEF302E944BE49D3A38F23B2 /* WidgetKit.framework */ = {isa = PBXFileReference; name = "WidgetKit.framework"; path = "System/Library/Frameworks/WidgetKit.framework"; sourceTree = SDKROOT; fileEncoding = undefined; lastKnownFileType = wrapper.framework; explicitFileType = undefined; includeInIndex = 0; };
+		B9E4B5BAECE545B6800F868C /* SwiftUI.framework */ = {isa = PBXFileReference; name = "SwiftUI.framework"; path = "System/Library/Frameworks/SwiftUI.framework"; sourceTree = SDKROOT; fileEncoding = undefined; lastKnownFileType = wrapper.framework; explicitFileType = undefined; includeInIndex = 0; };
+		7C2E40F4F2AA41D0BA141F2D /* StudyTimerAttributes.swift */ = {isa = PBXFileReference; name = "StudyTimerAttributes.swift"; path = "StudyTimerAttributes.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		E97773B84BFC4F1EA3608E56 /* CasteloMark.swift */ = {isa = PBXFileReference; name = "CasteloMark.swift"; path = "CasteloMark.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		F699EC492A4F4129B3E37A59 /* StudyTimerLiveActivity.swift */ = {isa = PBXFileReference; name = "StudyTimerLiveActivity.swift"; path = "StudyTimerLiveActivity.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,6 +54,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				2D1A797CE28B4D8EF482E0AE /* libPods-Quibly.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3FD9218D2AF4722A411B852 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				69A3919A7C0D48C292CB0946 /* WidgetKit.framework in Frameworks */,
+				5DD35F56D9BF4868B673110A /* SwiftUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +119,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				7E733DECD38B9D3F2ED77FD9 /* Pods */,
 				8F6D6AB2D8A2EEB77B94F994 /* ExpoModulesProviders */,
+				2401513E9E7B414CB2FDD29A /* QuiblyWidget */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -106,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* Quibly.app */,
+				2E03CB36595D4F089ED09F27 /* QuiblyWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -135,6 +160,18 @@
 			name = Quibly;
 			sourceTree = "<group>";
 		};
+		2401513E9E7B414CB2FDD29A /* QuiblyWidget */ = {
+			isa = PBXGroup;
+			children = (
+				DD5286F55E9947F7BB3AC4C2 /* Info.plist */,
+				7C2E40F4F2AA41D0BA141F2D /* StudyTimerAttributes.swift */,
+				E97773B84BFC4F1EA3608E56 /* CasteloMark.swift */,
+				F699EC492A4F4129B3E37A59 /* StudyTimerLiveActivity.swift */,
+			);
+			name = QuiblyWidget;
+			path = QuiblyWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -151,6 +188,7 @@
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				6C877F5F5DC2EAB670E26471 /* [CP] Embed Pods Frameworks */,
 				7A94E7AD234BE56DBDA0F39B /* [CP-User] [RNFB] Core Configuration */,
+				4E68CFC361134FA599314652 /* Copy Files */,
 			);
 			buildRules = (
 			);
@@ -160,6 +198,23 @@
 			productName = Quibly;
 			productReference = 13B07F961A680F5B00A75B9A /* Quibly.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C5771D2565294D82848FAFF8 /* "QuiblyWidget" */ = {
+			isa = PBXNativeTarget;
+			name = "QuiblyWidget";
+			productName = "QuiblyWidget";
+			productReference = 2E03CB36595D4F089ED09F27;
+			productType = "com.apple.product-type.app-extension";
+			buildConfigurationList = B54307340FBD47A4ADAA966A;
+			buildPhases = (
+				5622478F1854446A953B5297 /* Sources */,
+				C3B5DF5B6FD04A108ED74E3B /* Resources */,
+				F3FD9218D2AF4722A411B852 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
 		};
 /* End PBXNativeTarget section */
 
@@ -190,6 +245,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* Quibly */,
+				C5771D2565294D82848FAFF8 /* "QuiblyWidget" */,
 			);
 		};
 /* End PBXProject section */
@@ -204,6 +260,13 @@
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				D4011DB5F7674AA19414134C /* GoogleService-Info.plist in Resources */,
 				FC6E1B2EBE0FE905E953F5AE /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3B5DF5B6FD04A108ED74E3B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -386,6 +449,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5622478F1854446A953B5297 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BCD267ABF2E04354BE2FF8E7 /* StudyTimerAttributes.swift in Sources */,
+				D6DE860FDC1546F0BB919C84 /* CasteloMark.swift in Sources */,
+				B8BA22C2FF0545C29A72BE32 /* StudyTimerLiveActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -416,11 +489,11 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.quibly.app;
-				PRODUCT_NAME = Quibly;
+				PRODUCT_NAME = "Quibly";
 				SWIFT_OBJC_BRIDGING_HEADER = "Quibly/Quibly-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1";
 				VERSIONING_SYSTEM = "apple-generic";
 				DEVELOPMENT_TEAM = "3HWKHD9KF8";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -450,10 +523,10 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.quibly.app;
-				PRODUCT_NAME = Quibly;
+				PRODUCT_NAME = "Quibly";
 				SWIFT_OBJC_BRIDGING_HEADER = "Quibly/Quibly-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1";
 				VERSIONING_SYSTEM = "apple-generic";
 				DEVELOPMENT_TEAM = "3HWKHD9KF8";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -579,6 +652,40 @@
 			};
 			name = Release;
 		};
+		5F22CE13F0784755B843C1BF /* Debug */ = {
+			name = Debug;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "QuiblyWidget/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = "QuiblyWidget";
+				SKIP_INSTALL = "NO";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.quibly.app.widget";
+				IPHONEOS_DEPLOYMENT_TARGET = "16.1";
+				SWIFT_VERSION = "5.0";
+				TARGETED_DEVICE_FAMILY = "1";
+				CODE_SIGN_STYLE = "Automatic";
+			};
+		};
+		D4B44AB4E9F74FD683A4FB0D /* Release */ = {
+			name = Release;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = "QuiblyWidget/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = "QuiblyWidget";
+				SKIP_INSTALL = "NO";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.quibly.app.widget";
+				IPHONEOS_DEPLOYMENT_TARGET = "16.1";
+				SWIFT_VERSION = "5.0";
+				TARGETED_DEVICE_FAMILY = "1";
+				CODE_SIGN_STYLE = "Automatic";
+			};
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -600,7 +707,30 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		B54307340FBD47A4ADAA966A /* Build configuration list for PBXNativeTarget "QuiblyWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5F22CE13F0784755B843C1BF /* Debug */,
+				D4B44AB4E9F74FD683A4FB0D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4E68CFC361134FA599314652 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5D6E6F0EEA3D423C9D36DB20 /* QuiblyWidget.appex in Copy Files */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Copy Files";
+			dstPath = "";
+			dstSubfolderSpec = 13;
+		};
+/* End PBXCopyFilesBuildPhase section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

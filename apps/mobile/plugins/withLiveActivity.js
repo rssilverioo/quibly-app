@@ -27,11 +27,17 @@ const {
  * campo, o sistema recusa a atividade em silêncio, sem erro de compilação.
  *
  * A alternativa robusta é um framework compartilhado entre os dois targets, que
- * é bem mais encanamento. Não fiz porque não tenho como compilar e comparar os
- * dois caminhos. Se a Live Activity não aparecer no aparelho, **este é o
- * primeiro lugar para olhar.**
+ * é bem mais encanamento. Se a Live Activity não aparecer no aparelho, **este é
+ * o primeiro lugar para olhar.**
  *
- * Nada disto foi executado. Ver `modules/study-timer/README.md`.
+ * ## O que foi verificado
+ *
+ * `expo prebuild -p ios` gera o target, e
+ * `xcodebuild -scheme QuiblyWidget -sdk iphonesimulator` compila e produz o
+ * `.appex`. Ou seja: o pbxproj é válido e o Swift compila.
+ *
+ * O que isso **não** prova é que a Live Activity aparece — para isso é preciso
+ * um aparelho. Ver `modules/study-timer/README.md`.
  */
 
 const TARGET_NAME = 'QuiblyWidget';
@@ -129,11 +135,10 @@ const withWidgetTarget = (config) =>
       throw new Error('[withLiveActivity] ios.bundleIdentifier não definido.');
     }
 
-    const group = project.addPbxGroup(
-      [...SOURCES, 'Info.plist'],
-      TARGET_NAME,
-      TARGET_NAME,
-    );
+    // Só o Info.plist entra aqui. As fontes entram via `addSourceFile`, que
+    // também as registra na build phase — declará-las nos dois lugares
+    // duplicaria as referências no grupo.
+    const group = project.addPbxGroup(['Info.plist'], TARGET_NAME, TARGET_NAME);
 
     // Pendura o grupo na raiz do projeto, senão os arquivos não aparecem no
     // navegador do Xcode nem entram na build.
@@ -156,12 +161,12 @@ const withWidgetTarget = (config) =>
       target.uuid,
     );
 
+    // Só o nome do arquivo. O grupo já tem `path = QuiblyWidget`, e o Xcode
+    // resolve relativo a ele — prefixar aqui produzia
+    // `QuiblyWidget/QuiblyWidget/Foo.swift` e a build falhava com
+    // "Build input files cannot be found".
     for (const file of SOURCES) {
-      project.addSourceFile(
-        `${TARGET_NAME}/${file}`,
-        { target: target.uuid },
-        group.uuid,
-      );
+      project.addSourceFile(file, { target: target.uuid }, group.uuid);
     }
 
     const configurations = project.pbxXCBuildConfigurationSection();
