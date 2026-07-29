@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../../stores/session.store';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSubjects, createSubject as createSubjectService } from '../../services/subjects';
+import { SessionAlreadyLiveError } from '../../services/sessions';
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius, SUBJECT_COLORS } from '../../theme';
 import { track } from '../../lib/analytics';
@@ -33,7 +34,11 @@ export default function SessionSetupScreen() {
   const [newSubjectColor, setNewSubjectColor] = useState<string>(SUBJECT_COLORS[0]);
   const [creatingSubject, setCreatingSubject] = useState(false);
 
+  // Stopwatch sits first on purpose: it is the default mode in YPT and the one
+  // most used by people who study for hours, for whom a fixed 25-minute block
+  // is friction rather than structure.
   const timerModes = useMemo(() => [
+    { mode: 'stopwatch' as TimerMode, label: tr('setup.stopwatch'), subtitle: tr('setup.stopwatchSubtitle') },
     { mode: 'pomodoro' as TimerMode, label: tr('setup.pomodoro'), subtitle: tr('setup.pomodoroSubtitle') },
     { mode: 'deep_focus' as TimerMode, label: tr('setup.deepFocus'), subtitle: tr('setup.deepFocusSubtitle') },
     { mode: 'custom' as TimerMode, label: tr('setup.custom'), subtitle: tr('setup.customSubtitle') },
@@ -93,6 +98,18 @@ export default function SessionSetupScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       router.replace('/session/active');
     } catch (err) {
+      // A live session already exists. This is not an error the user caused —
+      // it is what "the app was killed mid-session and reopened" looks like now
+      // that the server refuses overlapping sessions instead of silently
+      // killing the first. Pick the old one back up.
+      if (err instanceof SessionAlreadyLiveError) {
+        const restored = await store.restoreFromServer();
+        if (restored) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          router.replace('/session/active');
+          return;
+        }
+      }
       console.error('[StartSession]', err);
       setStarting(false);
     }

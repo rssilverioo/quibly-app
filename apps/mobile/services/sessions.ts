@@ -1,37 +1,117 @@
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import type { StudySession, TimerMode } from '@quibly/shared';
 
+/**
+ * Session lifecycle client. Mirrors docs/API-SESSIONS.md.
+ *
+ * The rule that shapes this whole file: **the client never sends time.** No
+ * duration, no cycle count, no start timestamp. The server measures from its
+ * own clock, and everything here either asks it for a number or hands it an
+ * event. Anything that looks like the app computing minutes is a bug.
+ */
+
 export interface StartSessionData {
-  user_id: string;
   subject_id: string;
   league_id?: string;
   timer_mode: TimerMode;
-  work_duration: number;
-  break_duration: number;
+  /** Ignored by the server for `stopwatch`. */
+  work_duration?: number;
+  break_duration?: number;
+  proof_mode?: boolean;
 }
 
-export async function startSession(data: StartSessionData): Promise<StudySession> {
-  return api.post<StudySession>('/sessions/start', {
-    subject_id: data.subject_id,
-    league_id: data.league_id,
-    timer_mode: data.timer_mode,
-    work_duration: data.work_duration,
-    break_duration: data.break_duration,
-  });
+/** What the server tells us about a live session, on start and on resume. */
+export interface LiveSession extends StudySession {
+  /** The server's count, already net of pauses. This is what the UI renders. */
+  elapsed_seconds: number;
+  heartbeat_interval_seconds: number;
+  heartbeat_grace_seconds: number;
 }
 
-export async function endSession(
-  sessionId: string,
-  data: {
-    pomodoro_cycles_completed: number;
-    total_duration_minutes: number;
+export interface HeartbeatResult {
+  session_id: string;
+  status: 'active' | 'paused';
+  server_time: string;
+  elapsed_seconds: number;
+  next_heartbeat_in_seconds: number;
+}
+
+/**
+ * Thrown when `POST /sessions/start` returns 409 because a session is already
+ * live. This is *not* an error state for the user — it is the normal shape of
+ * "the app was killed and reopened". The caller should offer to resume.
+ */
+export class SessionAlreadyLiveError extends Error {
+  constructor(
+    readonly activeSession: {
+      id: string;
+      status: string;
+      started_at: string;
+      subject_id: string;
+    },
+  ) {
+    super('A session is already live');
+    this.name = 'SessionAlreadyLiveError';
   }
-): Promise<{ session: StudySession; score: any; previous_level?: number; new_level?: number }> {
-  return api.post('/sessions/end', {
-    session_id: sessionId,
-    pomodoro_cycles_completed: data.pomodoro_cycles_completed,
-    total_duration_minutes: data.total_duration_minutes,
-  });
+}
+
+export async function startSession(data: StartSessionData): Promise<LiveSession> {
+  try {
+    return await api.post<LiveSession>('/sessions/start', {
+      subject_id: data.subject_id,
+      league_id: data.league_id,
+      timer_mode: data.timer_mode,
+      // Omitted entirely for stopwatch so the server keeps its defaults rather
+      // than recording a target duration the mode does not have.
+      ...(data.timer_mode === 'stopwatch'
+        ? {}
+        : { work_duration: data.work_duration, break_duration: data.break_duration }),
+      proof_mode: data.proof_mode ?? false,
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409 && err.body?.active_session) {
+      throw new SessionAlreadyLiveError(err.body.active_session);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Keep-alive. Returns the server's elapsed count, which the caller should
+ * reconcile against whatever it has been rendering locally between beats.
+ */
+export async function heartbeat(sessionId: string): Promise<HeartbeatResult> {
+  return api.post<HeartbeatResult>(`/sessions/${sessionId}/heartbeat`);
+}
+
+export async function pauseSession(sessionId: string): Promise<StudySession> {
+  return api.post<StudySession>(`/sessions/${sessionId}/pause`);
+}
+
+export async function resumeSession(sessionId: string): Promise<StudySession> {
+  return api.post<StudySession>(`/sessions/${sessionId}/resume`);
+}
+
+export interface EndSessionResult {
+  session: StudySession;
+  score: any;
+  newAchievements?: string[];
+  previous_level?: number;
+  new_level?: number;
+}
+
+/**
+ * Finish and score. **No body** — see docs/API-SESSIONS.md §4. The duration,
+ * the pomodoro cycle count and the "ended early" flag are all derived on the
+ * server from its own clock and the recorded pause intervals.
+ */
+export async function endSession(sessionId: string): Promise<EndSessionResult> {
+  return api.post<EndSessionResult>(`/sessions/${sessionId}/end`);
+}
+
+/** Throw the session away. Scores nothing, unlike `endSession`. */
+export async function abandonSession(sessionId: string): Promise<void> {
+  await api.post(`/sessions/${sessionId}/abandon`);
 }
 
 export async function getSession(sessionId: string): Promise<StudySession | null> {
@@ -42,9 +122,14 @@ export async function getSession(sessionId: string): Promise<StudySession | null
   }
 }
 
-export async function getActiveSession(_userId?: string): Promise<StudySession | null> {
+/**
+ * The user's open timer, if any — paused counts. Carries `elapsed_seconds`, so
+ * a client that was killed and relaunched rebuilds its timer from the truth
+ * instead of guessing from a persisted local counter.
+ */
+export async function getActiveSession(): Promise<LiveSession | null> {
   try {
-    return await api.get<StudySession | null>('/sessions/active');
+    return await api.get<LiveSession | null>('/sessions/active');
   } catch {
     return null;
   }
@@ -53,10 +138,10 @@ export async function getActiveSession(_userId?: string): Promise<StudySession |
 export async function getUserSessions(
   _userId?: string,
   limitCount = 20,
-  page = 1
+  page = 1,
 ): Promise<StudySession[]> {
   const result = await api.get<{ sessions: StudySession[] }>(
-    `/sessions?page=${page}&limit=${limitCount}`
+    `/sessions?page=${page}&limit=${limitCount}`,
   );
   return result.sessions;
 }
@@ -68,12 +153,7 @@ export interface StudyDate {
 
 export async function getStudyDates(year: number, month: number): Promise<StudyDate[]> {
   const result = await api.get<{ dates: StudyDate[] }>(
-    `/sessions/study-dates?year=${year}&month=${month}`
+    `/sessions/study-dates?year=${year}&month=${month}`,
   );
   return result.dates;
 }
-
-export async function abandonSession(sessionId: string): Promise<void> {
-  await api.post(`/sessions/${sessionId}/abandon`);
-}
-

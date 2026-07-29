@@ -19,7 +19,9 @@
     "startSession": "INICIAR SESSÃO",
     "newSubject": "Nova Matéria",
     "subjectNamePlaceholder": "Nome da matéria",
-    "color": "Cor"
+    "color": "Cor",
+    "stopwatch": "Cronômetro",
+    "stopwatchSubtitle": "Conta para cima. Sem meta."
   },
   "active": {
     "work": "TRABALHO",
@@ -29,7 +31,9 @@
     "endSession": "Encerrar Sessão",
     "ending": "Encerrando...",
     "endConfirmTitle": "Encerrar Sessão",
-    "endConfirmMessage": "Tem certeza?"
+    "endConfirmMessage": "Tem certeza?",
+    "stopwatch": "ESTUDANDO",
+    "disconnected": "Conexão perdida. Seu tempo até a última sincronização foi salvo."
   },
   "complete": {
     "title": "Sessão Completa!",
