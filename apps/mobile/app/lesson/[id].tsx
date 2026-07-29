@@ -48,22 +48,12 @@ export default function LessonScreen() {
     if (!id) return;
     try {
       const data = await getLesson(id);
-      const wasProcessing = lesson?.status === 'processing';
       setLesson(data);
 
-      if (!lesson) track('lesson_opened', { source: data.source });
-      if (wasProcessing && data.status === 'ready') {
-        track('lesson_ready', {
-          source: data.source,
-          seconds: Math.round((Date.now() - new Date(data.created_at).getTime()) / 1000),
-        });
-      }
-      if (wasProcessing && data.status === 'failed') {
-        track('lesson_processing_failed', {
-          source: data.source,
-          reason: data.error_message ?? 'unknown',
-        });
-      }
+      // lesson_ready / lesson_processing_failed are server-sourced (fired
+      // from lessons.service.ts the moment processing actually finishes) —
+      // the client only polls for the result, it doesn't get to say when
+      // the AI loop closed.
 
       // Keep polling only while the server is still working on it.
       if (data.status === 'processing') {

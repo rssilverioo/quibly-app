@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { OpenaiService } from '../openai/openai.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import type { LessonSource } from '@prisma/client';
 
 /**
@@ -29,6 +30,7 @@ export class LessonsService {
     private readonly storage: StorageService,
     private readonly gemini: GeminiService,
     private readonly openai: OpenaiService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   /**
@@ -66,7 +68,7 @@ export class LessonsService {
     });
 
     // Deliberately not awaited: the client polls GET /lessons/:id.
-    void this.process(lesson.id, file.buffer, file.originalname, file.mimetype, language)
+    void this.process(lesson.id, userId, source, file.buffer, file.originalname, file.mimetype, language)
       .catch((err) => this.logger.error(`Lesson ${lesson.id} failed: ${err}`));
 
     return lesson;
@@ -87,16 +89,19 @@ export class LessonsService {
    */
   private async process(
     lessonId: string,
+    userId: string,
+    source: LessonSource,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     language: string,
   ): Promise<void> {
+    const startedAt = Date.now();
     try {
       const rawText = await this.extractText(buffer, filename, mimeType, language);
 
       if (rawText.trim().length < MIN_USABLE_CHARS) {
-        await this.fail(lessonId, 'Not enough content in this capture to build a note');
+        await this.fail(lessonId, userId, source, 'Not enough content in this capture to build a note');
         return;
       }
 
@@ -115,9 +120,17 @@ export class LessonsService {
         },
       });
 
+      // [SERVER] lesson_ready — the AI loop closed. The client only polls
+      // for this; it doesn't get to say when it happened.
+      this.analytics.track(
+        'lesson_ready',
+        { userId },
+        { source, processing_seconds: Math.round((Date.now() - startedAt) / 1000) },
+      );
+
       this.logger.log(`Lesson ${lessonId} ready: "${structured.title}"`);
     } catch (err) {
-      await this.fail(lessonId, err instanceof Error ? err.message : String(err));
+      await this.fail(lessonId, userId, source, err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -147,12 +160,19 @@ export class LessonsService {
     return this.gemini.extractTextFromImage(buffer);
   }
 
-  private async fail(lessonId: string, message: string): Promise<void> {
+  private async fail(
+    lessonId: string,
+    userId: string,
+    source: LessonSource,
+    message: string,
+  ): Promise<void> {
     this.logger.warn(`Lesson ${lessonId} failed: ${message}`);
     await this.prisma.lesson.update({
       where: { id: lessonId },
       data: { status: 'failed', errorMessage: message },
     });
+    // [SERVER] Pairs with lesson_ready — the other half of "did the loop close."
+    this.analytics.track('lesson_processing_failed', { userId }, { source, reason: message });
   }
 
   async list(userId: string) {

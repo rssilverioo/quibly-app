@@ -68,6 +68,7 @@ export default function JoinLeagueScreen() {
     try {
       const data = await getLeaguePreview(code);
       setPreview(data);
+      track('invite_opened', { is_member: data.is_member });
     } catch (err: any) {
       setError(err?.message ?? t('join.invalidOrExpired'));
     } finally {
@@ -84,7 +85,7 @@ export default function JoinLeagueScreen() {
     setJoining(true);
     try {
       const league = await joinLeague(user.uid, code, displayName.trim());
-      track('league_joined');
+      track('room_joined', { mode: preview?.mode ?? 'unknown' });
       Alert.alert(t('join.joinedTitle'), t('join.joinedMessage', { name: league.name }), [
         { text: t('common:ok'), onPress: () => router.replace(`/league/${league.id}`) },
       ]);

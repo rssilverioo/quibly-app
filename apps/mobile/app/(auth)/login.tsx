@@ -23,7 +23,7 @@ import Animated, {
 import AppleSignInButton from '../../components/auth/AppleSignInButton';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import { staticDark as c, NIGHT_GRADIENT } from '../../theme';
-import { track } from '../../lib/analytics';
+import { trackScreen } from '../../lib/analytics';
 
 const { width: W, height: H } = Dimensions.get('window');
 const LOGO_SIZE = 88;
@@ -166,7 +166,7 @@ export default function LoginScreen() {
   const uiOpacity = useSharedValue(0);
 
   useEffect(() => {
-    track('login_viewed');
+    trackScreen('login');
   }, []);
 
   useEffect(() => {

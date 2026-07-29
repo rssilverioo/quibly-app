@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AchievementsService } from '../achievements/achievements.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { StartSessionDto } from './dto/start-session.dto';
 import { EndSessionDto } from './dto/end-session.dto';
 import {
@@ -21,6 +22,7 @@ export class SessionsService {
     private readonly prisma: PrismaService,
     private readonly achievementsService: AchievementsService,
     private readonly notificationsService: NotificationsService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   private async updateUserStreak(userId: string): Promise<void> {
@@ -30,6 +32,7 @@ export class SessionsService {
         lastStudyDate: true,
         currentStreak: true,
         longestStreak: true,
+        plan: true,
       },
     });
 
@@ -77,7 +80,18 @@ export class SessionsService {
           lastStudyDate: today,
         },
       });
+      this.analytics.track('streak_extended', { userId, plan: profile.plan }, { days: newStreak });
     } else {
+      // A streak that was actually running (>=1 day) just lapsed. `lastDate
+      // === null` means this is the user's first qualifying day ever — that
+      // isn't a break, there was nothing to lose.
+      if (lastDate && profile.currentStreak >= 1) {
+        this.analytics.track(
+          'streak_broken',
+          { userId, plan: profile.plan },
+          { previous_days: profile.currentStreak },
+        );
+      }
       // Missed a day or first time → reset to 1
       await this.prisma.profile.update({
         where: { id: userId },
@@ -96,6 +110,11 @@ export class SessionsService {
         where: { id: existingSession.id },
         data: { status: 'abandoned', endedAt: new Date() },
       });
+      this.analytics.track(
+        'session_abandoned',
+        { userId },
+        { reason: 'implicit_restart' },
+      );
     }
 
     const now = new Date();
@@ -127,7 +146,7 @@ export class SessionsService {
 
   async endSession(userId: string, dto: EndSessionDto) {
     // Use a transaction to atomically claim the session and prevent double-scoring
-    const { updatedSession, scoreResult, previousLevel, newLevel } =
+    const { updatedSession, scoreResult, previousLevel, newLevel, plan: planFromTx } =
       await this.prisma.$transaction(async (tx) => {
         const session = await tx.studySession.findUnique({
           where: { id: dto.session_id },
@@ -167,6 +186,7 @@ export class SessionsService {
             totalXp: true,
             totalStudyMinutes: true,
             level: true,
+            plan: true,
           },
         });
 
@@ -231,8 +251,20 @@ export class SessionsService {
           newLevel: newLvl,
           isVerified,
           totalDurationMinutes,
+          plan: profile?.plan,
         };
       });
+
+    this.analytics.track(
+      'session_completed',
+      { userId, plan: planFromTx },
+      {
+        minutes: Number(updatedSession.totalDurationMinutes ?? 0),
+        points_earned: Number(updatedSession.pointsEarned ?? 0),
+        xp_earned: Number(updatedSession.xpEarned ?? 0),
+        is_verified: updatedSession.isVerified,
+      },
+    );
 
     await this.updateUserStreak(userId);
 
@@ -316,6 +348,8 @@ export class SessionsService {
     if (session.status !== 'active') {
       throw new BadRequestException('Session is not active');
     }
+
+    this.analytics.track('session_abandoned', { userId }, { reason: 'explicit' });
 
     return this.prisma.studySession.update({
       where: { id: sessionId },

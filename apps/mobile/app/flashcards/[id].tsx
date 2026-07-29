@@ -67,7 +67,7 @@ export default function FlashcardPlayerScreen() {
       setCurrentIndex(currentIndex + 1);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
-      track('flashcards_completed', { cards: cards.length });
+      track('flashcards_reviewed', { cards: cards.length });
       setIsComplete(true);
       setShowConfetti(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

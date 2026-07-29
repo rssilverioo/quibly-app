@@ -24,6 +24,10 @@ interface SessionState {
   userId: string | null;
   streakDays: number;
   isPaused: boolean;
+  /** Set by session/setup.tsx before startSession() — carries through to
+   *  active.tsx so `first_session_completed` can fire without a second
+   *  round-trip to the profile. */
+  isFirstSession: boolean;
 
   setTimerMode: (mode: TimerMode) => void;
   setWorkDuration: (minutes: number) => void;
@@ -34,6 +38,7 @@ interface SessionState {
   setLeagueId: (id: string | null) => void;
   setUserId: (id: string) => void;
   setStreakDays: (days: number) => void;
+  setIsFirstSession: (value: boolean) => void;
   startSession: () => Promise<void>;
   endSession: () => Promise<{
     durationMinutes: number;
@@ -43,6 +48,7 @@ interface SessionState {
     score?: Record<string, number>;
     previousLevel?: number;
     newLevel?: number;
+    isFirstSession: boolean;
   }>;
   tick: () => void;
   /** Catch the timer up after the app was backgrounded. */
@@ -71,6 +77,7 @@ const initialState = {
   userId: null,
   streakDays: 0,
   isPaused: false,
+  isFirstSession: false,
 };
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -102,6 +109,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setLeagueId: (id) => set({ leagueId: id }),
   setUserId: (id) => set({ userId: id }),
   setStreakDays: (days) => set({ streakDays: days }),
+  setIsFirstSession: (value) => set({ isFirstSession: value }),
 
   startSession: async () => {
     const state = get();
@@ -139,6 +147,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         pomodorosCompleted: 0,
         pointsEarned: 0,
         xpEarned: 0,
+        isFirstSession: state.isFirstSession,
       };
     }
 
@@ -159,6 +168,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       score: result.score,
       previousLevel: result.previous_level,
       newLevel: result.new_level,
+      isFirstSession: state.isFirstSession,
     };
   },
 

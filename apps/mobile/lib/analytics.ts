@@ -9,13 +9,18 @@
  *  - **Firebase / GA4** is the Google side: it feeds Google Ads attribution
  *    and the Firebase console, and it's where install/session data lives.
  *
+ * Event names and properties are NOT defined here — they come from
+ * `@quibly/shared`'s `analytics-events.ts`, the single canonical taxonomy
+ * shared with the API. This file is a thin, typed transport: it injects the
+ * required base properties (`country_code`, `exam_track`, `plan`,
+ * `app_version`, `platform`) on every call and forwards to both sinks.
+ *
  * Rules that keep the data usable:
- *  - Events are a closed union. A typo becomes a compile error, not a silent
- *    event nobody notices is missing for three months.
- *  - Names are snake_case, past tense — GA4's convention, and PostHog is happy
- *    with it too, so one name works in both tools.
- *  - No personal data in parameters. Both SDKs already tie events to their own
- *    ids; adding emails or names would only create a privacy liability.
+ *  - `track()` only accepts `ClientSourcedEvent`s — server-sourced events
+ *    (session_completed, purchase_completed, lesson_ready, ...) are a
+ *    compile error here on purpose. See analytics-events.ts's file header.
+ *  - No personal data in parameters. Both SDKs already tie events to their
+ *    own ids; adding emails or names would only create a privacy liability.
  *  - Every call is fire-and-forget. Analytics must never break a user flow.
  */
 import {
@@ -26,59 +31,50 @@ import {
   setUserProperties as setFirebaseUserProperties,
 } from '@react-native-firebase/analytics';
 import PostHog from 'posthog-react-native';
-
-/**
- * The funnel, in order, plus the things worth knowing around it.
- * If an event isn't on this list it can't be logged.
- */
-export interface AnalyticsEvents {
-  // ── activation ──────────────────────────────────────────────────────────
-  /** Landed on the login screen. Denominator for everything below. */
-  login_viewed: undefined;
-  login_succeeded: { method: 'apple' | 'google' };
-  onboarding_step_completed: { step: number; total: number };
-  onboarding_completed: { education: string; goal: string; subjects: number };
-  /** Left onboarding without finishing — the step tells you where. */
-  onboarding_abandoned: { step: number };
-
-  // ── the core loop: capture a class ──────────────────────────────────────
-  capture_opened: { from: 'lessons' | 'library' | 'empty_state' };
-  capture_started: { source: 'audio' | 'document' | 'photo' };
-  /** Recording stopped. `seconds` shows whether people record whole classes. */
-  capture_recording_stopped: { seconds: number };
-  capture_uploaded: { source: 'audio' | 'document' | 'photo'; seconds?: number };
-  capture_failed: { source: 'audio' | 'document' | 'photo'; reason: string };
-
-  /** Server finished. `seconds` is wall clock from upload — the patience budget. */
-  lesson_ready: { source: 'audio' | 'document' | 'photo'; seconds: number };
-  lesson_processing_failed: { source: 'audio' | 'document' | 'photo'; reason: string };
-  lesson_opened: { source: 'audio' | 'document' | 'photo' };
-  lesson_asked: { grounded: boolean };
-  lesson_deleted: undefined;
-
-  // ── did the capture lead anywhere ───────────────────────────────────────
-  material_generated: { kind: 'flashcards' | 'quiz' };
-  flashcards_completed: { cards: number };
-  quiz_completed: { questions: number; percent: number };
-  study_session_started: { mode: string; minutes: number };
-  study_session_ended: { minutes: number; completed_pomodoros: number };
-
-  // ── retention and money ─────────────────────────────────────────────────
-  streak_continued: { days: number };
-  streak_broken: { previous_days: number };
-  league_joined: undefined;
-  league_created: undefined;
-  paywall_viewed: { trigger: 'quota' | 'settings' | 'feature' };
-  subscription_started: { plan: 'monthly' | 'yearly' };
-}
-
-export type AnalyticsEvent = keyof AnalyticsEvents;
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import type {
+  AnalyticsBaseProperties,
+  AnalyticsEventProps,
+  ClientSourcedEvent,
+} from '@quibly/shared';
+import { UNKNOWN_COUNTRY_CODE, UNKNOWN_EXAM_TRACK } from '@quibly/shared';
 
 /** GA4 truncates string parameters past this. Trim before sending, so both
  *  sinks record the same value rather than silently diverging. */
 const MAX_PARAM_CHARS = 100;
 
 let posthog: PostHog | null = null;
+
+/**
+ * Mutable context merged into every event. `country_code` and `exam_track`
+ * stay `"unknown"` until Fase 1 adds them to the profile (see
+ * analytics-events.ts) — `setAnalyticsContext` is where that gets wired up
+ * once they exist.
+ */
+const context: AnalyticsBaseProperties = {
+  country_code: UNKNOWN_COUNTRY_CODE,
+  exam_track: UNKNOWN_EXAM_TRACK,
+  plan: 'FREE',
+  app_version: Constants.expoConfig?.version ?? 'unknown',
+  platform: Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'unknown',
+};
+
+/**
+ * Called from AuthContext whenever the profile loads or changes. Only
+ * `plan` has a real value today — `country_code` / `exam_track` are wired
+ * here in advance so the call site doesn't need to change again once Fase 1
+ * ships `Profile.countryCode` / `Profile.examTrackId`.
+ */
+export function setAnalyticsContext(next: {
+  plan?: AnalyticsBaseProperties['plan'];
+  country_code?: string;
+  exam_track?: string;
+}): void {
+  if (next.plan) context.plan = next.plan;
+  if (next.country_code) context.country_code = next.country_code;
+  if (next.exam_track) context.exam_track = next.exam_track;
+}
 
 /**
  * Called once at boot. Without a key PostHog stays null and every call below
@@ -118,15 +114,22 @@ function sanitise(params: Record<string, unknown>): Record<string, ParamValue> {
   return out;
 }
 
+/** An event's own properties — the caller only supplies what's specific to
+ *  that event; the base properties are injected automatically. */
+type ExtraProps<E extends ClientSourcedEvent> = AnalyticsEventProps[E];
+
 /**
- * Log an event to both sinks. Never throws — a failed analytics call must not
- * surface to the user or abort the flow it was measuring.
+ * Log an event to both sinks. Never throws — a failed analytics call must
+ * not surface to the user or abort the flow it was measuring.
+ *
+ * Only `ClientSourcedEvent`s are accepted — passing a server-sourced event
+ * name (e.g. `session_completed`) is a compile error, not a runtime one.
  */
-export function track<E extends AnalyticsEvent>(
-  ...args: AnalyticsEvents[E] extends undefined ? [E] : [E, AnalyticsEvents[E]]
+export function track<E extends ClientSourcedEvent>(
+  ...args: ExtraProps<E> extends Record<string, never> ? [E] | [E, ExtraProps<E>] : [E, ExtraProps<E>]
 ): void {
-  const [event, raw] = args as [E, Record<string, unknown> | undefined];
-  const params = raw ? sanitise(raw) : undefined;
+  const [event, extra] = args as [E, Record<string, unknown> | undefined];
+  const params = sanitise({ ...context, ...(extra ?? {}) });
 
   logEvent(getAnalytics(), event, params).catch(() => {});
   try {
@@ -134,7 +137,9 @@ export function track<E extends AnalyticsEvent>(
   } catch {}
 }
 
-/** Screen views, for the funnel between screens rather than within one. */
+/** Screen views, for the funnel between screens rather than within one. Kept
+ *  separate from the typed event union — a raw screen name is not a
+ *  business-question-bearing event, just navigation telemetry. */
 export function trackScreen(name: string): void {
   logScreenView(getAnalytics(), { screen_name: name, screen_class: name }).catch(() => {});
   try {

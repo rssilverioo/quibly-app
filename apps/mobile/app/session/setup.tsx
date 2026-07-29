@@ -80,11 +80,16 @@ export default function SessionSetupScreen() {
     if (!store.subjectId) return;
     setStarting(true);
     try {
+      const isFirstSession = (profile?.total_study_minutes ?? 0) === 0;
+      store.setIsFirstSession(isFirstSession);
       await store.startSession();
-      track('study_session_started', {
-        mode: store.timerMode,
-        minutes: store.workDuration,
+      track('session_started', {
+        timer_mode: store.timerMode,
+        work_minutes: store.workDuration,
       });
+      if (isFirstSession) {
+        track('first_session_started', { subject_id: store.subjectId ?? undefined });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       router.replace('/session/active');
     } catch (err) {
