@@ -5,6 +5,11 @@ import * as sessionsService from '../services/sessions';
 import type { LiveSession } from '../services/sessions';
 import { HeartbeatController } from '../lib/heartbeat';
 import {
+  startLiveTimer,
+  updateLiveTimer,
+  stopLiveTimer,
+} from '../services/study-timer';
+import {
   schedulePhaseEndNotification,
   cancelSessionNotifications,
 } from '../lib/notifications';
@@ -164,17 +169,26 @@ export const useSessionStore = create<SessionState>((set, get) => {
           serverSyncedAt: Date.now(),
           isDisconnected: false,
         });
+        // Push the corrected total to the lock screen too, so the notification
+        // and the in-app timer never disagree.
+        void updateLiveTimer(
+          get().subjectName ?? '',
+          snapshot.elapsedSeconds,
+          snapshot.status === 'active',
+        );
       },
       onGraceExpired: () => {
         // Stop the running illusion. The server has swept this session (or is
         // about to), crediting up to the last beat — showing a ticking timer
-        // now would be a lie.
+        // now would be a lie, on screen or on the lock screen.
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
+        void stopLiveTimer();
       },
       onSessionGone: () => {
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
+        void stopLiveTimer();
       },
     });
     heartbeat.start();
@@ -254,6 +268,15 @@ export const useSessionStore = create<SessionState>((set, get) => {
         phase: 'work',
       });
       attachHeartbeat(session.id);
+
+      // Raise the lock-screen surface: the foreground service on Android (which
+      // keeps the process, and therefore the heartbeat, alive) and the Live
+      // Activity on iOS (which cannot, and only displays).
+      void startLiveTimer(
+        get().subjectName ?? '',
+        session.elapsed_seconds ?? 0,
+        !isPaused,
+      );
     },
 
     restoreFromServer: async () => {
@@ -266,6 +289,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     endSession: async () => {
       cancelSessionNotifications().catch(() => {});
       stopHeartbeat();
+      void stopLiveTimer();
 
       const state = get();
       if (!state.currentSession) {
@@ -332,6 +356,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
       const { currentSession } = get();
       // Flip locally first so the UI responds instantly; the request follows.
       set({ isRunning: false, isPaused: true });
+      void updateLiveTimer(get().subjectName ?? '', get().serverElapsedSeconds, false);
       if (!currentSession) return;
       try {
         await sessionsService.pauseSession(currentSession.id);
@@ -353,6 +378,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
       }
 
       set({ isRunning: true, isPaused: false });
+      void updateLiveTimer(get().subjectName ?? '', get().serverElapsedSeconds, true);
       if (!state.currentSession) return;
       try {
         await sessionsService.resumeSession(state.currentSession.id);
@@ -406,6 +432,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     reset: () => {
       cancelSessionNotifications().catch(() => {});
       stopHeartbeat();
+      void stopLiveTimer();
       set(initialState);
     },
   };

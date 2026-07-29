@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Modal, TextInput,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -15,9 +16,13 @@ import { useSessionStore } from '../../stores/session.store';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSubjects, createSubject as createSubjectService } from '../../services/subjects';
 import { SessionAlreadyLiveError } from '../../services/sessions';
+import { getBatteryWarning, openBatterySettings } from '../../services/study-timer';
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius, SUBJECT_COLORS } from '../../theme';
 import { track } from '../../lib/analytics';
+
+/** One prompt per install, not per session. */
+const BATTERY_PROMPT_KEY = '@quibly/battery-optimization-prompted';
 
 export default function SessionSetupScreen() {
   const { t: tr } = useTranslation('session');
@@ -81,10 +86,49 @@ export default function SessionSetupScreen() {
     } catch {} finally { setCreatingSubject(false); }
   };
 
+  /**
+   * Ask once, before the first session, whether the user wants to exempt the app
+   * from battery optimisation.
+   *
+   * On Xiaomi, Samsung and friends the system stops foreground services
+   * regardless of the documented contract, which means the heartbeat dies and
+   * the server credits only up to the last beat. The user experiences that as
+   * "the app lost my three hours" — so it is worth one prompt.
+   *
+   * Deliberately not blocking: they can decline and still study. And it fires
+   * before `startSession`, not after, so the dialog never lands on top of a
+   * timer that is already running.
+   */
+  const maybeWarnAboutBattery = async () => {
+    const warning = getBatteryWarning();
+    if (!warning) return;
+
+    const alreadyAsked = await AsyncStorage.getItem(BATTERY_PROMPT_KEY);
+    if (alreadyAsked) return;
+    await AsyncStorage.setItem(BATTERY_PROMPT_KEY, '1');
+
+    await new Promise<void>((resolve) => {
+      Alert.alert(
+        tr('setup.batteryTitle'),
+        warning.isAggressive
+          ? tr('setup.batteryBodyAggressive', { manufacturer: warning.manufacturer })
+          : tr('setup.batteryBody'),
+        [
+          { text: tr('common:notNow'), style: 'cancel', onPress: () => resolve() },
+          {
+            text: tr('setup.batteryOpenSettings'),
+            onPress: () => { void openBatterySettings(); resolve(); },
+          },
+        ],
+      );
+    });
+  };
+
   const handleStart = async () => {
     if (!store.subjectId) return;
     setStarting(true);
     try {
+      await maybeWarnAboutBattery();
       const isFirstSession = (profile?.total_study_minutes ?? 0) === 0;
       store.setIsFirstSession(isFirstSession);
       await store.startSession();

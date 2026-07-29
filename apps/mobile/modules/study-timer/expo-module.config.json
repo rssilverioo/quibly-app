@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["com.quibly.studytimer.StudyTimerModule"]
+  },
+  "ios": {
+    "modules": ["StudyTimerModule"]
+  }
+}

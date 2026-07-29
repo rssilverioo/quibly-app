@@ -70,8 +70,41 @@ jobs:
   # mobile/web squads — see the Fase 0 handoff report. This job surfaces
   # status without blocking merges until they wire it up; flip
   # `continue-on-error` off once it's green.
-  web-mobile:
-    name: web + mobile (lint — informational until fixed)
+  # ── apps/mobile ─────────────────────────────────────────────────────────
+  # Blocking as of Fase 1: the mobile app now has a typecheck and a test suite
+  # (the session heartbeat), so there is something real to gate on. Note what
+  # this job does *not* prove — the native surfaces (Android foreground service,
+  # iOS Live Activity) only behave meaningfully on a physical device, and no CI
+  # runner can tell you whether a session survived the app being killed. That
+  # check stays manual; see docs/API-SESSIONS.md and the Fase 1 mobile PR.
+  mobile:
+    name: mobile (typecheck, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build @quibly/shared
+        run: npm run build --workspace=packages/shared
+
+      - name: Typecheck — apps/mobile
+        run: npm run typecheck --workspace=apps/mobile
+
+      - name: Test — apps/mobile (vitest)
+        run: npm run test --workspace=apps/mobile
+
+  # ── apps/web ────────────────────────────────────────────────────────────
+  # Still informational: `next lint` has no eslint config or deps installed.
+  # Owned by whoever picks the web app back up.
+  web:
+    name: web (lint — informational until fixed)
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -85,5 +118,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: turbo run lint (web, mobile)
-        run: npx turbo run lint --filter=@quibly/web --filter=@quibly/mobile
+      - name: turbo run lint (web)
+        run: npx turbo run lint --filter=@quibly/web

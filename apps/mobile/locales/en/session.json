@@ -21,7 +21,11 @@
     "subjectNamePlaceholder": "Subject name",
     "color": "Color",
     "stopwatch": "Stopwatch",
-    "stopwatchSubtitle": "Counts up. No target."
+    "stopwatchSubtitle": "Counts up. No target.",
+    "batteryTitle": "Keep your timer running",
+    "batteryBody": "Android may stop the timer in the background. Allowing Quibly to run without battery restrictions keeps your study time accurate.",
+    "batteryBodyAggressive": "{{manufacturer}} devices stop background timers aggressively. Without an exemption, Quibly may lose track of your study time. It takes one tap.",
+    "batteryOpenSettings": "Open settings"
   },
   "active": {
     "work": "WORK",

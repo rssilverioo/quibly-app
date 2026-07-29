@@ -14,6 +14,7 @@ import Press from '../../components/ui/Press';
 import { Mascot } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
 import { track } from '../../lib/analytics';
+import { onLiveTimerAction } from '../../services/study-timer';
 
 const { width: SW } = Dimensions.get('window');
 const TIMER_SIZE = Math.min(SW * 0.72, 300);
@@ -154,6 +155,18 @@ export default function ActiveSessionScreen() {
       },
     ]);
   }, [endSession, goHome, isEnding, tr]);
+
+  // Pause / resume / end tapped on the Android notification or the iOS Live
+  // Activity run the same store methods as the in-app controls, so the two
+  // surfaces can never disagree about what the session is doing. Declared after
+  // `handleEndSession` because it closes over it.
+  useEffect(() => {
+    return onLiveTimerAction((action) => {
+      if (action === 'pause') void pause();
+      else if (action === 'resume') void resume();
+      else if (action === 'end') handleEndSession();
+    });
+  }, [pause, resume, handleEndSession]);
 
   return (
     <View style={[styles.container, { backgroundColor: c.bg }]}>

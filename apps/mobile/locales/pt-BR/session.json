@@ -21,7 +21,11 @@
     "subjectNamePlaceholder": "Nome da matéria",
     "color": "Cor",
     "stopwatch": "Cronômetro",
-    "stopwatchSubtitle": "Conta para cima. Sem meta."
+    "stopwatchSubtitle": "Conta para cima. Sem meta.",
+    "batteryTitle": "Mantenha seu cronômetro rodando",
+    "batteryBody": "O Android pode parar o cronômetro em segundo plano. Permitir que o Quibly rode sem restrição de bateria mantém seu tempo de estudo correto.",
+    "batteryBodyAggressive": "Aparelhos {{manufacturer}} interrompem cronômetros em segundo plano de forma agressiva. Sem a permissão, o Quibly pode perder seu tempo de estudo. É um toque só.",
+    "batteryOpenSettings": "Abrir ajustes"
   },
   "active": {
     "work": "TRABALHO",
