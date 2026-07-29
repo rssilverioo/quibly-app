@@ -1,14 +1,42 @@
-import { IsNumber, IsUUID, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
 
-export class EndSessionDto {
+/**
+ * Body of `POST /sessions/:id/end` — intentionally empty.
+ *
+ * The session comes from the URL and everything else from the server: the end
+ * instant is `now`, the duration is measured from `startedAt` minus recorded
+ * pauses, and the pomodoro cycle count is derived from that duration. Nothing
+ * the client could say about time is believed.
+ */
+export class EndSessionDto {}
+
+/**
+ * Body of the deprecated `POST /sessions/end`.
+ *
+ * v1.2.1 is live in the store and posts `session_id`,
+ * `total_duration_minutes` and `pomodoro_cycles_completed` to that route. The
+ * global ValidationPipe runs with `forbidNonWhitelisted: true`, so those fields
+ * have to stay *declared* — otherwise every old client takes a 400 the moment
+ * this deploys, which is a hard break for anyone who hasn't updated.
+ *
+ * So they are declared and then ignored: the service measures the duration
+ * server-side either way. An old client keeps working and silently starts
+ * getting honest numbers. Delete this class once the store minimum is past the
+ * release that moves to `POST /sessions/:id/end`.
+ */
+export class LegacyEndSessionDto {
   @IsUUID()
   session_id: string;
 
+  /** Ignored. The server measures the duration. */
   @IsNumber()
   @Min(0)
-  pomodoro_cycles_completed: number;
+  @IsOptional()
+  total_duration_minutes?: number;
 
+  /** Ignored. The server derives cycles from the measured duration. */
   @IsNumber()
   @Min(0)
-  total_duration_minutes: number;
+  @IsOptional()
+  pomodoro_cycles_completed?: number;
 }

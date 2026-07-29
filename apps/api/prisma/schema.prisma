@@ -21,6 +21,11 @@ enum TimerMode {
   deep_focus
   custom
   audio
+  /// Count-up timer with no target duration — start, run, stop. The default
+  /// mode in YPT and the most used one there: a fixed pomodoro is too rigid
+  /// for someone sitting down for six hours. Sessions in this mode never
+  /// earn pomodoro cycles.
+  stopwatch
 
   @@map("timer_mode")
 }
@@ -146,6 +151,7 @@ model Profile {
   quizzes           Quiz[]
   dailyUsage        DailyUsage[]
   audioStudySessions AudioStudySession[]
+  sessionAnomalies  SessionAnomaly[]
 
   @@index([level(sort: Desc)])
   @@index([totalXp(sort: Desc)])
@@ -187,18 +193,80 @@ model StudySession {
   xpEarned                Int           @default(0) @map("xp_earned")
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz()
 
+  /// Last `POST /sessions/:id/heartbeat`. The client is expected to beat every
+  /// 30s; a session whose last beat is older than the grace window is swept to
+  /// `abandoned` and credited only up to this instant. NULL means the session
+  /// has not beaten once yet — the sweeper falls back to `startedAt`.
+  lastHeartbeatAt         DateTime?     @map("last_heartbeat_at") @db.Timestamptz()
+  /// Wall-clock instant the session became `paused`. NULL whenever the session
+  /// is not currently paused. The closed intervals live in `SessionPause`;
+  /// this is only the open one.
+  pausedAt                DateTime?     @map("paused_at") @db.Timestamptz()
+  /// How the session reached a terminal state: 'user' (explicit end),
+  /// 'abandoned_no_heartbeat' (swept), 'user_abandon' (explicit discard).
+  /// Kept as a plain string so adding a reason is not a migration.
+  endReason               String?       @map("end_reason")
+  /// Server-computed seconds the session actually ran, before the daily cap is
+  /// applied. `totalDurationMinutes` is what got credited; this is what was
+  /// measured. When they disagree, the cap clipped the session.
+  measuredSeconds         Int?          @map("measured_seconds")
+
   user        Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   league      League?      @relation(fields: [leagueId], references: [id], onDelete: SetNull)
   proofChecks ProofCheck[]
   feedPosts   FeedPost[]
   audioSession AudioStudySession?
+  pauses      SessionPause[]
+  anomalies   SessionAnomaly[]
 
   @@index([userId])
   @@index([userId, startedAt(sort: Desc)])
   @@index([leagueId])
   @@index([status])
+  /// The sweeper's query: every live session whose heartbeat went stale.
+  @@index([status, lastHeartbeatAt])
   @@map("study_sessions")
+}
+
+/// One pause interval of a study session. Kept as rows rather than a running
+/// counter so the duration the server credits can be recomputed from scratch
+/// at any point — including for a session swept mid-pause, where the interval
+/// has to be clipped to the last heartbeat rather than to `now`.
+model SessionPause {
+  id        String    @id @default(uuid()) @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  startedAt DateTime  @map("started_at") @db.Timestamptz()
+  /// NULL while the pause is still open.
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz()
+
+  session StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("quibly_session_pauses")
+}
+
+/// Antifraud trail. Fase 1 deliberately does not ban, throttle or reject on
+/// these — it records them so that a later phase can look at real data instead
+/// of guessing what abuse looks like. See docs/API-SESSIONS.md §5.
+model SessionAnomaly {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id")
+  sessionId String?  @map("session_id") @db.Uuid
+  /// 'overlap_rejected' | 'daily_cap_clipped' | 'implausible_duration' |
+  /// 'heartbeat_gap' — see SessionAnomalyKind in sessions/session-timing.ts
+  kind      String
+  /// Whatever the check measured, so the row is readable without re-deriving
+  /// it from the session. Shape varies by `kind`.
+  detail    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user    Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session StudySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([kind, createdAt(sort: Desc)])
+  @@map("quibly_session_anomalies")
 }
 
 model ProofCheck {

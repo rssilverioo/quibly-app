@@ -14,9 +14,6 @@ import { UpdateLeagueDto } from './dto/update-league.dto';
 import { RematchDto } from './dto/rematch.dto';
 import { Prisma, type LeagueStatus } from '@prisma/client';
 
-/** Beyond this, an `active` session is a zombie, not a person studying. */
-const LIVE_SESSION_MAX_HOURS = 12;
-
 const INVITE_CODE_ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const INVITE_CODE_LENGTH = 8;
@@ -239,15 +236,16 @@ export class LeaguesService {
       if (!peerByUserId.has(peer.userId)) peerByUserId.set(peer.userId, peer);
     }
 
-    // Sessions left `active` for longer than this are zombies (app killed
-    // mid-session), not people actually studying.
-    const cutoff = new Date(Date.now() - LIVE_SESSION_MAX_HOURS * 3600_000);
-
+    // No zombie filter here any more. This used to drop anything `active` for
+    // over 12h, which hid dead sessions from the list without ever closing
+    // them — they sat `active` in the table forever. Since Fase 1 the
+    // heartbeat sweeper (sessions/sessions.sweeper.ts) closes them for real
+    // within ~6 minutes, so anything still `active` is genuinely someone
+    // studying right now.
     const sessions = await this.prisma.studySession.findMany({
       where: {
         userId: { in: [...peerByUserId.keys()] },
         status: 'active',
-        startedAt: { gte: cutoff },
       },
       select: {
         id: true,

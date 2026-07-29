@@ -1,4 +1,6 @@
 import { EntitlementsService } from './entitlements.service';
+import { ENTITLEMENT_KEYS } from './entitlements.constants';
+import { DEFAULT_DAILY_STUDY_MINUTES_CAP } from '../sessions/session-timing';
 
 function makePrismaMock() {
   return {
@@ -104,6 +106,10 @@ describe('EntitlementsService', () => {
         quizzes: Infinity,
         audio_sessions: Infinity,
         ai_daily_tokens: Infinity,
+        // Not Infinity, and deliberately so: this key is the antifraud ceiling
+        // on credited study minutes, not a monetization lever. See
+        // DEFAULT_ENTITLEMENTS.
+        daily_study_minutes_cap: DEFAULT_DAILY_STUDY_MINUTES_CAP,
       });
     });
   });
@@ -146,8 +152,8 @@ describe('EntitlementsService', () => {
       const defaultedRow = all.find((r) => r.plan === 'PRO' && r.key === 'audio_sessions');
       expect(defaultedRow).toEqual({ plan: 'PRO', key: 'audio_sessions', limit: Infinity, configured: false });
 
-      // 2 plans * 4 keys, one overridden — still 8 entries total, no duplicates.
-      expect(all).toHaveLength(8);
+      // 2 plans * 5 keys, one overridden — still 10 entries total, no duplicates.
+      expect(all).toHaveLength(2 * ENTITLEMENT_KEYS.length);
     });
   });
 });
