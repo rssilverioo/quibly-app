@@ -31,6 +31,8 @@ import { AudioSessionsModule } from './audio-sessions/audio-sessions.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { DailyPlanModule } from './daily-plan/daily-plan.module';
 import { FocusAreasModule } from './focus-areas/focus-areas.module';
+import { EntitlementsModule } from './entitlements/entitlements.module';
+import { AiRouterModule } from './ai-router/ai-router.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { FocusAreasModule } from './focus-areas/focus-areas.module';
     PrismaModule,
     FirebaseModule,
     StorageModule,
+    EntitlementsModule,
+    AiRouterModule,
     GeminiModule,
     ImageSearchModule,
     AuthModule,

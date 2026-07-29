@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { ImageSearchService } from '../image-search/image-search.service';
 import { UsageService } from '../usage/usage.service';
+import { AiRouterService } from '../ai-router/ai-router.service';
 
 @Injectable()
 export class GenerateService {
@@ -19,6 +20,13 @@ export class GenerateService {
     private readonly geminiService: GeminiService,
     private readonly imageSearchService: ImageSearchService,
     private readonly usageService: UsageService,
+    // Everything that actually calls the model for flashcards/quiz goes
+    // through AiRouter instead of GeminiService directly: it picks the model
+    // per task, debits the daily token budget, caches deterministic content
+    // by hash (skips re-paying for the same document+language), and writes
+    // the AiUsageLedger row. `geminiService` stays injected for `explainCard`,
+    // which isn't migrated yet — see the Fase 0 handoff report.
+    private readonly aiRouter: AiRouterService,
   ) {}
 
   async generateFlashcardsFromDocument(userId: string, documentId: string, language?: string) {
@@ -36,7 +44,7 @@ export class GenerateService {
       );
     }
 
-    const cards = await this.geminiService.generateFlashcards(doc.extractedText, language);
+    const cards = await this.aiRouter.generateFlashcards(userId, doc.extractedText, language || 'en');
     this.logger.log(`Generated ${cards.length} flashcards for "${doc.title}"`);
 
     // Search images in parallel (batch of 5 to avoid rate limits)
@@ -97,7 +105,7 @@ export class GenerateService {
       );
     }
 
-    const questions = await this.geminiService.generateQuiz(doc.extractedText, language);
+    const questions = await this.aiRouter.generateQuiz(userId, doc.extractedText, language || 'en');
     this.logger.log(`Generated ${questions.length} quiz questions for "${doc.title}"`);
 
     // Search images in parallel (batch of 5 to avoid rate limits)
@@ -199,7 +207,7 @@ export class GenerateService {
     const { language, title } = lesson;
 
     if (type === 'flashcards') {
-      const cards = await this.geminiService.generateFlashcards(lesson.rawText, language);
+      const cards = await this.aiRouter.generateFlashcards(userId, lesson.rawText, language);
       const withImages = await this.attachImages(cards);
 
       const set = await this.prisma.flashcardSet.create({
@@ -226,7 +234,7 @@ export class GenerateService {
       return set;
     }
 
-    const questions = await this.geminiService.generateQuiz(lesson.rawText, language);
+    const questions = await this.aiRouter.generateQuiz(userId, lesson.rawText, language);
     const withImages = await this.attachImages(questions);
 
     const quiz = await this.prisma.quiz.create({
@@ -273,7 +281,7 @@ export class GenerateService {
     const content = topic;
 
     if (type === 'flashcards') {
-      const cards = await this.geminiService.generateFlashcards(content, detectedLang);
+      const cards = await this.aiRouter.generateFlashcards(userId, content, detectedLang);
       const cardsWithImages = await Promise.all(
         cards.map(async (card, index) => {
           const imageUrl = card.imageQuery
@@ -306,7 +314,7 @@ export class GenerateService {
       await this.usageService.incrementUsage(userId, 'flashcard_sets');
       return set;
     } else {
-      const questions = await this.geminiService.generateQuiz(content, detectedLang);
+      const questions = await this.aiRouter.generateQuiz(userId, content, detectedLang);
       const questionsWithImages = await Promise.all(
         questions.map(async (q, index) => {
           const imageUrl = q.imageQuery

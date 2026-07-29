@@ -2,17 +2,22 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
   UseGuards,
   DefaultValuePipe,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
+import { Plan } from '@prisma/client';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { AdminService } from './admin.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
+import { ENTITLEMENT_KEYS, EntitlementKey } from '../entitlements/entitlements.constants';
 
 @Controller('admin')
 @UseGuards(FirebaseAuthGuard, AdminGuard)
@@ -20,6 +25,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly notificationsService: NotificationsService,
+    private readonly entitlementsService: EntitlementsService,
   ) {}
 
   @Get('stats')
@@ -108,6 +114,51 @@ export class AdminController {
     @Query('userId') userId?: string,
   ) {
     return this.adminService.getDocuments({ page, limit, search, userId });
+  }
+
+  // ─── AI cost (Fase 0, Bloco 4) ───
+
+  @Get('ai-costs')
+  getAiCostsByDay(
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+  ) {
+    return this.adminService.getAiCostsByDay(days);
+  }
+
+  @Get('ai-costs/users')
+  getAiCostsByUser(
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.adminService.getAiCostsByUser({ days, page, limit });
+  }
+
+  // ─── Entitlements (Fase 0, Bloco 3) ───
+  //
+  // This is the "change a limit without a deploy" knob the roadmap asks for.
+  // At launch every plan/key resolves to Infinity by default (see
+  // EntitlementsService) — these routes are how that gets turned into a
+  // finite limit later, by writing a row instead of shipping code.
+
+  @Get('entitlements')
+  listEntitlements() {
+    return this.entitlementsService.listAll();
+  }
+
+  @Patch('entitlements')
+  setEntitlement(
+    @Body() body: { plan: Plan; key: string; limit: number | null },
+  ) {
+    if (body.plan !== 'FREE' && body.plan !== 'PRO') {
+      throw new BadRequestException(`Unknown plan "${body.plan}"`);
+    }
+    if (!ENTITLEMENT_KEYS.includes(body.key as EntitlementKey)) {
+      throw new BadRequestException(`Unknown entitlement key "${body.key}"`);
+    }
+    return this.entitlementsService
+      .setLimit(body.plan, body.key as EntitlementKey, body.limit)
+      .then(() => ({ ok: true }));
   }
 
   @Post('notifications/broadcast')

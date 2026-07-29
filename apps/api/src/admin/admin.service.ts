@@ -412,6 +412,69 @@ export class AdminService {
 
   // ─── Documents ───
 
+  // ─── AI cost (Fase 0, Bloco 4) ───
+
+  /** Cost and token spend per calendar day, most recent first. */
+  async getAiCostsByDay(days: number) {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - days);
+
+    const rows = await this.prisma.aiUsageLedger.groupBy({
+      by: ['date'],
+      where: { date: { gte: since } },
+      _sum: { inputTokens: true, outputTokens: true, estimatedCostUsd: true },
+      _count: { _all: true },
+      orderBy: { date: 'desc' },
+    });
+
+    return rows.map((r) => ({
+      date: r.date,
+      calls: r._count._all,
+      input_tokens: r._sum.inputTokens ?? 0,
+      output_tokens: r._sum.outputTokens ?? 0,
+      estimated_cost_usd: Number(r._sum.estimatedCostUsd ?? 0),
+    }));
+  }
+
+  /** Cost and token spend per user over the window, most expensive first. */
+  async getAiCostsByUser(params: { days?: number; page?: number; limit?: number }) {
+    const { days = 30, page = 1, limit = 20 } = params;
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - days);
+
+    const grouped = await this.prisma.aiUsageLedger.groupBy({
+      by: ['userId'],
+      where: { date: { gte: since } },
+      _sum: { inputTokens: true, outputTokens: true, estimatedCostUsd: true },
+      _count: { _all: true },
+    });
+
+    const sorted = grouped.sort(
+      (a, b) => Number(b._sum.estimatedCostUsd ?? 0) - Number(a._sum.estimatedCostUsd ?? 0),
+    );
+    const total = sorted.length;
+    const page_rows = sorted.slice((page - 1) * limit, (page - 1) * limit + limit);
+
+    const users = await this.prisma.profile.findMany({
+      where: { id: { in: page_rows.map((r) => r.userId) } },
+      select: { id: true, email: true, username: true, plan: true },
+    });
+    const userById = new Map(users.map((u) => [u.id, u]));
+
+    return {
+      users: page_rows.map((r) => ({
+        user: userById.get(r.userId) ?? { id: r.userId, email: null, username: null, plan: null },
+        calls: r._count._all,
+        input_tokens: r._sum.inputTokens ?? 0,
+        output_tokens: r._sum.outputTokens ?? 0,
+        estimated_cost_usd: Number(r._sum.estimatedCostUsd ?? 0),
+      })),
+      pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
+    };
+  }
+
   async getDocuments(params: {
     page?: number;
     limit?: number;

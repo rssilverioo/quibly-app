@@ -12,6 +12,7 @@ import { OpenaiService, OpenAiVoice } from '../openai/openai.service';
 import { StorageService } from '../storage/storage.service';
 import { UsageService } from '../usage/usage.service';
 import { SessionsService } from '../sessions/sessions.service';
+import { AiRouterService } from '../ai-router/ai-router.service';
 import { CreateAudioSessionDto } from './dto/create-audio-session.dto';
 import { StartAudioSessionDto } from './dto/start-audio-session.dto';
 
@@ -38,6 +39,12 @@ export class AudioSessionsService {
     private readonly storage: StorageService,
     private readonly usage: UsageService,
     private readonly sessions: SessionsService,
+    // Ledger-only integration, same as LessonsService: recorded for cost
+    // visibility, not yet budget-gated through AiRouter. The clip cache
+    // below (AudioClip.textHash) already does the job AiRouter's generalized
+    // cache does elsewhere — it's the pattern that cache was modeled on, so
+    // it's left as-is rather than rerouted.
+    private readonly aiRouter: AiRouterService,
   ) {}
 
   async createSession(userId: string, dto: CreateAudioSessionDto) {
@@ -169,12 +176,21 @@ export class AudioSessionsService {
       voice: OpenAiVoice;
     },
   ) {
-    const segments = await this.gemini.planAudioScript(
+    const { result: segments, inputTokens, outputTokens } = await this.gemini.planAudioScriptWithUsage(
       params.flashcards,
       params.durationMinutes,
       params.language,
       params.userName,
     );
+    const scriptModel = this.aiRouter.modelFor('audio_script');
+    await this.aiRouter.record({
+      userId: params.userId,
+      task: 'audio_script',
+      provider: scriptModel.provider,
+      model: scriptModel.model,
+      inputUnits: inputTokens,
+      outputUnits: outputTokens,
+    });
 
     const clips: ClipRef[] = [];
     let totalDurationSec = 0;
@@ -205,6 +221,29 @@ export class AudioSessionsService {
             url,
             durationSec: estimatedDurationSec,
           },
+        });
+
+        const ttsModel = this.aiRouter.modelFor('tts');
+        // tts-1 is billed per character, per MODEL_PRICING's 'perChar' contract.
+        await this.aiRouter.record({
+          userId: params.userId,
+          task: 'tts',
+          provider: ttsModel.provider,
+          model: ttsModel.model,
+          inputUnits: text.length,
+        });
+      } else {
+        // AudioClip.textHash already deduped this — the original pattern
+        // AiRouter's generalized cache is modeled on. Record the hit so it
+        // shows up in cache hit-rate the same way AiRouter's own cache does.
+        const ttsModel = this.aiRouter.modelFor('tts');
+        await this.aiRouter.record({
+          userId: params.userId,
+          task: 'tts',
+          provider: ttsModel.provider,
+          model: ttsModel.model,
+          inputUnits: 0,
+          cacheHit: true,
         });
       }
 

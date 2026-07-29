@@ -12,7 +12,18 @@ import { StorageService } from '../storage/storage.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { OpenaiService } from '../openai/openai.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AiRouterService } from '../ai-router/ai-router.service';
 import type { LessonSource } from '@prisma/client';
+
+/**
+ * Whisper doesn't report audio duration back, and we don't decode the file
+ * server-side just to cost it. This assumes a ~128kbps encode (a reasonable
+ * average for phone-recorded voice memos) to turn bytes into a duration
+ * estimate for the AI cost ledger — it's a proxy, not a measurement. When the
+ * client sends `duration_sec` (it usually does), that real value is used
+ * instead.
+ */
+const ASSUMED_AUDIO_BYTES_PER_SEC = 16 * 1024;
 
 /**
  * Below this, a capture didn't produce enough to structure — a 20-second
@@ -31,6 +42,10 @@ export class LessonsService {
     private readonly gemini: GeminiService,
     private readonly openai: OpenaiService,
     private readonly analytics: AnalyticsService,
+    // Ledger-only integration for now: every AI call here is recorded to
+    // AiUsageLedger for cost visibility, but not yet budget-gated or cached
+    // through AiRouter — see the Fase 0 handoff report for the scope line.
+    private readonly aiRouter: AiRouterService,
   ) {}
 
   /**
@@ -68,7 +83,7 @@ export class LessonsService {
     });
 
     // Deliberately not awaited: the client polls GET /lessons/:id.
-    void this.process(lesson.id, userId, source, file.buffer, file.originalname, file.mimetype, language)
+    void this.process(lesson.id, userId, source, file.buffer, file.originalname, file.mimetype, language, opts.durationSec)
       .catch((err) => this.logger.error(`Lesson ${lesson.id} failed: ${err}`));
 
     return lesson;
@@ -95,17 +110,27 @@ export class LessonsService {
     filename: string,
     mimeType: string,
     language: string,
+    durationSecHint?: number,
   ): Promise<void> {
     const startedAt = Date.now();
     try {
-      const rawText = await this.extractText(buffer, filename, mimeType, language);
+      const rawText = await this.extractText(userId, buffer, filename, mimeType, language, durationSecHint);
 
       if (rawText.trim().length < MIN_USABLE_CHARS) {
         await this.fail(lessonId, userId, source, 'Not enough content in this capture to build a note');
         return;
       }
 
-      const structured = await this.gemini.structureLesson(rawText, language);
+      const { result: structured, inputTokens, outputTokens } = await this.gemini.structureLessonWithUsage(rawText, language);
+      const model = this.aiRouter.modelFor('lesson_structuring');
+      await this.aiRouter.record({
+        userId,
+        task: 'lesson_structuring',
+        provider: model.provider,
+        model: model.model,
+        inputUnits: inputTokens,
+        outputUnits: outputTokens,
+      });
 
       await this.prisma.lesson.update({
         where: { id: lessonId },
@@ -135,13 +160,27 @@ export class LessonsService {
   }
 
   private async extractText(
+    userId: string,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     language: string,
+    durationSecHint?: number,
   ): Promise<string> {
     if (mimeType.startsWith('audio/')) {
-      return this.openai.transcribe(buffer, filename, language);
+      const transcript = await this.openai.transcribe(buffer, filename, language);
+      const durationSec = durationSecHint ?? buffer.length / ASSUMED_AUDIO_BYTES_PER_SEC;
+      const model = this.aiRouter.modelFor('transcription');
+      // Whisper is billed per audio-minute, not per token: inputUnits here
+      // is seconds, per the MODEL_PRICING contract for 'perMinute' models.
+      await this.aiRouter.record({
+        userId,
+        task: 'transcription',
+        provider: model.provider,
+        model: model.model,
+        inputUnits: durationSec,
+      });
+      return transcript;
     }
 
     if (mimeType === 'application/pdf') {
@@ -157,7 +196,21 @@ export class LessonsService {
       }
     }
 
-    return this.gemini.extractTextFromImage(buffer);
+    const extracted = await this.gemini.extractTextFromImage(buffer);
+    const ocrModel = this.aiRouter.modelFor('ocr');
+    // Vision input isn't token-metered the same way text is, and
+    // extractTextFromImage doesn't surface usage — this only costs the
+    // output side (chars/4 as a token proxy). Input cost is not modeled;
+    // flagged in the handoff report as a known gap.
+    await this.aiRouter.record({
+      userId,
+      task: 'ocr',
+      provider: ocrModel.provider,
+      model: ocrModel.model,
+      inputUnits: 0,
+      outputUnits: extracted.length / 4,
+    });
+    return extracted;
   }
 
   private async fail(
@@ -237,7 +290,17 @@ Question: ${question}
 Class capture:
 ${lesson.rawText.slice(0, 50000)}`;
 
-    return this.gemini.chatJSON<{ answer: string; grounded: boolean }>(prompt);
+    const { result, inputTokens, outputTokens } = await this.gemini.chatJSONWithUsage<{ answer: string; grounded: boolean }>(prompt);
+    const model = this.aiRouter.modelFor('lesson_qa');
+    await this.aiRouter.record({
+      userId,
+      task: 'lesson_qa',
+      provider: model.provider,
+      model: model.model,
+      inputUnits: inputTokens,
+      outputUnits: outputTokens,
+    });
+    return result;
   }
 
   async remove(userId: string, id: string) {
