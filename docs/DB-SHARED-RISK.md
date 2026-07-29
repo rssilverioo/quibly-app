@@ -1,11 +1,35 @@
 # Risco do banco compartilhado
 
-> Diagnóstico apenas. Nenhum comando de escrita foi rodado contra produção
-> para produzir este documento — as conclusões abaixo vêm de leitura de
-> código (`schema.prisma`, migrations, `railway.toml`) e do texto do próprio
-> repo. Nada aqui foi executado. Ver "Passos de verificação" no final: há
-> perguntas que só o CEO (ou quem tem acesso ao Postgres de produção) pode
-> responder, porque não temos visibilidade sobre o produto vizinho.
+> ## ⚠️ Status: RESOLVIDO — 29/07/2026
+>
+> **O banco não é mais compartilhado.** Confirmado pelo Rodrigo nesta data.
+> O produto vizinho não opera mais contra esta instância.
+>
+> Com isso o risco agudo que este documento levantou **deixa de existir**, e a
+> Opção A (schema dedicado) deixa de ser urgente: ela resolvia exatamente a
+> colisão de nomes entre dois produtos que já não coexistem. Migration nossa
+> voltou a ser operação de rotina.
+>
+> **O que ainda vale, independente disso:**
+>
+> - Backup/PITR testado antes de qualquer migration destrutiva. Isso nunca foi
+>   sobre o vizinho — é higiene de qualquer banco de produção.
+> - O `@@map("captured_lessons")` continua lá. Renomear para `lessons` agora é
+>   possível, mas é migration de rename com dependentes: só com motivo real.
+> - Tabelas novas seguem nascendo com prefixo `quibly_`. Não pelo risco, que
+>   acabou, mas porque a convenção já está estabelecida e misturar dois padrões
+>   de nomenclatura é pior que manter um que não incomoda.
+>
+> O diagnóstico abaixo fica registrado como histórico: ele explica por que o
+> schema tem as marcas que tem, e serve de referência caso a instância volte a
+> ser compartilhada com qualquer coisa.
+
+---
+
+> Diagnóstico original, escrito quando o banco ainda era compartilhado. Nenhum
+> comando de escrita foi rodado contra produção para produzi-lo — as conclusões
+> vêm de leitura de código (`schema.prisma`, migrations, `railway.toml`) e do
+> texto do próprio repo.
 
 ## O fato que dispara isso
 

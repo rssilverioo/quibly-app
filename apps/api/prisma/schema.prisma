@@ -129,6 +129,17 @@ model Profile {
   educationLevel         String?   @map("education_level")   // high_school | college | graduate | professional
   studyGoal              String?   @map("study_goal")        // exam_prep | school | certification | fun
   dailyGoalMinutes       Int       @default(15) @map("daily_goal_minutes")
+
+  /// ISO 3166-1 alpha-2, resolvido no onboarding por locale + IP.
+  countryCode            String?   @map("country_code") @db.Char(2)
+  /// A prova que o usuário está estudando. Sugerida por geo, sempre trocável.
+  examTrackId            String?   @map("exam_track_id") @db.Uuid
+  /// IANA, ex: 'America/Sao_Paulo'. A Fase 2 precisa disto para horário de
+  /// silêncio das notificações; a Fase 6, para fechar o dia no fuso certo.
+  timezone               String?
+  /// Data da prova alvo, quando existe. É o `dias até a prova` da Fase 6.
+  examDate               DateTime? @map("exam_date") @db.Date
+
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
@@ -152,6 +163,9 @@ model Profile {
   dailyUsage        DailyUsage[]
   audioStudySessions AudioStudySession[]
   sessionAnomalies  SessionAnomaly[]
+  country           Country?         @relation(fields: [countryCode], references: [code], onDelete: SetNull)
+  examTrack         ExamTrack?       @relation(fields: [examTrackId], references: [id], onDelete: SetNull)
+  topicMastery      TopicMastery[]
 
   @@index([level(sort: Desc)])
   @@index([totalXp(sort: Desc)])
@@ -219,6 +233,7 @@ model StudySession {
   audioSession AudioStudySession?
   pauses      SessionPause[]
   anomalies   SessionAnomaly[]
+  topics      SessionTopic[]
 
   @@index([userId])
   @@index([userId, startedAt(sort: Desc)])
@@ -601,10 +616,15 @@ model Question {
   correctIndex Int    @map("correct_index")
   imageUrl     String? @map("image_url")
   sortOrder    Int    @default(0) @map("sort_order")
+  /// Liga a questão ao currículo. Nullable porque todo o conteúdo gerado
+  /// antes da Fase 1 não tem tópico, e não há de onde inferir.
+  topicId      String? @map("topic_id") @db.Uuid
 
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quiz  Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
 
   @@index([quizId])
+  @@index([topicId])
   @@map("questions")
 }
 
@@ -745,4 +765,153 @@ model AiContentCache {
 
   @@index([task])
   @@map("quibly_ai_content_cache")
+}
+
+// ─── CURRÍCULO (Fase 1) ───────────────────────────────────────────────────
+//
+// A decisão arquitetural central da reformulação (ARCHITECTURE.md §2): o
+// currículo é o eixo, e "Brasil primeiro, depois o mundo" vira um seed de
+// dados em vez de um refactor.
+//
+//   Country → ExamTrack → Discipline → Topic
+//
+// O `Topic` é a unidade atômica do sistema inteiro: liga onboarding, salas,
+// sessões, questões, medição de domínio e — na Fase 6 — o gerador de plano.
+
+model Country {
+  /// ISO 3166-1 alpha-2. Chave natural de propósito: o código do país já é
+  /// estável e universal, e usar UUID aqui só criaria uma indireção a mais
+  /// em cima de um identificador que o mundo inteiro já concorda.
+  code      String   @id @db.Char(2)
+  nameEn    String   @map("name_en")
+  namePt    String   @map("name_pt")
+  /// Locale padrão para sugerir conteúdo, ex: 'pt-BR'.
+  locale    String
+  /// Desligar um país sem apagar dados de quem já o escolheu.
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  tracks   ExamTrack[]
+  profiles Profile[]
+
+  @@map("quibly_countries")
+}
+
+model ExamTrack {
+  id          String  @id @default(uuid()) @db.Uuid
+  countryCode String  @map("country_code") @db.Char(2)
+  /// Estável e legível: 'enem', 'oab', 'sat'. É o que os seeds usam como
+  /// chave de upsert, então renomear um slug quebra a idempotência.
+  slug        String
+  name        String
+  description String?
+  /// Ordem de exibição na sugestão do onboarding.
+  sortOrder   Int     @default(0) @map("sort_order")
+  isActive    Boolean @default(true) @map("is_active")
+
+  country     Country      @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+  disciplines Discipline[]
+  profiles    Profile[]
+
+  @@unique([countryCode, slug])
+  @@index([countryCode])
+  @@map("quibly_exam_tracks")
+}
+
+model Discipline {
+  id          String  @id @default(uuid()) @db.Uuid
+  trackId     String  @map("track_id") @db.Uuid
+  slug        String
+  name        String
+  /// Cor sugerida ao virar `Subject` do usuário no onboarding.
+  color       String  @default("#7C5CFC")
+  icon        String?
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  track  ExamTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  topics Topic[]
+
+  @@unique([trackId, slug])
+  @@index([trackId])
+  @@map("quibly_disciplines")
+}
+
+model Topic {
+  id           String @id @default(uuid()) @db.Uuid
+  disciplineId String @map("discipline_id") @db.Uuid
+  slug         String
+  name         String
+
+  /// Quanto o tópico vale na prova, 0–100. Junto com `frequency`, é uma das
+  /// duas entradas do gerador de plano da Fase 6:
+  ///   peso × (1 − domínio) × urgência = prioridade
+  /// Peso errado aqui envenena o plano de estudo de todo mundo, por isso
+  /// `weightSource` é obrigatório na prática — ver seeds.
+  weight       Int    @default(50)
+
+  /// Em quantas das últimas 10 provas o tópico apareceu, 0–10. Peso diz
+  /// quanto vale; frequência diz quão provável é cair. São coisas
+  /// diferentes: um tópico pode valer muito e cair pouco.
+  frequency    Int    @default(5)
+
+  /// De onde saíram `weight` e `frequency`. Sem isto os números viram
+  /// folclore em seis meses e ninguém sabe se dá para confiar.
+  weightSource String? @map("weight_source")
+
+  sortOrder    Int    @default(0) @map("sort_order")
+
+  discipline Discipline      @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  sessions   SessionTopic[]
+  mastery    TopicMastery[]
+  questions  Question[]
+
+  @@unique([disciplineId, slug])
+  @@index([disciplineId])
+  @@map("quibly_topics")
+}
+
+/// O que o usuário marcou ter estudado numa sessão.
+///
+/// Esta tabela é a razão de o tagging começar na Fase 1 e não na Fase 6: sem
+/// histórico, o gerador de plano nasce cego e precisa de um backfill que não
+/// existe (ARCHITECTURE.md §2, "regra inegociável").
+model SessionTopic {
+  sessionId String   @map("session_id") @db.Uuid
+  topicId   String   @map("topic_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  session StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  topic   Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, topicId])
+  @@index([topicId])
+  @@map("quibly_session_topics")
+}
+
+/// Domínio do usuário por tópico.
+///
+/// **Criada vazia de propósito.** Nada escreve aqui na Fase 1 — a Fase 4
+/// (quiz alimentando mastery) começa a preencher. Existe agora porque criar
+/// depois custaria um backfill de dados que ninguém guardou.
+model TopicMastery {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id")
+  topicId    String    @map("topic_id") @db.Uuid
+
+  attempts   Int       @default(0)
+  correct    Int       @default(0)
+  /// Fator de facilidade no estilo SM-2/FSRS. 2.5 é o ponto de partida
+  /// clássico; sobe com acerto, desce com erro.
+  easeFactor Decimal   @default(2.5) @map("ease_factor") @db.Decimal(4, 2)
+  lastSeenAt DateTime? @map("last_seen_at") @db.Timestamptz()
+  /// Quando este tópico deve voltar. A Fase 4 preenche; a Fase 6 lê.
+  nextDueAt  DateTime? @map("next_due_at") @db.Timestamptz()
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user  Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([userId, nextDueAt])
+  @@map("quibly_topic_mastery")
 }

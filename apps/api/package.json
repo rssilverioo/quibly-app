@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "prisma:validate": "prisma validate"
+    "prisma:validate": "prisma validate",
+    "seed:curriculum": "ts-node -r tsconfig-paths/register src/curriculum/seed-curriculum.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.995.0",
