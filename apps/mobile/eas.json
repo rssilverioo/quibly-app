@@ -27,6 +27,7 @@
     "device": {
       "extends": "development",
       "developmentClient": false,
+      "autoIncrement": true,
       "android": {
         "buildType": "apk",
         "distribution": "internal"
