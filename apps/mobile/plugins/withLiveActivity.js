@@ -45,11 +45,23 @@ const BUNDLE_SUFFIX = '.widget';
 /** Live Activities exigem 16.1; a extensão não pode mirar mais baixo. */
 const DEPLOYMENT_TARGET = '16.1';
 
-/** Fontes que a extensão compila. Copiadas do módulo no prebuild. */
+/**
+ * Fontes que a extensão compila, e de onde vêm.
+ *
+ * A separação não é organizacional, é funcional: o autolinking do Expo compila
+ * todo Swift em `modules/study-timer/ios/` dentro do **app**, e
+ * `StudyTimerLiveActivity.swift` declara `@main`. Junto com o
+ * `@UIApplicationMain` do AppDelegate, o processo sobe o bundle do widget em
+ * vez do React Native e o app fica preso na splash — sem crash, sem log.
+ *
+ * Por isso as fontes exclusivas do widget moram em `widget/`, que o
+ * autolinking não varre. `StudyTimerAttributes` continua em `ios/` porque o
+ * módulo do app precisa dele.
+ */
 const SOURCES = [
-  'StudyTimerAttributes.swift',
-  'CasteloMark.swift',
-  'StudyTimerLiveActivity.swift',
+  { file: 'StudyTimerAttributes.swift', from: 'ios' },
+  { file: 'CasteloMark.swift', from: 'widget' },
+  { file: 'StudyTimerLiveActivity.swift', from: 'widget' },
 ];
 
 function widgetInfoPlist() {
@@ -86,18 +98,17 @@ const withWidgetFiles = (config) =>
     async (cfg) => {
       const iosRoot = cfg.modRequest.platformProjectRoot;
       const widgetDir = path.join(iosRoot, TARGET_NAME);
-      const moduleIos = path.join(
+      const moduleRoot = path.join(
         cfg.modRequest.projectRoot,
         'modules',
         'study-timer',
-        'ios',
       );
 
       fs.mkdirSync(widgetDir, { recursive: true });
       fs.writeFileSync(path.join(widgetDir, 'Info.plist'), widgetInfoPlist());
 
-      for (const file of SOURCES) {
-        const from = path.join(moduleIos, file);
+      for (const { file, from: dir } of SOURCES) {
+        const from = path.join(moduleRoot, dir, file);
         if (!fs.existsSync(from)) {
           throw new Error(
             `[withLiveActivity] Fonte ausente: ${from}. ` +
@@ -172,7 +183,7 @@ const withWidgetTarget = (config) =>
     // resolve relativo a ele — prefixar aqui produzia
     // `QuiblyWidget/QuiblyWidget/Foo.swift` e a build falhava com
     // "Build input files cannot be found".
-    for (const file of SOURCES) {
+    for (const { file } of SOURCES) {
       project.addSourceFile(file, { target: target.uuid }, group.uuid);
     }
 
