@@ -58,3 +58,74 @@ describe('FeedService.getLeagueFeed', () => {
     );
   });
 });
+
+describe('FeedService.getChallengeMemberPosts', () => {
+  it('filters by author and challenge window and keeps the feed item shape', async () => {
+    const startsAt = new Date('2026-08-01T00:00:00.000Z');
+    const endsAt = new Date('2026-08-08T00:00:00.000Z');
+    const prisma = {
+      league: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'challenge-1',
+          startDate: startsAt,
+          endDate: endsAt,
+        }),
+      },
+      leagueMember: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({ id: 'requester-membership' })
+          .mockResolvedValueOnce({ id: 'target-membership' }),
+        findMany: jest.fn().mockResolvedValue([
+          { userId: 'target-user', displayName: 'Bia' },
+        ]),
+      },
+      feedPost: {
+        count: jest.fn().mockResolvedValue(1),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'post-1',
+            leagueId: 'challenge-1',
+            userId: 'target-user',
+            caption: 'foto do dia',
+            photoUrl: 'https://cdn.example/photo.jpg',
+            showProofPhoto: false,
+            createdAt: new Date('2026-08-03T12:00:00.000Z'),
+            user: { username: 'profile-name', handle: 'bia', avatarUrl: null },
+            session: null,
+            reactions: [],
+            comments: [],
+          },
+        ]),
+      },
+    };
+
+    const result = await new FeedService(prisma as any, {} as any)
+      .getChallengeMemberPosts('challenge-1', 'requester', 'target-user', 1, 20);
+
+    expect(prisma.feedPost.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          leagueId: 'challenge-1',
+          userId: 'target-user',
+          createdAt: { gte: startsAt, lt: endsAt },
+        },
+        skip: 0,
+        take: 20,
+      }),
+    );
+    expect(result).toEqual({
+      items: [
+        expect.objectContaining({
+          id: 'post-1',
+          kind: 'standalone',
+          photoUrl: 'https://cdn.example/photo.jpg',
+          session: null,
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+    });
+  });
+});
