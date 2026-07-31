@@ -75,3 +75,96 @@ describe('ChallengesService.create', () => {
     );
   });
 });
+
+describe('ChallengesService.details', () => {
+  it('does not read the challenge or invite code for a non-member', async () => {
+    const prisma = {
+      leagueMember: { findUnique: jest.fn().mockResolvedValue(null) },
+      league: { findUnique: jest.fn() },
+    };
+
+    await expect(
+      new ChallengesService(prisma as any).details('challenge-1', 'outsider'),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(prisma.league.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns progress, guarded invite, top four and timezone-aware group stats', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-04T00:00:00.000Z'));
+    const challenge = {
+      id: 'challenge-1',
+      name: 'Sala',
+      description: 'Semana da prova',
+      participationMode: 'photo',
+      inviteCode: 'MEMBERS1',
+      startDate: new Date('2026-08-01T00:00:00.000Z'),
+      endDate: new Date('2026-08-07T00:00:00.000Z'),
+      members: [
+        {
+          userId: 'a-user',
+          displayName: 'Ana',
+          user: {
+            id: 'a-user',
+            handle: 'ana',
+            avatarUrl: 'ana.jpg',
+            timezone: 'America/Sao_Paulo',
+          },
+        },
+        {
+          userId: 'b-user',
+          displayName: 'Bia',
+          user: {
+            id: 'b-user',
+            handle: 'bia',
+            avatarUrl: 'bia.jpg',
+            timezone: 'UTC',
+          },
+        },
+      ],
+    };
+    const prisma = {
+      leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'member' }) },
+      league: { findUnique: jest.fn().mockResolvedValue(challenge) },
+      feedPost: {
+        findMany: jest.fn().mockResolvedValue([
+          { userId: 'a-user', createdAt: new Date('2026-08-02T09:00:00.000Z') },
+          { userId: 'a-user', createdAt: new Date('2026-08-03T05:00:00.000Z') },
+          { userId: 'b-user', createdAt: new Date('2026-08-02T06:00:00.000Z') },
+        ]),
+      },
+      studySession: {
+        findMany: jest.fn().mockResolvedValue([
+          { userId: 'a-user', totalDurationMinutes: 30, isVerified: true, endedAt: new Date('2026-08-02') },
+          { userId: 'b-user', totalDurationMinutes: 50, isVerified: false, endedAt: new Date('2026-08-02') },
+        ]),
+      },
+    };
+
+    const result = await new ChallengesService(prisma as any).details(
+      'challenge-1',
+      'a-user',
+    );
+
+    expect(result.room).toEqual({
+      id: 'challenge-1',
+      name: 'Sala',
+      inviteCode: 'MEMBERS1',
+    });
+    expect(result.challenge.elapsedFraction).toBe(0.5);
+    expect(result.rankings).toEqual([
+      expect.objectContaining({ rank: 1, userId: 'b-user', activeDays: 1 }),
+      expect.objectContaining({ rank: 2, userId: 'a-user', activeDays: 2 }),
+    ]);
+    expect(result.groupStats).toEqual(
+      expect.objectContaining({
+        totalCheckIns: 3,
+        totalDaysActive: 2,
+        averageCheckInsPerDay: 1.5,
+        earlyBird: expect.objectContaining({ userId: 'a-user', checkIns: 1 }),
+        nightOwl: expect.objectContaining({ userId: 'a-user', checkIns: 1 }),
+      }),
+    );
+    jest.useRealTimers();
+  });
+});

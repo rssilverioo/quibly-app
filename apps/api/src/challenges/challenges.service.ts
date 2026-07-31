@@ -186,4 +186,149 @@ export class ChallengesService {
       limit,
     };
   }
+
+  async details(challengeId: string, userId: string) {
+    const membership = await this.prisma.leagueMember.findUnique({
+      where: { leagueId_userId: { leagueId: challengeId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a room member');
+
+    // Read the invite credential only after authorization. Never spread this
+    // Prisma row into the response: every returned field is picked explicitly.
+    const challenge = await this.prisma.league.findUnique({
+      where: { id: challengeId },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: { id: true, avatarUrl: true, timezone: true },
+            },
+          },
+        },
+      },
+    });
+    if (!challenge) throw new NotFoundException('Challenge not found');
+
+    // Prisma cannot reference sibling fields in a relation filter, so fetch
+    // the exact window after the guarded challenge read.
+    const checkIns = await this.prisma.feedPost.findMany({
+      where: {
+        leagueId: challengeId,
+        createdAt: { gte: challenge.startDate, lt: challenge.endDate },
+      },
+      select: { userId: true, createdAt: true },
+    });
+    const leaderboard = await this.leaderboard(challengeId, userId, 1, 4);
+    const memberById = new Map(
+      challenge.members.map((member) => [member.userId, member]),
+    );
+    const activeDaysByUser = new Map<string, Set<string>>();
+    const groupActiveDays = new Set<string>();
+    const earlyBirdCounts = new Map<string, number>();
+    const nightOwlCounts = new Map<string, number>();
+
+    for (const checkIn of checkIns) {
+      const timezone = memberById.get(checkIn.userId)?.user.timezone;
+      const local = timezone
+        ? this.localDateAndHour(checkIn.createdAt, timezone)
+        : null;
+      if (!local) continue;
+      const userDays = activeDaysByUser.get(checkIn.userId) ?? new Set<string>();
+      userDays.add(local.date);
+      activeDaysByUser.set(checkIn.userId, userDays);
+      groupActiveDays.add(local.date);
+
+      if (local.hour >= 5 && local.hour < 9) {
+        earlyBirdCounts.set(
+          checkIn.userId,
+          (earlyBirdCounts.get(checkIn.userId) ?? 0) + 1,
+        );
+      } else if (local.hour >= 0 && local.hour < 5) {
+        nightOwlCounts.set(
+          checkIn.userId,
+          (nightOwlCounts.get(checkIn.userId) ?? 0) + 1,
+        );
+      }
+    }
+
+    const now = new Date();
+    const durationMs = challenge.endDate.getTime() - challenge.startDate.getTime();
+    const elapsedFraction =
+      durationMs <= 0
+        ? 0
+        : Math.min(
+            1,
+            Math.max(0, (now.getTime() - challenge.startDate.getTime()) / durationMs),
+          );
+    const superlative = (counts: Map<string, number>) => {
+      const winner = [...counts.entries()].sort(
+        ([userA, countA], [userB, countB]) => countB - countA || userA.localeCompare(userB),
+      )[0];
+      if (!winner) return null;
+      const member = memberById.get(winner[0]);
+      return member
+        ? {
+            userId: member.userId,
+            displayName: member.displayName,
+            avatarUrl: member.user.avatarUrl,
+            checkIns: winner[1],
+          }
+        : null;
+    };
+
+    return {
+      room: {
+        id: challenge.id,
+        name: challenge.name,
+        inviteCode: challenge.inviteCode,
+      },
+      challenge: {
+        id: challenge.id,
+        startsAt: challenge.startDate,
+        endsAt: challenge.endDate,
+        serverTime: now,
+        elapsedFraction,
+      },
+      rankings: leaderboard.entries.map((entry) => ({
+        rank: entry.rank,
+        userId: entry.userId,
+        displayName: entry.displayName,
+        avatarUrl: entry.avatarUrl,
+        activeDays: activeDaysByUser.get(entry.userId)?.size ?? 0,
+      })),
+      groupStats: {
+        totalCheckIns: checkIns.length,
+        totalDaysActive: groupActiveDays.size,
+        averageCheckInsPerDay:
+          groupActiveDays.size === 0
+            ? 0
+            : Number((checkIns.length / groupActiveDays.size).toFixed(2)),
+        earlyBird: superlative(earlyBirdCounts),
+        nightOwl: superlative(nightOwlCounts),
+      },
+    };
+  }
+
+  private localDateAndHour(at: Date, timezone: string) {
+    const format = () =>
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(at);
+    try {
+      const parts = format();
+      const value = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((part) => part.type === type)?.value ?? '';
+      return {
+        date: `${value('year')}-${value('month')}-${value('day')}`,
+        hour: Number(value('hour')),
+      };
+    } catch {
+      return null;
+    }
+  }
 }
