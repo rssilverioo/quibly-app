@@ -1,17 +1,20 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Camera, ChevronRight, Plus, Timer, Users } from 'lucide-react-native';
+import { CalendarDays, ChevronRight, Plus, Timer, Users } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard';
+import type { FirebaseFeedPost } from '../../components/feed/PostCard';
+import FeedRow from '../../components/feed/FeedRow';
 import { MascotBlock } from '../../components/mascot';
 import Avatar from '../../components/ui/Avatar';
 import Press from '../../components/ui/Press';
+import { cacheFeedPost } from '../../lib/feed-detail-cache';
 import { roomFeedPostToCardPost } from '../../lib/feed-post';
+import { feedDayLabel, startsNewFeedDay } from '../../lib/feed-post';
 import { challengeTimeLeft, isStudyChallenge, resolveRoomsHome } from '../../lib/rooms-home';
 import { getLiveMembers, type LiveMember } from '../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomFeedPost, type RoomSummary } from '../../services/rooms';
@@ -20,7 +23,7 @@ import { useTabBarClearance } from './_layout';
 
 export default function RoomsScreen() {
   const router = useRouter();
-  const { t: tr } = useTranslation('common');
+  const { t: tr, i18n } = useTranslation('common');
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const tabClearance = useTabBarClearance();
@@ -103,28 +106,27 @@ export default function RoomsScreen() {
       ? challengeTimeLeft(challenge.ends_at, challenge.server_time)
       : null;
     const challengeCard = challenge ? (
-      <Press onPress={() => router.push(`/league/challenge/${challenge.id}`)} style={styles.challengeCard}>
-        <View style={styles.challengeTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.challengeState}>{tr('rooms.activeChallenge')}</Text>
-            <Text style={styles.challengeTitle} numberOfLines={1}>{challenge.title}</Text>
+      <Press onPress={() => router.push(`/league/challenge/${challenge.id}`)}>
+        {state.room.cover_url ? (
+          <Image source={{ uri: state.room.cover_url }} style={styles.cover} resizeMode="cover" />
+        ) : (
+          <View style={styles.coverFallback}>
+            <MascotBlock state="idle" size={96} />
           </View>
-          <Text style={[styles.deadline, timeLeft?.urgent && styles.deadlineUrgent]}>
-            {tr('rooms.daysLeft', { count: timeLeft?.days ?? 0 })}
-          </Text>
-        </View>
-        {challenge.me.goal_progress != null ? (
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.min(100, challenge.me.goal_progress * 100)}%` }]} />
+        )}
+        <View style={styles.statsStrip}>
+          <View style={styles.statColumn}>
+            <Avatar uri={challenge.leader?.avatar_url ?? null} name={challenge.leader?.display_name ?? ''} size={28} />
+            <View><Text style={styles.statValue}>{challenge.leader?.metric_value ?? 0}</Text><Text style={styles.statLabel}>Leader</Text></View>
           </View>
-        ) : null}
-        <View style={styles.challengeBottom}>
-          <Text style={styles.challengeMeta}>
-            {challenge.me.rank
-              ? tr('rooms.yourRank', { rank: challenge.me.rank, count: challenge.participant_count })
-              : tr('rooms.notRanked')}
-          </Text>
-          <Text style={styles.challengeValue}>{challenge.me.metric_value} {challenge.metric_unit}</Text>
+          <View style={styles.statColumn}>
+            <Avatar uri={null} name={tr('rooms.you')} size={28} />
+            <View><Text style={styles.statValue}>{challenge.me.metric_value}</Text><Text style={styles.statLabel}>{tr('rooms.you')}</Text></View>
+          </View>
+          <View style={styles.statColumn}>
+            <View style={styles.calendarIcon}><CalendarDays size={25} color={c.fgMuted} /></View>
+            <View><Text style={styles.statValue}>{timeLeft?.days ?? 0}</Text><Text style={styles.statLabel}>{tr('rooms.daysLeftLabel')}</Text></View>
+          </View>
         </View>
       </Press>
     ) : (
@@ -152,35 +154,34 @@ export default function RoomsScreen() {
         ))}
       </View>
     ) : null;
-    const roomActions = (
+    const roomActions = studyMode ? (
       <View style={styles.actionsRow}>
-        <Press
-          haptic="medium"
-          onPress={() => router.push(`/league/post/${state.room.id}`)}
-          style={styles.actionCard}
-        >
-          <Camera size={20} color={c.fg} />
-          <Text style={styles.actionText}>{tr('rooms.postPhoto')}</Text>
+        <Press haptic="medium" onPress={() => router.push('/session/setup')} style={styles.actionCard}>
+          <Timer size={20} color={c.fg} />
+          <Text style={styles.actionText}>{tr('rooms.startTimer')}</Text>
         </Press>
-        {studyMode ? (
-          <Press
-            haptic="medium"
-            onPress={() => router.push('/session/setup')}
-            style={styles.actionCard}
-          >
-            <Timer size={20} color={c.fg} />
-            <Text style={styles.actionText}>{tr('rooms.startTimer')}</Text>
-          </Press>
-        ) : null}
       </View>
-    );
+    ) : null;
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <FlatList
           data={posts}
           keyExtractor={(post) => post.id}
-          renderItem={({ item }) => <PostCard post={item} />}
-          ItemSeparatorComponent={() => <View style={{ height: space.lg }} />}
+          renderItem={({ item, index }) => (
+            <View>
+              {startsNewFeedDay(posts, index) ? (
+                <Text style={styles.daySeparator}>{feedDayLabel(item.created_at, i18n.language)}</Text>
+              ) : null}
+              <FeedRow
+                post={item}
+                locale={i18n.language}
+                onPress={() => {
+                  cacheFeedPost(item);
+                  router.push(`/league/feed/post/${item.id}`);
+                }}
+              />
+            </View>
+          )}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
           contentContainerStyle={[styles.feed, { paddingBottom: tabClearance }]}
           ListHeaderComponent={<><Text style={styles.title}>{state.room.name}</Text>{challengeCard}{liveStrip}{roomActions}</>}
@@ -193,6 +194,13 @@ export default function RoomsScreen() {
             </Press>
           }
         />
+        <Press
+          haptic="medium"
+          onPress={() => router.push(`/league/post/${state.room.id}`)}
+          style={styles.fab}
+        >
+          <Plus size={26} color={c.fgOnAccent} />
+        </Press>
       </SafeAreaView>
     );
   }
@@ -247,6 +255,15 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   livePerson: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   liveName: { ...text.bodyStrong, color: c.fg },
   liveMeta: { ...text.caption, color: c.fgMuted, marginTop: 2 },
+  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg },
+  coverFallback: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  statsStrip: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.md },
+  statColumn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  statValue: { ...text.bodyStrong, color: c.fg },
+  statLabel: { ...text.caption, color: c.fgMuted, marginTop: 1 },
+  calendarIcon: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  daySeparator: { ...text.label, color: c.fgMuted, textAlign: 'center', paddingVertical: space.md },
+  fab: { position: 'absolute', right: space.xl, bottom: 104, width: 58, height: 58, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
   challengeCard: { borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, borderRadius: radius.lg, padding: space.lg, marginBottom: space.md, gap: space.md },
   challengeTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   challengeState: { ...text.overline, color: c.fgMuted, marginBottom: 4 },

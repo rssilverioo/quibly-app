@@ -67,6 +67,7 @@
     ,"memberHistory": "Challenge history"
     ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} in this challenge"
     ,"memberNoPosts": "No study posted in this challenge yet."
+    ,"daysLeftLabel": "days left"
   },
   "members": "Members",
   "members_one": "{{count}} member",

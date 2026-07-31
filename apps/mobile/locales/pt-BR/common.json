@@ -67,6 +67,7 @@
     ,"memberHistory": "Histórico no desafio"
     ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} no desafio"
     ,"memberNoPosts": "Nenhum estudo publicado neste desafio ainda."
+    ,"daysLeftLabel": "dias restantes"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

@@ -14,6 +14,7 @@ export default function LeagueLayout() {
       <Stack.Screen name="[id]" />
       <Stack.Screen name="chat/[id]" />
       <Stack.Screen name="feed/[id]" />
+      <Stack.Screen name="feed/post/[id]" />
       <Stack.Screen name="post/[id]" />
       <Stack.Screen name="challenge/[id]" />
       <Stack.Screen name="challenge/new" />

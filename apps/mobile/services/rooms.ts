@@ -8,6 +8,7 @@ export interface ActiveChallenge {
   server_time: string;
   participant_count: number;
   participation_mode?: 'photo' | 'study';
+  leader?: { display_name: string; metric_value: number; avatar_url?: string | null } | null;
   me: { rank: number | null; metric_value: number; goal_progress?: number | null };
 }
 
@@ -18,6 +19,7 @@ export interface RoomSummary {
   total_sp: number;
   last_post_at: string | null;
   unread_posts: number;
+  cover_url?: string | null;
   active_challenge: ActiveChallenge | null;
 }
 

@@ -25,3 +25,19 @@ export function roomFeedPostToCardPost(post: RoomFeedPost, roomId = ''): Firebas
     challenge_title: post.challenge?.title,
   };
 }
+
+export function feedDayLabel(iso: string, locale: string, now = new Date()): string {
+  const date = new Date(iso);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((start.getTime() - target.getTime()) / 86_400_000);
+  if (days === 0) return locale.startsWith('pt') ? 'Hoje' : 'Today';
+  if (days === 1) return locale.startsWith('pt') ? 'Ontem' : 'Yesterday';
+  return date.toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+export const startsNewFeedDay = (posts: FirebaseFeedPost[], index: number): boolean => {
+  if (index === 0) return true;
+  return new Date(posts[index].created_at).toDateString()
+    !== new Date(posts[index - 1].created_at).toDateString();
+};
