@@ -32,6 +32,7 @@
     "join": "Join",
     "feedEmptyTitle": "Nobody has studied yet today",
     "feedEmptySubtitle": "Start a session and your study will show up here.",
+    "photoFeedEmptySubtitle": "Post a photo and your study will show up here.",
     "listTitle": "Your rooms",
     "createChallenge": "Create the next challenge"
     ,"postPhoto": "Post photo"

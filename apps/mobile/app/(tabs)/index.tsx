@@ -211,7 +211,9 @@ export default function RoomsScreen() {
           ListEmptyComponent={
             <Press onPress={() => router.push('/session/setup')} style={styles.feedEmpty}>
               <Text style={styles.emptyTitle}>{tr('rooms.feedEmptyTitle')}</Text>
-              <Text style={styles.subtitle}>{tr('rooms.feedEmptySubtitle')}</Text>
+              <Text style={styles.subtitle}>
+                {tr(studyMode ? 'rooms.feedEmptySubtitle' : 'rooms.photoFeedEmptySubtitle')}
+              </Text>
             </Press>
           }
         />
