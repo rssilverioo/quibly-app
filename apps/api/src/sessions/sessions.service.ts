@@ -567,6 +567,37 @@ export class SessionsService {
           },
         });
 
+        // Closing the session, crediting every league and publishing its feed
+        // posts are one database operation. A failure in any write must leave
+        // the session active so the client can safely retry.
+        const memberships = await tx.leagueMember.findMany({
+          where: { userId },
+          select: { leagueId: true },
+        });
+
+        if (memberships.length > 0) {
+          await tx.leagueMember.updateMany({
+            where: { userId },
+            data: {
+              totalSp: { increment: scoreResult.totalSP },
+              weeklySp: { increment: scoreResult.totalSP },
+              monthlySp: { increment: scoreResult.totalSP },
+              verifiedHours: {
+                increment: isVerified ? totalDurationMinutes / 60 : 0,
+              },
+            },
+          });
+
+          await tx.feedPost.createMany({
+            data: memberships.map(({ leagueId }) => ({
+              leagueId,
+              sessionId: updatedSession.id,
+              userId,
+              showProofPhoto: isVerified,
+            })),
+          });
+        }
+
         return {
           updatedSession,
           scoreResult,
@@ -578,7 +609,9 @@ export class SessionsService {
           capClipped: clippedByDailyCap,
           measured,
         };
-      });
+      },
+      { timeout: 15_000 },
+    );
 
     // Fase 1 records and moves on — nobody gets blocked or banned on these.
     if (capClipped) {
@@ -621,42 +654,6 @@ export class SessionsService {
     );
 
     await this.updateUserStreak(userId, opts.endAt);
-
-    // Update SP for ALL leagues the user belongs to
-    const userLeagueMembers = await this.prisma.leagueMember.findMany({
-      where: { userId },
-    });
-
-    if (userLeagueMembers.length > 0) {
-      const isVerified = updatedSession.isVerified;
-      const durationMins = Number(updatedSession.totalDurationMinutes ?? 0);
-      const verifiedHoursIncrement = isVerified
-        ? durationMins / 60
-        : 0;
-
-      await Promise.all(
-        userLeagueMembers.map(async (member) => {
-          await this.prisma.leagueMember.update({
-            where: { id: member.id },
-            data: {
-              totalSp: { increment: scoreResult.totalSP },
-              weeklySp: { increment: scoreResult.totalSP },
-              monthlySp: { increment: scoreResult.totalSP },
-              verifiedHours: { increment: verifiedHoursIncrement },
-            },
-          });
-
-          await this.prisma.feedPost.create({
-            data: {
-              leagueId: member.leagueId,
-              sessionId: updatedSession.id,
-              userId,
-              showProofPhoto: isVerified,
-            },
-          });
-        }),
-      );
-    }
 
     // Check achievements
     const newAchievements =
