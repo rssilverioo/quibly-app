@@ -54,3 +54,16 @@ export const getMyRooms = (): Promise<RoomSummary[]> => api.get('/rooms');
 
 export const getRoomFeed = (roomId: string): Promise<RoomFeedPage> =>
   api.get(`/rooms/${roomId}/feed?page=1&limit=20`);
+
+export interface PostPhotoFile {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export function createRoomPost(roomId: string, photo: PostPhotoFile, caption: string) {
+  const formData = new FormData();
+  formData.append('photo', photo as any);
+  if (caption.trim()) formData.append('caption', caption.trim());
+  return api.upload<RoomFeedPost>(`/rooms/${roomId}/posts`, formData);
+}

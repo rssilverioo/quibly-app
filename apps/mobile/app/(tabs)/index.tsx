@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, Plus, Users } from 'lucide-react-native';
+import { Camera, ChevronRight, Plus, Timer, Users } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard';
@@ -112,6 +112,26 @@ export default function RoomsScreen() {
   }
 
   if (state.kind === 'feed') {
+    const roomActions = (
+      <View style={styles.actionsRow}>
+        <Press
+          haptic="medium"
+          onPress={() => router.push(`/league/post/${state.room.id}`)}
+          style={styles.actionCard}
+        >
+          <Camera size={20} color={c.fg} />
+          <Text style={styles.actionText}>{tr('rooms.postPhoto')}</Text>
+        </Press>
+        <Press
+          haptic="medium"
+          onPress={() => router.push('/session/setup')}
+          style={styles.actionCard}
+        >
+          <Timer size={20} color={c.fg} />
+          <Text style={styles.actionText}>{tr('rooms.startTimer')}</Text>
+        </Press>
+      </View>
+    );
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <FlatList
@@ -121,7 +141,7 @@ export default function RoomsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: space.lg }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
           contentContainerStyle={[styles.feed, { paddingBottom: tabClearance }]}
-          ListHeaderComponent={<Text style={styles.title}>{state.room.name}</Text>}
+          ListHeaderComponent={<><Text style={styles.title}>{state.room.name}</Text>{roomActions}</>}
           ListEmptyComponent={
             <Press onPress={() => router.push('/session/setup')} style={styles.feedEmpty}>
               <Text style={styles.emptyTitle}>{tr('rooms.feedEmptyTitle')}</Text>
@@ -173,6 +193,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   joinButton: { height: 50, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
   joinText: { ...text.label, color: c.fg },
   feed: { paddingHorizontal: space.xl, paddingTop: space.md, flexGrow: 1 },
+  actionsRow: { flexDirection: 'row', gap: space.sm, marginBottom: space.xl },
+  actionCard: { flex: 1, minHeight: 68, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: space.sm },
+  actionText: { ...text.label, color: c.fg },
   feedEmpty: { alignItems: 'center', paddingHorizontal: space.xl, paddingTop: 100 },
   list: { paddingHorizontal: space.xl, paddingTop: space.md },
   roomRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },

@@ -34,6 +34,14 @@
     "feedEmptySubtitle": "Start a session and your study will show up here.",
     "listTitle": "Your rooms",
     "createChallenge": "Create the next challenge"
+    ,"postPhoto": "Post photo"
+    ,"startTimer": "Start timer"
+    ,"newPost": "New photo"
+    ,"captionPlaceholder": "Share what you studied"
+    ,"takePhoto": "Take photo"
+    ,"choosePhoto": "Choose photo"
+    ,"publishPhoto": "Post to feed"
+    ,"publishing": "Posting…"
   },
   "members": "Members",
   "members_one": "{{count}} member",
