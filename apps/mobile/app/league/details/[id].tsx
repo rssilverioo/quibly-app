@@ -27,17 +27,37 @@ export default function RoomDetailsScreen() {
   const styles = useMemo(() => makeStyles(c), [c]);
   const [room, setRoom] = useState<RoomSummary | null>(null);
   const [details, setDetails] = useState<ChallengeDetails | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!id) return;
-    const rooms = await getMyRooms();
-    const current = rooms.find((candidate) => candidate.id === id) ?? null;
-    setRoom(current);
-    if (current?.active_challenge?.id) setDetails(await getRoomDetails(current.id));
+    setLoading(true);
+    try {
+      const rooms = await getMyRooms();
+      const current = rooms.find((candidate) => candidate.id === id) ?? null;
+      setRoom(current);
+      if (!current?.active_challenge?.id) throw new Error('No active challenge');
+      setDetails(await getRoomDetails(current.id));
+    } catch {
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
-  useEffect(() => { void load().catch(() => {}); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
-  if (!room || !details) return <View style={styles.center}><ActivityIndicator color={c.accent} /></View>;
+  if (loading || !room || !details) return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={styles.nav}><Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press></View>
+      <View style={styles.center}>
+        {loading ? <ActivityIndicator color={c.accent} /> : (
+          <>
+            <Text style={styles.errorText}>{t('rooms.detailsUnavailable')}</Text>
+            <Press onPress={load} style={styles.retry}><Text style={styles.retryText}>{t('rooms.tryAgain')}</Text></Press>
+          </>
+        )}
+      </View>
+    </SafeAreaView>
+  );
 
   const date = (iso: string) => new Date(iso).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric' });
   const stats = [
@@ -94,6 +114,9 @@ function Superlative({ Icon, data, label, styles, color }: any) {
 const makeStyles = (c: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
+  errorText: { ...text.body, color: c.fgMuted, textAlign: 'center' },
+  retry: { marginTop: space.md, paddingHorizontal: space.lg, paddingVertical: space.sm },
+  retryText: { ...text.bodyStrong, color: c.accent },
   nav: { height: 44, paddingHorizontal: space.md },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: space.xl, paddingBottom: space.xxl },

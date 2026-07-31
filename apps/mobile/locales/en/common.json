@@ -81,6 +81,8 @@
     ,"averageCheckIns": "Average check-ins per day"
     ,"earlyBird": "Most early bird workouts"
     ,"nightOwl": "Most night owl check-ins"
+    ,"detailsUnavailable": "Group details are unavailable right now."
+    ,"tryAgain": "Try again"
   },
   "members": "Members",
   "members_one": "{{count}} member",

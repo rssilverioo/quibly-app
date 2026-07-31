@@ -81,6 +81,8 @@
     ,"averageCheckIns": "Média de check-ins por dia"
     ,"earlyBird": "Mais estudos de manhã cedo"
     ,"nightOwl": "Mais check-ins de madrugada"
+    ,"detailsUnavailable": "Os detalhes do grupo estão indisponíveis agora."
+    ,"tryAgain": "Tentar novamente"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
