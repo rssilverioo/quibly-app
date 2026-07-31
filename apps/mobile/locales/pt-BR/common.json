@@ -42,6 +42,9 @@
     ,"choosePhoto": "Escolher foto"
     ,"publishPhoto": "Postar no feed"
     ,"publishing": "Postando…"
+    ,"studyingNow": "ESTUDANDO AGORA"
+    ,"minutesNow_one": "há {{count}} min"
+    ,"minutesNow_other": "há {{count}} min"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

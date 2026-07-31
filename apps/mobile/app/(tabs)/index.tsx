@@ -9,8 +9,10 @@ import { useTranslation } from 'react-i18next';
 
 import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard';
 import { MascotBlock } from '../../components/mascot';
+import Avatar from '../../components/ui/Avatar';
 import Press from '../../components/ui/Press';
 import { resolveRoomsHome } from '../../lib/rooms-home';
+import { getLiveMembers, type LiveMember } from '../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomFeedPost, type RoomSummary } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { useTabBarClearance } from './_layout';
@@ -48,6 +50,7 @@ export default function RoomsScreen() {
   const tabClearance = useTabBarClearance();
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [posts, setPosts] = useState<FirebaseFeedPost[]>([]);
+  const [liveMembers, setLiveMembers] = useState<LiveMember[]>([]);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,17 +59,23 @@ export default function RoomsScreen() {
     const nextRooms = await getMyRooms();
     setRooms(nextRooms);
     if (nextRooms.length === 1) {
-      const page = await getRoomFeed(nextRooms[0].id);
+      const [page, live] = await Promise.all([
+        getRoomFeed(nextRooms[0].id),
+        getLiveMembers(),
+      ]);
       setPosts(page.items.map((post) => toPost(post, nextRooms[0].id)));
+      setLiveMembers(live.filter((member) => member.league_id === nextRooms[0].id));
     } else {
       setPosts([]);
+      setLiveMembers([]);
     }
   }, []);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
     void load().catch(() => {}).finally(() => alive && setLoading(false));
-    return () => { alive = false; };
+    const interval = setInterval(() => void load().catch(() => {}), 30_000);
+    return () => { alive = false; clearInterval(interval); };
   }, [load]));
 
   const refresh = useCallback(async () => {
@@ -112,6 +121,25 @@ export default function RoomsScreen() {
   }
 
   if (state.kind === 'feed') {
+    const liveStrip = liveMembers.length > 0 ? (
+      <View style={styles.liveStrip}>
+        <View style={styles.liveHead}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveLabel}>{tr('rooms.studyingNow')}</Text>
+        </View>
+        {liveMembers.map((member) => (
+          <View key={member.session_id} style={styles.livePerson}>
+            <Avatar uri={member.avatar_url} name={member.display_name} size={36} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.liveName}>{member.display_name}</Text>
+              <Text style={styles.liveMeta} numberOfLines={1}>
+                {member.subject_name} · {tr('rooms.minutesNow', { count: member.elapsed_minutes })}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    ) : null;
     const roomActions = (
       <View style={styles.actionsRow}>
         <Press
@@ -141,7 +169,7 @@ export default function RoomsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: space.lg }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
           contentContainerStyle={[styles.feed, { paddingBottom: tabClearance }]}
-          ListHeaderComponent={<><Text style={styles.title}>{state.room.name}</Text>{roomActions}</>}
+          ListHeaderComponent={<><Text style={styles.title}>{state.room.name}</Text>{liveStrip}{roomActions}</>}
           ListEmptyComponent={
             <Press onPress={() => router.push('/session/setup')} style={styles.feedEmpty}>
               <Text style={styles.emptyTitle}>{tr('rooms.feedEmptyTitle')}</Text>
@@ -196,6 +224,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: space.sm, marginBottom: space.xl },
   actionCard: { flex: 1, minHeight: 68, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: space.sm },
   actionText: { ...text.label, color: c.fg },
+  liveStrip: { borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, borderRadius: radius.lg, padding: space.lg, marginBottom: space.md, gap: space.md },
+  liveHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.live },
+  liveLabel: { ...text.overline, color: c.fgMuted },
+  livePerson: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  liveName: { ...text.bodyStrong, color: c.fg },
+  liveMeta: { ...text.caption, color: c.fgMuted, marginTop: 2 },
   feedEmpty: { alignItems: 'center', paddingHorizontal: space.xl, paddingTop: 100 },
   list: { paddingHorizontal: space.xl, paddingTop: space.md },
   roomRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },

@@ -42,6 +42,9 @@
     ,"choosePhoto": "Choose photo"
     ,"publishPhoto": "Post to feed"
     ,"publishing": "Posting…"
+    ,"studyingNow": "STUDYING NOW"
+    ,"minutesNow_one": "for {{count}} min"
+    ,"minutesNow_other": "for {{count}} min"
   },
   "members": "Members",
   "members_one": "{{count}} member",
