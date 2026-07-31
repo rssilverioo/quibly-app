@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:db": "jest --config jest.db.config.js",
     "prisma:validate": "prisma validate",
     "seed:curriculum": "ts-node -r tsconfig-paths/register src/curriculum/seed-curriculum.ts"
   },
@@ -78,6 +79,9 @@
       "**/*.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "<rootDir>/.*\\.dbspec\\.ts$"
+    ]
   }
 }

@@ -62,6 +62,74 @@ jobs:
       - name: prisma validate
         run: npx prisma validate --schema=apps/api/prisma/schema.prisma
 
+  # ── migrations against a real Postgres ──────────────────────────────────
+  # The `backend` job above deliberately has no database — its unit suite
+  # mocks Prisma, and keeping it DB-free keeps it fast. But two things simply
+  # cannot be checked without a real Postgres, and both of them are the
+  # difference between a bad migration failing here or failing in production:
+  #
+  #   * that every migration applies to an empty database, in order. This is
+  #     the exact command `railway.toml` runs before the API process starts
+  #     (`npx prisma migrate deploy && node dist/main.js`), so a migration
+  #     that dies halfway does not roll back quietly — it takes the API down
+  #     and burns the 3 configured restart retries.
+  #   * that `schema.prisma` and `migrations/` still agree. Prisma lets the
+  #     schema be edited without generating a migration; everything typechecks
+  #     and the unit suite passes, and production then 500s on a column the
+  #     client expects and the database has never had.
+  #
+  # Blocking from the start. This job exists to gate the League -> Room +
+  # Challenge migration, and a gate that does not block is decoration.
+  migrations:
+    name: migrations (prisma migrate deploy + drift check)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: quibly
+          POSTGRES_PASSWORD: quibly
+          POSTGRES_DB: quibly_test
+        ports:
+          - 5432:5432
+        # Without the healthcheck the job races the container and fails on a
+        # connection refused that looks like a migration bug.
+        options: >-
+          --health-cmd "pg_isready -U quibly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Overrides the workspace-level placeholder: here it points at something
+      # real and disposable.
+      DATABASE_URL: 'postgresql://quibly:quibly@localhost:5432/quibly_test?schema=public'
+      # `prisma migrate diff --from-migrations` replays the whole chain into a
+      # scratch database to compare against. It must not be the one under test.
+      SHADOW_DATABASE_URL: 'postgresql://quibly:quibly@localhost:5432/quibly_shadow?schema=public'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Create the shadow database
+        run: |
+          PGPASSWORD=quibly createdb -h localhost -U quibly quibly_shadow
+
+      - name: Test — migrations (jest, real Postgres)
+        run: npm run test:db --workspace=apps/api
+
   # ── apps/web + apps/mobile ──────────────────────────────────────────────
   # Informational only, on purpose: as of Fase 0 neither app has a working
   # lint setup (apps/web's `next lint` has no eslint config/deps installed;
