@@ -111,3 +111,34 @@ export const getChallengeMemberPosts = (
 ): Promise<RoomFeedPage> => api.get(
   `/challenges/${challengeId}/members/${userId}/posts?page=${page}&limit=${limit}`,
 );
+
+export interface ChallengeDetails {
+  challenge: {
+    id: string;
+    room_id: string;
+    title: string;
+    participation_mode: 'photo' | 'study';
+    starts_at: string;
+    ends_at: string;
+    server_time: string;
+    elapsed_fraction: number;
+  };
+  invite_code: string;
+  rankings: Array<{
+    rank: number;
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+    active_days: number;
+  }>;
+  group_stats: {
+    total_check_ins: number;
+    total_active_days: number;
+    average_check_ins_per_day: number;
+    most_early_bird: null | { user_id: string; display_name: string; avatar_url: string | null; check_ins: number };
+    most_night_owl: null | { user_id: string; display_name: string; avatar_url: string | null; check_ins: number };
+  };
+}
+
+export const getRoomDetails = (roomId: string): Promise<ChallengeDetails> =>
+  api.get(`/rooms/${roomId}/details`);

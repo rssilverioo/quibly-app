@@ -68,6 +68,19 @@
     ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} no desafio"
     ,"memberNoPosts": "Nenhum estudo publicado neste desafio ainda."
     ,"daysLeftLabel": "dias restantes"
+    ,"started": "Começou em {{date}}"
+    ,"finishes": "Termina em {{date}}"
+    ,"invite": "Convidar"
+    ,"rankingsPreview": "Rankings"
+    ,"daysActive_one": "1 dia ativo"
+    ,"daysActive_other": "{{count}} dias ativos"
+    ,"allRankings": "Todos os rankings"
+    ,"groupStats": "Estatísticas do grupo"
+    ,"totalCheckIns": "Check-ins totais"
+    ,"totalDaysActive": "Dias ativos no total"
+    ,"averageCheckIns": "Média de check-ins por dia"
+    ,"earlyBird": "Mais estudos de manhã cedo"
+    ,"nightOwl": "Mais check-ins de madrugada"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

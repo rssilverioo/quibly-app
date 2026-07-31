@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { get, upload } = vi.hoisted(() => ({ get: vi.fn(), upload: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: { get, upload } }));
 
-import { createRoomPost, getChallengeMemberPosts } from '../services/rooms';
+import { createRoomPost, getChallengeMemberPosts, getRoomDetails } from '../services/rooms';
 
 describe('createRoomPost', () => {
   beforeEach(() => upload.mockReset());
@@ -46,5 +46,13 @@ describe('getChallengeMemberPosts', () => {
     expect(get).toHaveBeenCalledWith(
       '/challenges/challenge-1/members/user-1/posts?page=2&limit=20',
     );
+  });
+});
+
+describe('getRoomDetails', () => {
+  it('loads the authorized aggregate for one room', async () => {
+    get.mockResolvedValue({ invite_code: 'YOXVNUED' });
+    await getRoomDetails('room-1');
+    expect(get).toHaveBeenCalledWith('/rooms/room-1/details');
   });
 });

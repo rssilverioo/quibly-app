@@ -68,6 +68,19 @@
     ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} in this challenge"
     ,"memberNoPosts": "No study posted in this challenge yet."
     ,"daysLeftLabel": "days left"
+    ,"started": "Started {{date}}"
+    ,"finishes": "Finishes {{date}}"
+    ,"invite": "Invite"
+    ,"rankingsPreview": "Rankings"
+    ,"daysActive_one": "1 day active"
+    ,"daysActive_other": "{{count}} days active"
+    ,"allRankings": "All rankings"
+    ,"groupStats": "Group stats"
+    ,"totalCheckIns": "Total check-ins"
+    ,"totalDaysActive": "Total days active"
+    ,"averageCheckIns": "Average check-ins per day"
+    ,"earlyBird": "Most early bird workouts"
+    ,"nightOwl": "Most night owl check-ins"
   },
   "members": "Members",
   "members_one": "{{count}} member",
