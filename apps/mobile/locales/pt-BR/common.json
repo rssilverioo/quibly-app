@@ -50,6 +50,8 @@
     ,"daysLeft_other": "faltam {{count}} dias"
     ,"yourRank": "Você está em #{{rank}} de {{count}}"
     ,"notRanked": "Comece a estudar para entrar no placar"
+    ,"leaderboard": "PLACAR"
+    ,"you": "você"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

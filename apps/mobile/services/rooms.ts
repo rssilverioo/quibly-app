@@ -68,3 +68,24 @@ export function createRoomPost(roomId: string, photo: PostPhotoFile, caption: st
   if (caption.trim()) formData.append('caption', caption.trim());
   return api.upload<RoomFeedPost>(`/rooms/${roomId}/posts`, formData);
 }
+
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  metric_value: number;
+  minutes: number;
+  sessions: number;
+  active_days: number;
+}
+
+export interface ChallengeLeaderboard {
+  challenge: ActiveChallenge;
+  entries: LeaderboardEntry[];
+  me: { rank: number | null; metric_value: number };
+  total: number;
+}
+
+export const getChallengeLeaderboard = (challengeId: string): Promise<ChallengeLeaderboard> =>
+  api.get(`/challenges/${challengeId}/leaderboard?page=1&limit=50`);

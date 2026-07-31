@@ -126,7 +126,7 @@ export default function RoomsScreen() {
       ? challengeTimeLeft(challenge.ends_at, challenge.server_time)
       : null;
     const challengeCard = challenge ? (
-      <Press onPress={() => router.push(`/league/${state.room.id}`)} style={styles.challengeCard}>
+      <Press onPress={() => router.push(`/league/challenge/${challenge.id}`)} style={styles.challengeCard}>
         <View style={styles.challengeTop}>
           <View style={{ flex: 1 }}>
             <Text style={styles.challengeState}>{tr('rooms.activeChallenge')}</Text>
