@@ -22,8 +22,8 @@ export default function RoomTabBar({
   const styles = useMemo(() => makeStyles(c), [c]);
   const tabs = [
     { id: 'details' as const, label: 'Details', Icon: Info, onPress: () => router.push(`/league/details/${roomId}`) },
-    { id: 'rankings' as const, label: 'Rankings', Icon: BarChart3, onPress: () => challengeId && router.push(`/league/challenge/${challengeId}`), disabled: !challengeId },
-    { id: 'chat' as const, label: 'Chat', Icon: MessageCircle, onPress: () => router.push(`/league/chat/${roomId}`) },
+    { id: 'rankings' as const, label: 'Rankings', Icon: BarChart3, onPress: () => challengeId && router.push({ pathname: '/league/challenge/[id]', params: { id: challengeId, roomId } }), disabled: !challengeId },
+    { id: 'chat' as const, label: 'Chat', Icon: MessageCircle, onPress: () => router.push({ pathname: '/league/chat/[id]', params: { id: roomId, challengeId: challengeId ?? '' } }) },
   ];
   return (
     <View style={styles.bar}>

@@ -16,11 +16,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FONTS } from '@quibly/shared/constants';
 import { legacyColors as COLORS } from '../../../theme';
-import { ArrowLeft, Send } from 'lucide-react-native';
+import { ArrowLeft, AtSign, Image as ImageIcon, Send } from 'lucide-react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
 import type { ChatMessage } from '@quibly/shared';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
+import { Mascot } from '../../../components/mascot';
 
 // ─── Constants ───
 
@@ -133,7 +134,7 @@ function MessageBubble({
 
 export default function LeagueChatScreen() {
   const { t } = useTranslation('leagues');
-  const { id: leagueId } = useLocalSearchParams<{ id: string }>();
+  const { id: leagueId, challengeId } = useLocalSearchParams<{ id: string; challengeId?: string }>();
   const router = useRouter();
   const { user, profile } = useAuth();
 
@@ -214,6 +215,7 @@ export default function LeagueChatScreen() {
     if (isLoading) return null;
     return (
       <View style={styles.emptyContainer}>
+        <Mascot state="idle" size={132} plate={false} animate={false} />
         <Text style={styles.emptyText}>{t('noMessages')}</Text>
         <Text style={styles.emptySubtext}>{t('noMessagesSub')}</Text>
       </View>
@@ -272,6 +274,17 @@ export default function LeagueChatScreen() {
 
         {/* Input Bar */}
         <View style={styles.inputBar}>
+          <TouchableOpacity style={styles.inputAction} activeOpacity={0.7} accessibilityLabel="Add image">
+            <ImageIcon size={20} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.inputAction}
+            onPress={() => setInputText((current) => `${current}@`)}
+            activeOpacity={0.7}
+            accessibilityLabel="Mention someone"
+          >
+            <AtSign size={20} color={COLORS.textSecondary} />
+          </TouchableOpacity>
           <View style={styles.inputWrapper}>
             <TextInput
               style={[styles.textInput, { height: inputHeight }]}
@@ -297,7 +310,7 @@ export default function LeagueChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-      <RoomTabBar roomId={leagueId!} challengeId={leagueId} active="chat" />
+      <RoomTabBar roomId={leagueId!} challengeId={challengeId || null} active="chat" />
     </SafeAreaView>
   );
 }
@@ -365,6 +378,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 16,
     fontFamily: FONTS.semiBold,
+    marginTop: 12,
     marginBottom: 4,
   },
   emptySubtext: {
@@ -514,6 +528,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 8 : 4,
+    justifyContent: 'center',
+  },
+  inputAction: {
+    width: 36,
+    height: 40,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   textInput: {

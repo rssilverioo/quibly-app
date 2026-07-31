@@ -73,7 +73,7 @@ export default function RoomDetailsScreen() {
             <Text style={styles.position}>{ordinal(entry.rank, i18n.language)}</Text>
           </View>
         ))}
-        <Press onPress={() => router.push(`/league/challenge/${details.challenge.id}`)} style={styles.allRow}><Text style={styles.allText}>{t('rooms.allRankings')} ›</Text></Press>
+        <Press onPress={() => router.push({ pathname: '/league/challenge/[id]', params: { id: details.challenge.id, roomId: room.id } })} style={styles.allRow}><Text style={styles.allText}>{t('rooms.allRankings')} ›</Text></Press>
 
         <Text style={styles.sectionTitle}>{t('rooms.groupStats')}</Text>
         {stats.map(({ Icon, value, label }) => (

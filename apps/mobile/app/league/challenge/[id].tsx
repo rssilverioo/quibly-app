@@ -13,7 +13,7 @@ import { getChallengeLeaderboard, type ChallengeLeaderboard } from '../../../ser
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
 export default function ChallengeLeaderboardScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, roomId } = useLocalSearchParams<{ id: string; roomId?: string }>();
   const router = useRouter();
   const { t } = useTranslation('common');
   const { c } = useTheme();
@@ -89,7 +89,7 @@ export default function ChallengeLeaderboardScreen() {
           );
         }}
       />
-      <RoomTabBar roomId={id} challengeId={id} active="rankings" />
+      <RoomTabBar roomId={roomId ?? id} challengeId={id} active="rankings" />
     </SafeAreaView>
   );
 }
