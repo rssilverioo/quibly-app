@@ -17,25 +17,33 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Users, Calendar, Shield } from 'lucide-react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLeaguePreview, joinLeague, type LeaguePreview } from '../../../services/leagues';
-import { staticDark as c } from '../../../theme';
+import { useTheme, type Palette } from '../../../theme';
 import { track } from '../../../lib/analytics';
 
-const COLORS = {
+const getColors = (c: Palette) => ({
   background: c.bg,
-  surface: c.bg,
-  surfaceLight: c.surface,
-  border: c.surfaceRaised,
+  surface: c.surface,
+  surfaceLight: c.surfaceRaised,
+  border: c.border,
   primary: c.accent,
   primaryLight: c.accent,
   secondary: c.accent,
   accent: c.danger,
   warning: c.warning,
-  success: c.accent,
+  success: c.success,
   error: c.danger,
   text: c.fg,
-  textSecondary: c.fgSubtle,
-  textMuted: c.fgMuted,
-};
+  textSecondary: c.fgMuted,
+  textMuted: c.fgSubtle,
+});
+
+function useLeagueStyles() {
+  const { c } = useTheme();
+  return useMemo(() => {
+    const COLORS = getColors(c);
+    return { c, COLORS, styles: makeStyles(c) };
+  }, [c]);
+}
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
@@ -46,6 +54,7 @@ function formatDateRange(start: string, end: string): string {
 
 export default function JoinLeagueScreen() {
   const { t } = useTranslation('leagues');
+  const { c, COLORS, styles } = useLeagueStyles();
   const { code } = useLocalSearchParams<{ code: string }>();
   const { user } = useAuth();
 
@@ -245,7 +254,7 @@ export default function JoinLeagueScreen() {
               activeOpacity={0.7}
             >
               {joining ? (
-                <ActivityIndicator size="small" color={COLORS.text} />
+                <ActivityIndicator size="small" color={c.fgOnAccent} />
               ) : (
                 <Text style={styles.primaryButtonText}>{t('join.joinButton')}</Text>
               )}
@@ -264,7 +273,9 @@ export default function JoinLeagueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => {
+  const COLORS = getColors(c);
+  return StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1, backgroundColor: COLORS.background },
   scrollView: { flex: 1 },
@@ -330,7 +341,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButtonText: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+  primaryButtonText: { color: c.fgOnAccent, fontSize: 16, fontWeight: '700' },
   buttonDisabled: { opacity: 0.5 },
   secondaryButton: {
     height: 48,
@@ -372,4 +383,5 @@ const styles = StyleSheet.create({
   // Already member
   successTitle: { color: COLORS.text, fontSize: 22, fontWeight: '700', marginBottom: 8 },
   successMessage: { color: COLORS.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 24 },
-});
+  });
+};
