@@ -14,6 +14,12 @@ describe('room screen themes', () => {
 
     expect(source).toContain('useTheme');
     expect(source).not.toContain('staticDark');
+    if (screen === '../app/league/feed/[id].tsx') {
+      expect(source).toContain('backgroundColor: c.surface');
+      expect(source).toContain('borderBottomColor: c.border');
+      expect(source).toContain('color: c.fgMuted');
+      return;
+    }
     expect(source).toContain('surface: c.surface');
     expect(source).toContain('border: c.border');
     expect(source).toContain('success: c.success');
@@ -24,14 +30,14 @@ describe('room screen themes', () => {
 
   it('keeps subject colors on the indicator instead of readable text', () => {
     const source = readFileSync(
-      new URL('../app/league/feed/[id].tsx', import.meta.url).pathname,
+      new URL('../components/feed/PostCard.tsx', import.meta.url).pathname,
       'utf8',
     );
 
     expect(source).toContain('styles.subjectDot');
-    expect(source).toContain('<Text style={styles.subjectText}>');
+    expect(source).toContain('<Text style={styles.subjectName}>');
     expect(source).not.toContain(
-      'styles.subjectText, { color: post.subject_color',
+      'styles.subjectName, { color: post.subject_color',
     );
   });
 });
