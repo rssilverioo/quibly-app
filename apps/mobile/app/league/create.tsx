@@ -22,28 +22,36 @@ import { useAuth } from '../../contexts/AuthContext';
 import { createLeague } from '../../services/leagues';
 import type { League, LeagueMode, LeaguePrivacy } from '@quibly/shared';
 import { inviteUrl } from '@quibly/shared/constants';
-import { staticDark as c } from '../../theme';
+import { useTheme, type Palette } from '../../theme';
 import { track } from '../../lib/analytics';
 
-const COLORS = {
+const getColors = (c: Palette) => ({
   background: c.bg,
-  surface: c.bg,
-  surfaceLight: c.surface,
-  border: c.surfaceRaised,
+  surface: c.surface,
+  surfaceLight: c.surfaceRaised,
+  border: c.border,
   primary: c.accent,
   primaryLight: c.accent,
   secondary: c.accent,
   accent: c.danger,
   warning: c.warning,
-  success: c.accent,
+  success: c.success,
   error: c.danger,
   text: c.fg,
-  textSecondary: c.fgSubtle,
-  textMuted: c.fgMuted,
+  textSecondary: c.fgMuted,
+  textMuted: c.fgSubtle,
   gold: c.gold,
   silver: c.silver,
   bronze: c.bronze,
-};
+});
+
+function useLeagueStyles() {
+  const { c } = useTheme();
+  return useMemo(() => {
+    const COLORS = getColors(c);
+    return { c, COLORS, styles: makeStyles(c) };
+  }, [c]);
+}
 
 function formatDateISO(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -67,6 +75,7 @@ function addDays(dateStr: string, days: number): string {
 
 export default function CreateLeagueScreen() {
   const { t } = useTranslation('leagues');
+  const { c, COLORS, styles } = useLeagueStyles();
   const { user } = useAuth();
 
   const modeOptions = useMemo(() => [
@@ -479,7 +488,7 @@ export default function CreateLeagueScreen() {
           activeOpacity={0.7}
         >
           {creating ? (
-            <ActivityIndicator size="small" color={COLORS.text} />
+            <ActivityIndicator size="small" color={c.fgOnAccent} />
           ) : (
             <Text style={styles.createButtonText}>{t('create.createButton')}</Text>
           )}
@@ -492,7 +501,9 @@ export default function CreateLeagueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => {
+  const COLORS = getColors(c);
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -533,7 +544,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   labelOptional: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontWeight: '400',
   },
   input: {
@@ -613,7 +624,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   quickDurationText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -663,7 +674,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   toggleText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -722,7 +733,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sliderLabelText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 11,
   },
 
@@ -739,7 +750,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   createButtonText: {
-    color: COLORS.text,
+    color: c.fgOnAccent,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -810,7 +821,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   successButtonText: {
-    color: COLORS.text,
+    color: c.fgOnAccent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -825,4 +836,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-});
+  });
+};
