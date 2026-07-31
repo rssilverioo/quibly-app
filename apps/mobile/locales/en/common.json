@@ -52,6 +52,17 @@
     ,"notRanked": "Start studying to join the leaderboard"
     ,"leaderboard": "LEADERBOARD"
     ,"you": "you"
+    ,"noChallenge": "NO ACTIVE CHALLENGE"
+    ,"newChallenge": "New challenge"
+    ,"challengeName": "Challenge name"
+    ,"challengeMode": "HOW THE GROUP PARTICIPATES"
+    ,"photoMode": "Photo"
+    ,"photoModeSubtitle": "Post a photo of what you studied. No timer."
+    ,"studyMode": "Study"
+    ,"studyModeSubtitle": "Use the timer and show up as studying now."
+    ,"duration": "DEADLINE"
+    ,"durationDays": "{{count}} days"
+    ,"createChallengeAction": "Create challenge"
   },
   "members": "Members",
   "members_one": "{{count}} member",

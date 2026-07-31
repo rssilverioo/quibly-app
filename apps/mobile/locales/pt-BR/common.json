@@ -52,6 +52,17 @@
     ,"notRanked": "Comece a estudar para entrar no placar"
     ,"leaderboard": "PLACAR"
     ,"you": "você"
+    ,"noChallenge": "SEM DESAFIO ATIVO"
+    ,"newChallenge": "Novo desafio"
+    ,"challengeName": "Nome do desafio"
+    ,"challengeMode": "COMO O GRUPO PARTICIPA"
+    ,"photoMode": "Foto"
+    ,"photoModeSubtitle": "Poste uma foto do que estudou. Sem timer."
+    ,"studyMode": "Estudo"
+    ,"studyModeSubtitle": "Use o timer e apareça estudando agora."
+    ,"duration": "PRAZO"
+    ,"durationDays": "{{count}} dias"
+    ,"createChallengeAction": "Criar desafio"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

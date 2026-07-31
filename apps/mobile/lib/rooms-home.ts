@@ -1,4 +1,4 @@
-import type { RoomSummary } from '../services/rooms';
+import type { ActiveChallenge, RoomSummary } from '../services/rooms';
 
 export type RoomsHomeState =
   | { kind: 'empty' }
@@ -16,3 +16,7 @@ export function challengeTimeLeft(endsAt: string, serverTime: string): { days: n
   const days = Math.ceil(milliseconds / 86_400_000);
   return { days, urgent: days <= 3 };
 }
+
+/** Missing mode is photo on purpose: legacy rooms must expose zero timer UI. */
+export const isStudyChallenge = (challenge: ActiveChallenge | null): boolean =>
+  challenge?.participation_mode === 'study';

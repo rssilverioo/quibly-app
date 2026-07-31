@@ -7,6 +7,7 @@ export interface ActiveChallenge {
   ends_at: string;
   server_time: string;
   participant_count: number;
+  participation_mode?: 'photo' | 'study';
   me: { rank: number | null; metric_value: number; goal_progress?: number | null };
 }
 
@@ -89,3 +90,13 @@ export interface ChallengeLeaderboard {
 
 export const getChallengeLeaderboard = (challengeId: string): Promise<ChallengeLeaderboard> =>
   api.get(`/challenges/${challengeId}/leaderboard?page=1&limit=50`);
+
+export interface CreateChallengeInput {
+  title: string;
+  metric: 'minutes';
+  ends_on: string;
+  participation_mode: 'photo' | 'study';
+}
+
+export const createChallenge = (roomId: string, input: CreateChallengeInput) =>
+  api.post<ActiveChallenge>(`/rooms/${roomId}/challenges`, input);

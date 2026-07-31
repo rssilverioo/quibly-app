@@ -11,7 +11,7 @@ import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard'
 import { MascotBlock } from '../../components/mascot';
 import Avatar from '../../components/ui/Avatar';
 import Press from '../../components/ui/Press';
-import { challengeTimeLeft, resolveRoomsHome } from '../../lib/rooms-home';
+import { challengeTimeLeft, isStudyChallenge, resolveRoomsHome } from '../../lib/rooms-home';
 import { getLiveMembers, type LiveMember } from '../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomFeedPost, type RoomSummary } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
@@ -122,6 +122,7 @@ export default function RoomsScreen() {
 
   if (state.kind === 'feed') {
     const challenge = state.room.active_challenge;
+    const studyMode = isStudyChallenge(challenge);
     const timeLeft = challenge
       ? challengeTimeLeft(challenge.ends_at, challenge.server_time)
       : null;
@@ -150,8 +151,13 @@ export default function RoomsScreen() {
           <Text style={styles.challengeValue}>{challenge.me.metric_value} {challenge.metric_unit}</Text>
         </View>
       </Press>
-    ) : null;
-    const liveStrip = liveMembers.length > 0 ? (
+    ) : (
+      <Press onPress={() => router.push(`/league/challenge/new?roomId=${state.room.id}`)} style={styles.challengeCard}>
+        <Text style={styles.challengeState}>{tr('rooms.noChallenge')}</Text>
+        <Text style={styles.challengeMeta}>{tr('rooms.createChallenge')}</Text>
+      </Press>
+    );
+    const liveStrip = studyMode && liveMembers.length > 0 ? (
       <View style={styles.liveStrip}>
         <View style={styles.liveHead}>
           <View style={styles.liveDot} />
@@ -180,14 +186,16 @@ export default function RoomsScreen() {
           <Camera size={20} color={c.fg} />
           <Text style={styles.actionText}>{tr('rooms.postPhoto')}</Text>
         </Press>
-        <Press
-          haptic="medium"
-          onPress={() => router.push('/session/setup')}
-          style={styles.actionCard}
-        >
-          <Timer size={20} color={c.fg} />
-          <Text style={styles.actionText}>{tr('rooms.startTimer')}</Text>
-        </Press>
+        {studyMode ? (
+          <Press
+            haptic="medium"
+            onPress={() => router.push('/session/setup')}
+            style={styles.actionCard}
+          >
+            <Timer size={20} color={c.fg} />
+            <Text style={styles.actionText}>{tr('rooms.startTimer')}</Text>
+          </Press>
+        ) : null}
       </View>
     );
     return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { challengeTimeLeft, resolveRoomsHome } from './rooms-home';
+import { challengeTimeLeft, isStudyChallenge, resolveRoomsHome } from './rooms-home';
 import type { RoomSummary } from '../services/rooms';
 
 const room = (id: string): RoomSummary => ({
@@ -16,6 +16,18 @@ describe('challengeTimeLeft', () => {
   it('uses server time instead of the device clock', () => {
     expect(challengeTimeLeft('2026-08-08T12:00:00Z', '2026-08-06T12:00:00Z'))
       .toEqual({ days: 2, urgent: true });
+  });
+});
+
+describe('isStudyChallenge', () => {
+  it('defaults legacy and photo rooms to zero timer interface', () => {
+    expect(isStudyChallenge(null)).toBe(false);
+    expect(isStudyChallenge({ participation_mode: 'photo' } as any)).toBe(false);
+    expect(isStudyChallenge({} as any)).toBe(false);
+  });
+
+  it('shows timer UI only for an explicit study mode', () => {
+    expect(isStudyChallenge({ participation_mode: 'study' } as any)).toBe(true);
   });
 });
 
