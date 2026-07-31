@@ -356,6 +356,27 @@ muda, o nome não.
 **Ajuste de escopo:** ligar 8 estados e arquivar o resto. Sessenta arquivos
 mantidos por causa de oito não se paga.
 
+### 5.1 A capa padrão da sala
+
+Formato fechado com o Pulso: **16:9**, sem texto embutido. Título da sala e a
+faixa de três colunas vivem fora da imagem. O elemento essencial respeita o
+safe crop central de 80% da largura × 80% da altura.
+
+**Decisão: quatro variações determinísticas, não uma capa única.** Uma única
+capa faria salas sem foto parecerem o mesmo grupo — ruim justamente num produto
+de grupos pequenos e conhecidos. Trinta variações, por outro lado, transformam
+estados emocionais em identidade aleatória e atribuem significados falsos
+(`sad`, `sleepy`, `trophy`) à sala. Quatro é o ponto disciplinado: diversidade
+visível sem loteria semântica.
+
+As variações são neutras e derivam de ativos existentes: castelo-base,
+`reading`, `focused` e `thinking`. Todas usam a silhueta lime aprovada sobre
+fundo dark-first. `roomCoverForId(roomId)` aplica FNV-1a e escolhe sempre o mesmo
+índice; a capa não muda entre aberturas.
+
+Arquivos: `assets/room-covers/room-cover-castle-01.png` a `04.png`. A integração
+importa apenas `assets/room-covers/index.ts`, que também exporta a proporção.
+
 ---
 
 ## 6. O que não copiamos do GymRats

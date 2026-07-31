@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <title>Quibly room cover — reading castle</title>
+  <defs>
+    <linearGradient id="bg" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#131318"/><stop offset="1" stop-color="#0A0A0C"/></linearGradient>
+    <radialGradient id="glow" cx="68%" cy="48%" r="56%"><stop stop-color="#C8FF4D" stop-opacity=".14"/><stop offset="1" stop-color="#C8FF4D" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/><rect width="1600" height="900" fill="url(#glow)"/>
+  <g transform="translate(405 50) scale(.78)" fill="#C8FF4D" opacity=".88">
+    <path fill-rule="evenodd" d="M224 790V334h52v-78h54v48h60v-48h54v78h44V218h48v116h46v-78h54v48h60v-48h54v78h50v456H224ZM452 790V672c0-44 27-76 60-76s60 32 60 76v118H452Z"/><path d="M500 116h24v146h-24zM524 126c74-28 140-10 206 36-68 43-132 55-206 25v-61Z"/>
+  </g>
+  <!-- Open-book motif derived from castelo-reading-night.svg. -->
+  <g transform="translate(1045 545) rotate(-8)" fill="none" stroke="#F5F5F7" stroke-width="22" stroke-linejoin="round" opacity=".72">
+    <path d="M0 0c90-28 164-4 224 48v190c-67-50-142-64-224-34V0Z"/><path d="M224 48c60-52 134-76 224-48v204c-82-30-157-16-224 34V48Z"/>
+  </g>
+</svg>
