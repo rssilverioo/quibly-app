@@ -81,6 +81,7 @@ export interface LeaderboardEntry {
   minutes: number;
   sessions: number;
   active_days: number;
+  latest_photo_url: string | null;
 }
 
 export interface ChallengeLeaderboard {

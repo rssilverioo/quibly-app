@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '../../../components/ui/Avatar';
+import CastleMark from '../../../components/brand/CastleMark';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { challengeTimeLeft } from '../../../lib/rooms-home';
+import { rankingThumbnailUrl } from '../../../lib/ranking-thumbnail';
 import { getChallengeLeaderboard, type ChallengeLeaderboard } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
@@ -58,6 +59,7 @@ export default function ChallengeLeaderboardScreen() {
         ListHeaderComponent={<Text style={styles.section}>{t('rooms.leaderboard')}</Text>}
         renderItem={({ item }) => {
           const isMe = item.rank === data.me.rank && item.metric_value === data.me.metric_value;
+          const thumbnailUrl = rankingThumbnailUrl(item);
           return (
             <Press
               onPress={() => router.push({
@@ -75,7 +77,11 @@ export default function ChallengeLeaderboardScreen() {
               style={[styles.row, isMe && styles.meRow]}
             >
               {isMe ? <View style={styles.meBar} /> : null}
-              <Avatar uri={item.avatar_url} name={item.display_name} size={40} />
+              <View style={styles.thumbnail}>
+                {thumbnailUrl
+                  ? <Image source={{ uri: thumbnailUrl }} style={styles.thumbnailImage} resizeMode="cover" />
+                  : <CastleMark size={26} />}
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>
                 <Text style={styles.metric}>{item.metric_value} {data.challenge.metric_unit}</Text>
@@ -103,7 +109,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   subtitle: { ...text.caption, color: c.fgMuted, marginTop: 2 },
   list: { padding: space.xl },
   section: { ...text.overline, color: c.fgMuted, marginBottom: space.md },
-  row: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  row: { height: 72, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  thumbnail: { width: 48, height: 48, borderRadius: radius.md, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: c.surfaceRaised },
+  thumbnailImage: { width: '100%', height: '100%' },
   meRow: { backgroundColor: c.accentSoft, borderBottomColor: 'transparent', borderRadius: radius.md, overflow: 'hidden' },
   meBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: c.accent },
   name: { ...text.bodyStrong, color: c.fg },
