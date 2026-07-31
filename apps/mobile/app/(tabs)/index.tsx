@@ -11,7 +11,7 @@ import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard'
 import { MascotBlock } from '../../components/mascot';
 import Avatar from '../../components/ui/Avatar';
 import Press from '../../components/ui/Press';
-import { resolveRoomsHome } from '../../lib/rooms-home';
+import { challengeTimeLeft, resolveRoomsHome } from '../../lib/rooms-home';
 import { getLiveMembers, type LiveMember } from '../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomFeedPost, type RoomSummary } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
@@ -121,6 +121,36 @@ export default function RoomsScreen() {
   }
 
   if (state.kind === 'feed') {
+    const challenge = state.room.active_challenge;
+    const timeLeft = challenge
+      ? challengeTimeLeft(challenge.ends_at, challenge.server_time)
+      : null;
+    const challengeCard = challenge ? (
+      <Press onPress={() => router.push(`/league/${state.room.id}`)} style={styles.challengeCard}>
+        <View style={styles.challengeTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.challengeState}>{tr('rooms.activeChallenge')}</Text>
+            <Text style={styles.challengeTitle} numberOfLines={1}>{challenge.title}</Text>
+          </View>
+          <Text style={[styles.deadline, timeLeft?.urgent && styles.deadlineUrgent]}>
+            {tr('rooms.daysLeft', { count: timeLeft?.days ?? 0 })}
+          </Text>
+        </View>
+        {challenge.me.goal_progress != null ? (
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.min(100, challenge.me.goal_progress * 100)}%` }]} />
+          </View>
+        ) : null}
+        <View style={styles.challengeBottom}>
+          <Text style={styles.challengeMeta}>
+            {challenge.me.rank
+              ? tr('rooms.yourRank', { rank: challenge.me.rank, count: challenge.participant_count })
+              : tr('rooms.notRanked')}
+          </Text>
+          <Text style={styles.challengeValue}>{challenge.me.metric_value} {challenge.metric_unit}</Text>
+        </View>
+      </Press>
+    ) : null;
     const liveStrip = liveMembers.length > 0 ? (
       <View style={styles.liveStrip}>
         <View style={styles.liveHead}>
@@ -169,7 +199,7 @@ export default function RoomsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: space.lg }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
           contentContainerStyle={[styles.feed, { paddingBottom: tabClearance }]}
-          ListHeaderComponent={<><Text style={styles.title}>{state.room.name}</Text>{liveStrip}{roomActions}</>}
+          ListHeaderComponent={<><Text style={styles.title}>{state.room.name}</Text>{challengeCard}{liveStrip}{roomActions}</>}
           ListEmptyComponent={
             <Press onPress={() => router.push('/session/setup')} style={styles.feedEmpty}>
               <Text style={styles.emptyTitle}>{tr('rooms.feedEmptyTitle')}</Text>
@@ -231,6 +261,17 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   livePerson: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   liveName: { ...text.bodyStrong, color: c.fg },
   liveMeta: { ...text.caption, color: c.fgMuted, marginTop: 2 },
+  challengeCard: { borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, borderRadius: radius.lg, padding: space.lg, marginBottom: space.md, gap: space.md },
+  challengeTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  challengeState: { ...text.overline, color: c.fgMuted, marginBottom: 4 },
+  challengeTitle: { ...text.title3, color: c.fg },
+  deadline: { ...text.label, color: c.fgMuted },
+  deadlineUrgent: { color: c.deadline, backgroundColor: c.deadlineSoft, paddingHorizontal: space.sm, paddingVertical: 5, borderRadius: radius.full },
+  progressTrack: { height: 5, borderRadius: radius.full, backgroundColor: c.surfacePressed, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.fgMuted },
+  challengeBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  challengeMeta: { ...text.label, color: c.fgMuted },
+  challengeValue: { ...text.label, color: c.fg },
   feedEmpty: { alignItems: 'center', paddingHorizontal: space.xl, paddingTop: 100 },
   list: { paddingHorizontal: space.xl, paddingTop: space.md },
   roomRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },

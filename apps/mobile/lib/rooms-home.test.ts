@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveRoomsHome } from './rooms-home';
+import { challengeTimeLeft, resolveRoomsHome } from './rooms-home';
 import type { RoomSummary } from '../services/rooms';
 
 const room = (id: string): RoomSummary => ({
@@ -10,6 +10,13 @@ const room = (id: string): RoomSummary => ({
   last_post_at: null,
   unread_posts: 0,
   active_challenge: null,
+});
+
+describe('challengeTimeLeft', () => {
+  it('uses server time instead of the device clock', () => {
+    expect(challengeTimeLeft('2026-08-08T12:00:00Z', '2026-08-06T12:00:00Z'))
+      .toEqual({ days: 2, urgent: true });
+  });
 });
 
 describe('resolveRoomsHome', () => {

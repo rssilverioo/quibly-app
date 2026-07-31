@@ -45,6 +45,11 @@
     ,"studyingNow": "ESTUDANDO AGORA"
     ,"minutesNow_one": "há {{count}} min"
     ,"minutesNow_other": "há {{count}} min"
+    ,"activeChallenge": "DESAFIO ATIVO"
+    ,"daysLeft_one": "falta 1 dia"
+    ,"daysLeft_other": "faltam {{count}} dias"
+    ,"yourRank": "Você está em #{{rank}} de {{count}}"
+    ,"notRanked": "Comece a estudar para entrar no placar"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

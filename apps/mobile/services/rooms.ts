@@ -5,8 +5,9 @@ export interface ActiveChallenge {
   title: string;
   metric_unit: string;
   ends_at: string;
+  server_time: string;
   participant_count: number;
-  me: { rank: number | null; metric_value: number };
+  me: { rank: number | null; metric_value: number; goal_progress?: number | null };
 }
 
 export interface RoomSummary {
