@@ -10,6 +10,7 @@ import type { FirebaseFeedPost } from '../../../components/feed/PostCard';
 import { MascotBlock } from '../../../components/mascot';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
+import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { cacheFeedPost } from '../../../lib/feed-detail-cache';
 import { feedDayLabel, roomFeedPostToCardPost, startsNewFeedDay } from '../../../lib/feed-post';
 import { challengeTimeLeft, isStudyChallenge } from '../../../lib/rooms-home';
@@ -118,6 +119,7 @@ export default function RoomFeedScreen() {
         ListEmptyComponent={<Text style={styles.empty}>{t(studyMode ? 'rooms.feedEmptySubtitle' : 'rooms.photoFeedEmptySubtitle')}</Text>}
       />
       <Press haptic="medium" onPress={() => router.push(`/league/post/${room.id}`)} style={styles.fab}><Plus size={26} color={c.fgOnAccent} /></Press>
+      <RoomTabBar roomId={room.id} challengeId={challenge?.id} />
     </SafeAreaView>
   );
 }
@@ -145,5 +147,5 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   timer: { height: 52, borderWidth: 1, borderColor: c.border, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
   day: { ...text.label, color: c.fgMuted, textAlign: 'center', paddingVertical: space.md },
   empty: { ...text.body, color: c.fgMuted, textAlign: 'center', paddingTop: space.xxl },
-  fab: { position: 'absolute', right: space.xl, bottom: 28, width: 58, height: 58, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  fab: { position: 'absolute', right: space.xl, bottom: 82, width: 58, height: 58, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
 });

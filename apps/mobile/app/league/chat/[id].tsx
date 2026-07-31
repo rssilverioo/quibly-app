@@ -20,6 +20,7 @@ import { ArrowLeft, Send } from 'lucide-react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
 import type { ChatMessage } from '@quibly/shared';
+import RoomTabBar from '../../../components/rooms/RoomTabBar';
 
 // ─── Constants ───
 
@@ -296,6 +297,7 @@ export default function LeagueChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <RoomTabBar roomId={leagueId!} challengeId={leagueId} active="chat" />
     </SafeAreaView>
   );
 }

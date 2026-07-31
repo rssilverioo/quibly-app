@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
+import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { challengeTimeLeft } from '../../../lib/rooms-home';
 import { getChallengeLeaderboard, type ChallengeLeaderboard } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
@@ -88,6 +89,7 @@ export default function ChallengeLeaderboardScreen() {
           );
         }}
       />
+      <RoomTabBar roomId={id} challengeId={id} active="rankings" />
     </SafeAreaView>
   );
 }
