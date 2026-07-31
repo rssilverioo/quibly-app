@@ -1,10 +1,22 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaguesService } from '../leagues/leagues.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { ChallengesService } from '../challenges/challenges.service';
 import { StorageService } from '../storage/storage.service';
+
+/**
+ * Heartbeats arrive every 30s. Presence tolerates two missed beats and drops
+ * the member on the third (90s), avoiding flicker without leaving a closed app
+ * visible for the sweeper's deliberately more generous 5-minute credit grace.
+ */
+export const PRESENCE_HEARTBEAT_GRACE_SECONDS = 90;
 
 @Injectable()
 export class RoomsService {
@@ -82,6 +94,79 @@ export class RoomsService {
       photoUrl: post.photoUrl,
       createdAt: post.createdAt,
     };
+  }
+
+  async getPresence(roomId: string, userId: string) {
+    const room = await this.assertCanViewLeague(roomId, userId);
+    if (room.participationMode !== 'study') {
+      throw new BadRequestException(
+        'Presence is only available for study challenges',
+      );
+    }
+
+    const now = new Date();
+    const cutoff = new Date(
+      now.getTime() - PRESENCE_HEARTBEAT_GRACE_SECONDS * 1000,
+    );
+    const members = await this.prisma.leagueMember.findMany({
+      where: { leagueId: roomId },
+      select: { userId: true, displayName: true },
+    });
+    const displayNameByUser = new Map(
+      members.map((member) => [member.userId, member.displayName]),
+    );
+    const sessions = await this.prisma.studySession.findMany({
+      where: {
+        userId: { in: members.map((member) => member.userId) },
+        status: 'active',
+        lastHeartbeatAt: { gte: cutoff },
+      },
+      select: {
+        id: true,
+        userId: true,
+        startedAt: true,
+        lastHeartbeatAt: true,
+        subject: { select: { id: true, name: true, color: true } },
+        user: { select: { username: true, avatarUrl: true } },
+      },
+      orderBy: { startedAt: 'asc' },
+    });
+
+    return {
+      serverTime: now,
+      heartbeatGraceSeconds: PRESENCE_HEARTBEAT_GRACE_SECONDS,
+      pollAfterSeconds: 30,
+      members: sessions.map((session) => ({
+        sessionId: session.id,
+        userId: session.userId,
+        displayName:
+          displayNameByUser.get(session.userId) ?? session.user.username,
+        avatarUrl: session.user.avatarUrl,
+        subject: session.subject,
+        startedAt: session.startedAt,
+        lastHeartbeatAt: session.lastHeartbeatAt,
+        elapsedMinutes: Math.max(
+          0,
+          Math.floor((now.getTime() - session.startedAt.getTime()) / 60_000),
+        ),
+      })),
+    };
+  }
+
+  private async assertCanViewLeague(roomId: string, userId: string) {
+    const room = await this.prisma.league.findUnique({
+      where: { id: roomId },
+      select: { id: true, privacy: true, participationMode: true },
+    });
+    if (!room) throw new NotFoundException('Room not found');
+
+    if (room.privacy === 'private') {
+      const membership = await this.prisma.leagueMember.findUnique({
+        where: { leagueId_userId: { leagueId: roomId, userId } },
+      });
+      if (!membership) throw new ForbiddenException('You are not a room member');
+    }
+    return room;
   }
 
   async listForUser(userId: string) {

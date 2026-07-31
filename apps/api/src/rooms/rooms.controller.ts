@@ -50,6 +50,14 @@ export class RoomsController {
     return this.feedService.getLeagueFeed(roomId, user.userId, page, limit);
   }
 
+  @Get(':id/presence')
+  presence(
+    @CurrentUser() user: { userId: string; email: string },
+    @Param('id') roomId: string,
+  ) {
+    return this.roomsService.getPresence(roomId, user.userId);
+  }
+
   @Post(':id/posts')
   @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: 10 * 1024 * 1024 } }))
   createPost(

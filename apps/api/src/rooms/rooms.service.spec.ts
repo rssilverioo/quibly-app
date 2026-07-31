@@ -1,4 +1,7 @@
-import { RoomsService } from './rooms.service';
+import {
+  PRESENCE_HEARTBEAT_GRACE_SECONDS,
+  RoomsService,
+} from './rooms.service';
 
 describe('RoomsService.listForUser', () => {
   it('embeds the active challenge and its remaining deadline', async () => {
@@ -144,5 +147,129 @@ describe('RoomsService.listForUser', () => {
       }),
     });
     expect(result).toEqual(expect.objectContaining({ kind: 'standalone' }));
+  });
+});
+
+describe('RoomsService.getPresence', () => {
+  it('returns only recent active sessions for members of a study room', async () => {
+    jest.useFakeTimers();
+    const now = new Date('2026-08-03T12:00:00.000Z');
+    jest.setSystemTime(now);
+    const prisma = {
+      league: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'room-1',
+          privacy: 'private',
+          participationMode: 'study',
+        }),
+      },
+      leagueMember: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'requester-membership' }),
+        findMany: jest.fn().mockResolvedValue([
+          { userId: 'user-1', displayName: 'Rô' },
+          { userId: 'user-2', displayName: 'Bia' },
+        ]),
+      },
+      studySession: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'session-2',
+            userId: 'user-2',
+            startedAt: new Date('2026-08-03T11:13:00.000Z'),
+            lastHeartbeatAt: new Date('2026-08-03T11:59:30.000Z'),
+            subject: { id: 'subject-1', name: 'Biologia', color: '#00ff00' },
+            user: { username: 'profile-bia', avatarUrl: 'bia.jpg' },
+          },
+        ]),
+      },
+    };
+    const service = new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getPresence('room-1', 'user-1');
+
+    expect(prisma.studySession.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'active',
+          lastHeartbeatAt: {
+            gte: new Date(
+              now.getTime() - PRESENCE_HEARTBEAT_GRACE_SECONDS * 1000,
+            ),
+          },
+        }),
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        heartbeatGraceSeconds: 90,
+        pollAfterSeconds: 30,
+        members: [
+          expect.objectContaining({
+            userId: 'user-2',
+            displayName: 'Bia',
+            avatarUrl: 'bia.jpg',
+            elapsedMinutes: 47,
+          }),
+        ],
+      }),
+    );
+    jest.useRealTimers();
+  });
+
+  it('rejects presence for a photo room before querying sessions', async () => {
+    const prisma = {
+      league: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'room-1',
+          privacy: 'private',
+          participationMode: 'photo',
+        }),
+      },
+      leagueMember: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'requester-membership' }),
+      },
+      studySession: { findMany: jest.fn() },
+    };
+    const service = new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(service.getPresence('room-1', 'user-1')).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(prisma.studySession.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects an outsider before reading presence from a private room', async () => {
+    const prisma = {
+      league: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'room-1',
+          privacy: 'private',
+          participationMode: 'study',
+        }),
+      },
+      leagueMember: { findUnique: jest.fn().mockResolvedValue(null) },
+      studySession: { findMany: jest.fn() },
+    };
+    const service = new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(service.getPresence('room-1', 'outsider')).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(prisma.studySession.findMany).not.toHaveBeenCalled();
   });
 });
