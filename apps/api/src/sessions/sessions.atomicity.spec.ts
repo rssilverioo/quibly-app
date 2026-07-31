@@ -64,7 +64,10 @@ function makeTransactionalPrisma(failFeedPosts: boolean) {
       league: { findUnique: jest.fn(async () => null) },
       leagueMember: {
         findMany: jest.fn(async () =>
-          store.members.map(({ leagueId }) => ({ leagueId })),
+          store.members.map(({ leagueId }) => ({
+            leagueId,
+            league: { name: leagueId },
+          })),
         ),
         updateMany: jest.fn(async ({ data }: any) => {
           write(() => {
@@ -76,10 +79,13 @@ function makeTransactionalPrisma(failFeedPosts: boolean) {
         }),
       },
       feedPost: {
-        createMany: jest.fn(async ({ data }: any) => {
+        createManyAndReturn: jest.fn(async ({ data }: any) => {
           if (failFeedPosts) throw new FeedPostWriteFailure();
           write(() => store.posts.push(...data));
-          return { count: data.length };
+          return data.map((post: any, index: number) => ({
+            id: `post-${index + 1}`,
+            leagueId: post.leagueId,
+          }));
         }),
       },
       sessionAnomaly: { create: jest.fn() },

@@ -46,7 +46,7 @@ function makePrismaMock() {
       updateMany: jest.fn(),
     },
     feedPost: {
-      createMany: jest.fn(),
+      createManyAndReturn: jest.fn().mockResolvedValue([]),
     },
   };
 
@@ -312,21 +312,30 @@ describe('SessionsService.endSession', () => {
   it('propagates score and XP into every league the user belongs to', async () => {
     prisma.tx.studySession.findUnique.mockResolvedValue({ ...baseSession });
     prisma.tx.leagueMember.findMany.mockResolvedValue([
-      { leagueId: 'league-a' },
-      { leagueId: 'league-b' },
+      { leagueId: 'league-a', league: { name: 'Sala A' } },
+      { leagueId: 'league-b', league: { name: 'Sala B' } },
+    ]);
+    prisma.tx.feedPost.createManyAndReturn.mockResolvedValue([
+      { id: 'post-a', leagueId: 'league-a' },
+      { id: 'post-b', leagueId: 'league-b' },
     ]);
 
-    await service.endSession('user-1', 'session-1');
+    const result = await service.endSession('user-1', 'session-1');
 
     expect(prisma.tx.leagueMember.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: 'user-1' } }),
     );
-    expect(prisma.tx.feedPost.createMany).toHaveBeenCalledWith({
+    expect(prisma.tx.feedPost.createManyAndReturn).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({ leagueId: 'league-a' }),
         expect.objectContaining({ leagueId: 'league-b' }),
       ],
+      select: { id: true, leagueId: true },
     });
+    expect(result.posts).toEqual([
+      { id: 'post-a', roomId: 'league-a', roomName: 'Sala A' },
+      { id: 'post-b', roomId: 'league-b', roomName: 'Sala B' },
+    ]);
   });
 });
 
