@@ -38,10 +38,20 @@ export class FeedService {
           },
           session: {
             select: {
+              id: true,
               totalDurationMinutes: true,
               pointsEarned: true,
+              xpEarned: true,
               isVerified: true,
               proofMode: true,
+              subject: {
+                select: { id: true, name: true, color: true },
+              },
+              proofChecks: {
+                where: { status: 'passed' },
+                select: { photoUrl: true },
+                take: 1,
+              },
             },
           },
           reactions: true,
@@ -83,8 +93,17 @@ export class FeedService {
       }
 
       const { reactions: _reactions, ...postWithoutReactions } = post;
+      const proofPhotoUrl = post.showProofPhoto
+        ? post.session.proofChecks[0]?.photoUrl ?? null
+        : null;
       return {
         ...postWithoutReactions,
+        photoUrl: proofPhotoUrl,
+        session: {
+          ...post.session,
+          minutes: Number(post.session.totalDurationMinutes),
+          proofPhotoUrl,
+        },
         user: {
           ...post.user,
           username: displayNameMap.get(post.userId) ?? post.user.username,
