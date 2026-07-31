@@ -83,20 +83,27 @@ export class LeaguesController {
 
   @Get(':id/leaderboard')
   getLeaderboard(
+    @CurrentUser() user: { userId: string; email: string },
     @Param('id') id: string,
     @Query('period') period: 'weekly' | 'monthly' | 'all_time' = 'all_time',
   ) {
-    return this.leaguesService.getLeaderboard(id, period);
+    return this.leaguesService.getLeaderboard(id, user.userId, period);
   }
 
   @Get(':id/members')
-  getMembers(@Param('id') id: string) {
-    return this.leaguesService.getMembers(id);
+  getMembers(
+    @CurrentUser() user: { userId: string; email: string },
+    @Param('id') id: string,
+  ) {
+    return this.leaguesService.getMembers(id, user.userId);
   }
 
   @Get(':id/results')
-  getEndResults(@Param('id') id: string) {
-    return this.leaguesService.getEndResults(id);
+  getEndResults(
+    @CurrentUser() user: { userId: string; email: string },
+    @Param('id') id: string,
+  ) {
+    return this.leaguesService.getEndResults(id, user.userId);
   }
 
   @Post(':id/rematch')
