@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaguesService } from '../leagues/leagues.service';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { ChallengesService } from '../challenges/challenges.service';
 
 @Injectable()
 export class RoomsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly leaguesService: LeaguesService,
+    private readonly challengesService: ChallengesService,
   ) {}
 
   async create(userId: string, dto: CreateRoomDto) {
@@ -53,13 +55,14 @@ export class RoomsService {
       orderBy: { joinedAt: 'desc' },
     });
 
-    return memberships.map((membership) => {
+    return Promise.all(memberships.map(async (membership) => {
       const { league } = membership;
       const challengeIsActive =
         league.startDate.getTime() <= now.getTime() &&
         league.endDate.getTime() > now.getTime();
-      const rank =
-        league.members.findIndex((member) => member.userId === userId) + 1;
+      const leaderboard = challengeIsActive
+        ? await this.challengesService.leaderboard(league.id, userId, 1, 1)
+        : null;
 
       return {
         id: league.id,
@@ -88,12 +91,12 @@ export class RoomsService {
               ),
               participantCount: league.members.length,
               me: {
-                rank: rank || null,
-                metricValue: membership.totalSp,
+                rank: leaderboard?.me?.rank ?? null,
+                metricValue: leaderboard?.me?.metricValue ?? 0,
               },
             }
           : null,
       };
-    });
+    }));
   }
 }

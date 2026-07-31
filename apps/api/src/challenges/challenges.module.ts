@@ -6,5 +6,6 @@ import { RoomChallengesController } from './room-challenges.controller';
 @Module({
   controllers: [ChallengesController, RoomChallengesController],
   providers: [ChallengesService],
+  exports: [ChallengesService],
 })
 export class ChallengesModule {}

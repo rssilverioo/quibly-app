@@ -29,14 +29,21 @@ describe('RoomsService.listForUser', () => {
       },
     };
 
-    const [room] = await new RoomsService(prisma as any, {} as any).listForUser('user-1');
+    const challenges = {
+      leaderboard: jest.fn().mockResolvedValue({ me: { rank: 2, metricValue: 47 } }),
+    };
+    const [room] = await new RoomsService(
+      prisma as any,
+      {} as any,
+      challenges as any,
+    ).listForUser('user-1');
 
     expect(room.activeChallenge).toEqual(
       expect.objectContaining({
         id: 'room-1',
         endsAt: new Date('2026-08-04T12:00:00.000Z'),
         remainingSeconds: 86_400,
-        me: { rank: 2, metricValue: 120 },
+        me: { rank: 2, metricValue: 47 },
       }),
     );
     expect(prisma.leagueMember.findMany).toHaveBeenCalledTimes(1);
@@ -65,7 +72,11 @@ describe('RoomsService.listForUser', () => {
       },
     };
 
-    const [room] = await new RoomsService(prisma as any, {} as any).listForUser('user-1');
+    const [room] = await new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+    ).listForUser('user-1');
 
     expect(room.activeChallenge).toBeNull();
   });
@@ -80,7 +91,7 @@ describe('RoomsService.listForUser', () => {
         createdAt: new Date(),
       }),
     };
-    const service = new RoomsService({} as any, leagues as any);
+    const service = new RoomsService({} as any, leagues as any, {} as any);
 
     const room = await service.create('user-1', {
       name: 'Sala',
