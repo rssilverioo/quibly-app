@@ -64,6 +64,9 @@
     ,"duration": "DEADLINE"
     ,"durationDays": "{{count}} days"
     ,"createChallengeAction": "Create challenge"
+    ,"memberHistory": "Challenge history"
+    ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} in this challenge"
+    ,"memberNoPosts": "No study posted in this challenge yet."
   },
   "members": "Members",
   "members_one": "{{count}} member",

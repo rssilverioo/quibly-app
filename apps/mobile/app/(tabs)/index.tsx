@@ -11,36 +11,12 @@ import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard'
 import { MascotBlock } from '../../components/mascot';
 import Avatar from '../../components/ui/Avatar';
 import Press from '../../components/ui/Press';
+import { roomFeedPostToCardPost } from '../../lib/feed-post';
 import { challengeTimeLeft, isStudyChallenge, resolveRoomsHome } from '../../lib/rooms-home';
 import { getLiveMembers, type LiveMember } from '../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomFeedPost, type RoomSummary } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { useTabBarClearance } from './_layout';
-
-function toPost(post: RoomFeedPost, roomId: string): FirebaseFeedPost {
-  return {
-    id: post.id,
-    kind: post.session ? 'session' : 'standalone',
-    league_id: roomId,
-    user_id: post.author.user_id,
-    username: post.author.display_name,
-    avatar_url: post.author.avatar_url,
-    session_id: post.session?.id ?? '',
-    subject_id: '',
-    subject_name: post.session?.subject.name ?? '',
-    subject_color: post.session?.subject.color ?? '',
-    show_proof_photo: post.show_proof_photo,
-    proof_photo_url: post.photo_url,
-    total_duration_minutes: post.session?.minutes ?? 0,
-    points_earned: post.session?.xp_earned ?? 0,
-    is_verified: post.session?.is_verified ?? false,
-    reactions: {},
-    comment_count: post.comment_count,
-    created_at: post.created_at,
-    caption: post.caption,
-    challenge_title: post.challenge?.title,
-  };
-}
 
 export default function RoomsScreen() {
   const router = useRouter();
@@ -63,7 +39,7 @@ export default function RoomsScreen() {
         getRoomFeed(nextRooms[0].id),
         getLiveMembers(),
       ]);
-      setPosts(page.items.map((post) => toPost(post, nextRooms[0].id)));
+      setPosts(page.items.map((post) => roomFeedPostToCardPost(post, nextRooms[0].id)));
       setLiveMembers(live.filter((member) => member.league_id === nextRooms[0].id));
     } else {
       setPosts([]);

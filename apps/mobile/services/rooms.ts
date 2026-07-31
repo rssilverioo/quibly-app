@@ -100,3 +100,12 @@ export interface CreateChallengeInput {
 
 export const createChallenge = (roomId: string, input: CreateChallengeInput) =>
   api.post<ActiveChallenge>(`/rooms/${roomId}/challenges`, input);
+
+export const getChallengeMemberPosts = (
+  challengeId: string,
+  userId: string,
+  page = 1,
+  limit = 20,
+): Promise<RoomFeedPage> => api.get(
+  `/challenges/${challengeId}/members/${userId}/posts?page=${page}&limit=${limit}`,
+);

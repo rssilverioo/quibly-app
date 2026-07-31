@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '../../../components/ui/Avatar';
@@ -58,7 +58,21 @@ export default function ChallengeLeaderboardScreen() {
         renderItem={({ item }) => {
           const isMe = item.rank === data.me.rank && item.metric_value === data.me.metric_value;
           return (
-            <View style={[styles.row, isMe && styles.meRow]}>
+            <Press
+              onPress={() => router.push({
+                pathname: '/league/challenge/[id]/member/[userId]',
+                params: {
+                  id,
+                  userId: item.user_id,
+                  name: item.display_name,
+                  avatar: item.avatar_url ?? '',
+                  rank: String(item.rank),
+                  value: String(item.metric_value),
+                  unit: data.challenge.metric_unit,
+                },
+              })}
+              style={[styles.row, isMe && styles.meRow]}
+            >
               {isMe ? <View style={styles.meBar} /> : null}
               <Avatar uri={item.avatar_url} name={item.display_name} size={40} />
               <View style={{ flex: 1 }}>
@@ -69,7 +83,8 @@ export default function ChallengeLeaderboardScreen() {
                 <Text style={styles.rank}>{item.rank}</Text>
                 <Text style={styles.ordinal}>º</Text>
               </View>
-            </View>
+              <ChevronRight size={17} color={c.fgSubtle} />
+            </Press>
           );
         }}
       />

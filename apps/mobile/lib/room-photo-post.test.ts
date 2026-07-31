@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { upload } = vi.hoisted(() => ({ upload: vi.fn() }));
-vi.mock('../lib/api', () => ({ api: { upload } }));
+const { get, upload } = vi.hoisted(() => ({ get: vi.fn(), upload: vi.fn() }));
+vi.mock('../lib/api', () => ({ api: { get, upload } }));
 
-import { createRoomPost } from '../services/rooms';
+import { createRoomPost, getChallengeMemberPosts } from '../services/rooms';
 
 describe('createRoomPost', () => {
   beforeEach(() => upload.mockReset());
@@ -34,5 +34,17 @@ describe('createRoomPost', () => {
 
     const body = upload.mock.calls[0][1] as FormData;
     expect(body.has('caption')).toBe(false);
+  });
+});
+
+describe('getChallengeMemberPosts', () => {
+  it('requests the paginated history for one member inside one challenge', async () => {
+    get.mockResolvedValue({ items: [], total: 0, page: 2, limit: 20 });
+
+    await getChallengeMemberPosts('challenge-1', 'user-1', 2, 20);
+
+    expect(get).toHaveBeenCalledWith(
+      '/challenges/challenge-1/members/user-1/posts?page=2&limit=20',
+    );
   });
 });
