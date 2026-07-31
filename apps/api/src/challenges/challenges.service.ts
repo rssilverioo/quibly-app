@@ -1,9 +1,64 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateChallengeDto } from './dto/create-challenge.dto';
 
 @Injectable()
 export class ChallengesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async create(roomId: string, userId: string, dto: CreateChallengeDto) {
+    const membership = await this.prisma.leagueMember.findUnique({
+      where: { leagueId_userId: { leagueId: roomId, userId } },
+    });
+    if (!membership || !['owner', 'admin'].includes(membership.role)) {
+      throw new ForbiddenException('Only room admins can create a challenge');
+    }
+
+    const room = await this.prisma.league.findUnique({ where: { id: roomId } });
+    if (!room) throw new NotFoundException('Room not found');
+
+    const now = new Date();
+    if (room.startDate <= now && room.endDate > now) {
+      throw new ConflictException('This room already has an active challenge');
+    }
+
+    const startsAt = dto.starts_on ? new Date(dto.starts_on) : now;
+    const endsAt = new Date(dto.ends_on);
+    if (endsAt <= startsAt) {
+      throw new BadRequestException('Challenge end must be after its start');
+    }
+
+    const challenge = await this.prisma.league.update({
+      where: { id: roomId },
+      data: {
+        description: dto.title,
+        startDate: startsAt,
+        endDate: endsAt,
+        status: startsAt <= now ? 'active' : 'upcoming',
+      },
+    });
+
+    return {
+      id: challenge.id,
+      roomId: challenge.id,
+      title: dto.title,
+      metric: dto.metric,
+      metricUnit: 'min',
+      status: startsAt <= now ? 'active' : 'upcoming',
+      startsAt,
+      endsAt,
+      serverTime: now,
+      participantCount: await this.prisma.leagueMember.count({
+        where: { leagueId: roomId },
+      }),
+    };
+  }
 
   async leaderboard(
     challengeId: string,

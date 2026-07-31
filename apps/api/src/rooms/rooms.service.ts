@@ -1,9 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { LeaguesService } from '../leagues/leagues.service';
+import { CreateRoomDto } from './dto/create-room.dto';
 
 @Injectable()
 export class RoomsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly leaguesService: LeaguesService,
+  ) {}
+
+  async create(userId: string, dto: CreateRoomDto) {
+    const league = await this.leaguesService.create(userId, {
+      name: dto.name,
+      display_name: dto.display_name,
+      start_date: '1970-01-01',
+      end_date: '1970-01-02',
+      privacy: 'private',
+      mode: 'competitive',
+    });
+
+    return {
+      id: league.id,
+      name: league.name,
+      inviteCode: league.inviteCode,
+      maxMembers: league.maxMembers,
+      createdAt: league.createdAt,
+      activeChallenge: null,
+      myMembership: { role: 'owner', displayName: dto.display_name },
+    };
+  }
 
   async listForUser(userId: string) {
     const now = new Date();

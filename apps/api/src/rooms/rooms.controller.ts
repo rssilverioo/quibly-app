@@ -1,8 +1,9 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { FeedService } from '../feed/feed.service';
 import { RoomsService } from './rooms.service';
+import { CreateRoomDto } from './dto/create-room.dto';
 
 @Controller('rooms')
 @UseGuards(FirebaseAuthGuard)
@@ -15,6 +16,14 @@ export class RoomsController {
   @Get()
   list(@CurrentUser() user: { userId: string; email: string }) {
     return this.roomsService.listForUser(user.userId);
+  }
+
+  @Post()
+  create(
+    @CurrentUser() user: { userId: string; email: string },
+    @Body() dto: CreateRoomDto,
+  ) {
+    return this.roomsService.create(user.userId, dto);
   }
 
   @Get(':id/feed')

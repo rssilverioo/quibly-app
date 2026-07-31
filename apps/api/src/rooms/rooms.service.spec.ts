@@ -29,7 +29,7 @@ describe('RoomsService.listForUser', () => {
       },
     };
 
-    const [room] = await new RoomsService(prisma as any).listForUser('user-1');
+    const [room] = await new RoomsService(prisma as any, {} as any).listForUser('user-1');
 
     expect(room.activeChallenge).toEqual(
       expect.objectContaining({
@@ -65,8 +65,32 @@ describe('RoomsService.listForUser', () => {
       },
     };
 
-    const [room] = await new RoomsService(prisma as any).listForUser('user-1');
+    const [room] = await new RoomsService(prisma as any, {} as any).listForUser('user-1');
 
+    expect(room.activeChallenge).toBeNull();
+  });
+
+  it('creates a private room from only name and display name', async () => {
+    const leagues = {
+      create: jest.fn().mockResolvedValue({
+        id: 'room-1',
+        name: 'Sala',
+        inviteCode: 'ABC12345',
+        maxMembers: 50,
+        createdAt: new Date(),
+      }),
+    };
+    const service = new RoomsService({} as any, leagues as any);
+
+    const room = await service.create('user-1', {
+      name: 'Sala',
+      display_name: 'Rô',
+    });
+
+    expect(leagues.create).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ privacy: 'private', display_name: 'Rô' }),
+    );
     expect(room.activeChallenge).toBeNull();
   });
 });
