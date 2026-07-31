@@ -41,6 +41,7 @@ export class ChallengesService {
         startDate: startsAt,
         endDate: endsAt,
         status: startsAt <= now ? 'active' : 'upcoming',
+        participationMode: dto.participation_mode ?? 'photo',
       },
     });
 
@@ -50,6 +51,7 @@ export class ChallengesService {
       title: dto.title,
       metric: dto.metric,
       metricUnit: 'min',
+      participationMode: challenge.participationMode,
       status: startsAt <= now ? 'active' : 'upcoming',
       startsAt,
       endsAt,
@@ -171,6 +173,7 @@ export class ChallengesService {
         title: league.description ?? league.name,
         metric: 'minutes',
         metricUnit: 'min',
+        participationMode: league.participationMode,
         status,
         startsAt: league.startDate,
         endsAt: league.endDate,

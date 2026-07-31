@@ -9,6 +9,10 @@ export class CreateChallengeDto {
   @IsIn(['minutes'])
   metric: 'minutes';
 
+  @IsIn(['photo', 'study'])
+  @IsOptional()
+  participation_mode?: 'photo' | 'study';
+
   @IsDateString()
   @IsOptional()
   starts_on?: string;

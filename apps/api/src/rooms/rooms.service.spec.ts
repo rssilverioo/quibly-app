@@ -36,6 +36,7 @@ describe('RoomsService.listForUser', () => {
       prisma as any,
       {} as any,
       challenges as any,
+      {} as any,
     ).listForUser('user-1');
 
     expect(room.activeChallenge).toEqual(
@@ -76,6 +77,7 @@ describe('RoomsService.listForUser', () => {
       prisma as any,
       {} as any,
       {} as any,
+      {} as any,
     ).listForUser('user-1');
 
     expect(room.activeChallenge).toBeNull();
@@ -91,7 +93,7 @@ describe('RoomsService.listForUser', () => {
         createdAt: new Date(),
       }),
     };
-    const service = new RoomsService({} as any, leagues as any, {} as any);
+    const service = new RoomsService({} as any, leagues as any, {} as any, {} as any);
 
     const room = await service.create('user-1', {
       name: 'Sala',
@@ -103,5 +105,44 @@ describe('RoomsService.listForUser', () => {
       expect.objectContaining({ privacy: 'private', display_name: 'Rô' }),
     );
     expect(room.activeChallenge).toBeNull();
+  });
+
+  it('creates a standalone photo post without a session', async () => {
+    const prisma = {
+      leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'member-1' }) },
+      feedPost: {
+        create: jest.fn().mockImplementation(({ data }) => ({
+          ...data,
+          createdAt: new Date('2026-07-31T12:00:00Z'),
+        })),
+      },
+    };
+    const storage = {
+      uploadPublic: jest.fn().mockResolvedValue('https://cdn.example/photo.jpg'),
+    };
+    const service = new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      storage as any,
+    );
+
+    const result = await service.createPost(
+      'room-1',
+      'user-1',
+      '  foco hoje  ',
+      { buffer: Buffer.from('image'), mimetype: 'image/jpeg' } as Express.Multer.File,
+    );
+
+    expect(prisma.feedPost.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        leagueId: 'room-1',
+        userId: 'user-1',
+        sessionId: null,
+        caption: 'foco hoje',
+        photoUrl: 'https://cdn.example/photo.jpg',
+      }),
+    });
+    expect(result).toEqual(expect.objectContaining({ kind: 'standalone' }));
   });
 });

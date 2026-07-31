@@ -96,9 +96,11 @@ export class FeedService {
       const proofPhotoUrl = post.showProofPhoto
         ? post.session?.proofChecks[0]?.photoUrl ?? null
         : null;
+      const photoUrl = post.photoUrl ?? proofPhotoUrl;
       return {
         ...postWithoutReactions,
-        photoUrl: proofPhotoUrl,
+        kind: post.session ? 'session' : 'standalone',
+        photoUrl,
         session: post.session
           ? {
               ...post.session,

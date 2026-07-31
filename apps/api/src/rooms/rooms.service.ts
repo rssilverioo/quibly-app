@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaguesService } from '../leagues/leagues.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { ChallengesService } from '../challenges/challenges.service';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class RoomsService {
@@ -10,6 +12,7 @@ export class RoomsService {
     private readonly prisma: PrismaService,
     private readonly leaguesService: LeaguesService,
     private readonly challengesService: ChallengesService,
+    private readonly storageService: StorageService,
   ) {}
 
   async create(userId: string, dto: CreateRoomDto) {
@@ -30,6 +33,54 @@ export class RoomsService {
       createdAt: league.createdAt,
       activeChallenge: null,
       myMembership: { role: 'owner', displayName: dto.display_name },
+    };
+  }
+
+  async createPost(
+    roomId: string,
+    userId: string,
+    rawCaption?: string,
+    photo?: Express.Multer.File,
+  ) {
+    const membership = await this.prisma.leagueMember.findUnique({
+      where: { leagueId_userId: { leagueId: roomId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a room member');
+
+    const caption = rawCaption?.trim() || null;
+    if (!photo && !caption) {
+      throw new BadRequestException('A photo or caption is required');
+    }
+    if (photo && !photo.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Photo must be an image');
+    }
+
+    const postId = randomUUID();
+    const photoUrl = photo
+      ? await this.storageService.uploadPublic(
+          `room-posts/${roomId}/${userId}/${postId}`,
+          photo.buffer,
+          photo.mimetype,
+        )
+      : null;
+    const post = await this.prisma.feedPost.create({
+      data: {
+        id: postId,
+        leagueId: roomId,
+        userId,
+        sessionId: null,
+        caption,
+        photoUrl,
+      },
+    });
+
+    return {
+      id: post.id,
+      roomId: post.leagueId,
+      kind: 'standalone',
+      caption: post.caption,
+      photoUrl: post.photoUrl,
+      createdAt: post.createdAt,
     };
   }
 
@@ -81,6 +132,7 @@ export class RoomsService {
               title: league.description ?? league.name,
               metric: 'minutes',
               metricUnit: 'min',
+              participationMode: league.participationMode,
               status: 'active',
               startsAt: league.startDate,
               endsAt: league.endDate,
