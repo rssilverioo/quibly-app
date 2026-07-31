@@ -35,6 +35,8 @@ import { FocusAreasModule } from './focus-areas/focus-areas.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { AiRouterModule } from './ai-router/ai-router.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
+import { RoomsModule } from './rooms/rooms.module';
+import { ChallengesModule } from './challenges/challenges.module';
 
 @Module({
   imports: [
@@ -87,6 +89,8 @@ import { CurriculumModule } from './curriculum/curriculum.module';
     OnboardingModule,
     DailyPlanModule,
     FocusAreasModule,
+    RoomsModule,
+    ChallengesModule,
   ],
   providers: [
     {

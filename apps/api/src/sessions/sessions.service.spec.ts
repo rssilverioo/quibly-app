@@ -41,6 +41,13 @@ function makePrismaMock() {
     league: {
       findUnique: jest.fn(),
     },
+    leagueMember: {
+      findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn(),
+    },
+    feedPost: {
+      createMany: jest.fn(),
+    },
   };
 
   return {
@@ -304,14 +311,22 @@ describe('SessionsService.endSession', () => {
 
   it('propagates score and XP into every league the user belongs to', async () => {
     prisma.tx.studySession.findUnique.mockResolvedValue({ ...baseSession });
-    prisma.leagueMember.findMany.mockResolvedValue([
-      { id: 'member-1', leagueId: 'league-a' },
-      { id: 'member-2', leagueId: 'league-b' },
+    prisma.tx.leagueMember.findMany.mockResolvedValue([
+      { leagueId: 'league-a' },
+      { leagueId: 'league-b' },
     ]);
 
     await service.endSession('user-1', 'session-1');
 
-    expect(prisma.feedPost.create).toHaveBeenCalledTimes(2);
+    expect(prisma.tx.leagueMember.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'user-1' } }),
+    );
+    expect(prisma.tx.feedPost.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ leagueId: 'league-a' }),
+        expect.objectContaining({ leagueId: 'league-b' }),
+      ],
+    });
   });
 });
 
