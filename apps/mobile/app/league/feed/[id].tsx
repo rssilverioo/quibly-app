@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,26 +18,34 @@ import { ArrowLeft, BookOpen, Camera, Plus, X, ChevronUp, ChevronDown, CheckCirc
 import { useAuth } from '../../../contexts/AuthContext';
 import { getFeedPosts, toggleReaction, addComment, getComments } from '../../../services/feed';
 import type { ReactionEmoji } from '@quibly/shared';
-import { staticDark as c } from '../../../theme';
+import { useTheme, type Palette } from '../../../theme';
 
 // ─── Theme ───
 
-const COLORS = {
+const getColors = (c: Palette) => ({
   background: c.bg,
-  surface: c.bg,
-  surfaceLight: c.surface,
-  border: c.surfaceRaised,
+  surface: c.surface,
+  surfaceLight: c.surfaceRaised,
+  border: c.border,
   primary: c.accent,
   primaryLight: c.accent,
   secondary: c.accent,
   accent: c.danger,
   warning: c.warning,
-  success: c.accent,
+  success: c.success,
   error: c.danger,
   text: c.fg,
-  textSecondary: c.fgSubtle,
-  textMuted: c.fgMuted,
-};
+  textSecondary: c.fgMuted,
+  textMuted: c.fgSubtle,
+});
+
+function useLeagueStyles() {
+  const { c } = useTheme();
+  return useMemo(() => {
+    const COLORS = getColors(c);
+    return { c, COLORS, styles: makeStyles(c) };
+  }, [c]);
+}
 
 const REACTION_EMOJIS: ReactionEmoji[] = ['🔥', '🧠', '💀', '👑', '⚡'];
 
@@ -97,6 +105,7 @@ function getInitials(name: string): string {
 
 export default function LeagueFeedScreen() {
   const { t } = useTranslation('feed');
+  const { COLORS, styles } = useLeagueStyles();
   const { id: leagueId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -281,6 +290,7 @@ function FeedPostCard({
   onAddComment,
 }: FeedPostCardProps) {
   const { t } = useTranslation('feed');
+  const { COLORS, styles } = useLeagueStyles();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -352,7 +362,7 @@ function FeedPostCard({
             <View
               style={[styles.subjectDot, { backgroundColor: post.subject_color ?? COLORS.primary }]}
             />
-            <Text style={[styles.subjectText, { color: post.subject_color ?? COLORS.primary }]}>
+            <Text style={styles.subjectText}>
               {post.subject_name}
             </Text>
           </View>
@@ -514,6 +524,7 @@ function FeedPostCard({
 // ─── Comment Item Component ───
 
 function CommentItem({ comment }: { comment: CommentData }) {
+  const { styles } = useLeagueStyles();
   return (
     <View style={styles.commentItem}>
       {comment.avatar_url ? (
@@ -543,7 +554,9 @@ function CommentItem({ comment }: { comment: CommentData }) {
 
 // ─── Styles ───
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => {
+  const COLORS = getColors(c);
+  return StyleSheet.create({
   flex: {
     flex: 1,
   },
@@ -660,7 +673,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   handle: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 13,
     marginTop: 1,
   },
@@ -887,7 +900,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   commentTime: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 11,
   },
   commentContent: {
@@ -926,8 +939,9 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   commentSendText: {
-    color: COLORS.text,
+    color: c.fgOnAccent,
     fontSize: 13,
     fontWeight: '700',
   },
-});
+  });
+};
