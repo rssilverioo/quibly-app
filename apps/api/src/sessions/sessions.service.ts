@@ -438,6 +438,7 @@ export class SessionsService {
       plan: planFromTx,
       capClipped,
       measured,
+      posts,
     } = await this.prisma.$transaction(async (tx) => {
         const session = await tx.studySession.findUnique({
           where: { id: sessionId },
@@ -572,9 +573,13 @@ export class SessionsService {
         // the session active so the client can safely retry.
         const memberships = await tx.leagueMember.findMany({
           where: { userId },
-          select: { leagueId: true },
+          select: {
+            leagueId: true,
+            league: { select: { name: true } },
+          },
         });
 
+        let posts: Array<{ id: string; roomId: string; roomName: string }> = [];
         if (memberships.length > 0) {
           await tx.leagueMember.updateMany({
             where: { userId },
@@ -588,14 +593,23 @@ export class SessionsService {
             },
           });
 
-          await tx.feedPost.createMany({
+          const createdPosts = await tx.feedPost.createManyAndReturn({
             data: memberships.map(({ leagueId }) => ({
               leagueId,
               sessionId: updatedSession.id,
               userId,
               showProofPhoto: isVerified,
             })),
+            select: { id: true, leagueId: true },
           });
+          const roomNames = new Map(
+            memberships.map(({ leagueId, league }) => [leagueId, league.name]),
+          );
+          posts = createdPosts.map((post) => ({
+            id: post.id,
+            roomId: post.leagueId,
+            roomName: roomNames.get(post.leagueId) ?? '',
+          }));
         }
 
         return {
@@ -608,6 +622,7 @@ export class SessionsService {
           plan: profile?.plan,
           capClipped: clippedByDailyCap,
           measured,
+          posts,
         };
       },
       { timeout: 15_000 },
@@ -679,6 +694,7 @@ export class SessionsService {
       newAchievements,
       previousLevel,
       newLevel,
+      posts,
     };
   }
 
