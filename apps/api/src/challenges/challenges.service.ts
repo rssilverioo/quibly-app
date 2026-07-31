@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChallengesService {
@@ -104,6 +105,32 @@ export class ChallengesService {
         endedAt: true,
       },
     });
+    const latestPhotos = await this.prisma.$queryRaw<
+      Array<{ user_id: string; latest_photo_url: string }>
+    >(Prisma.sql`
+      SELECT DISTINCT ON (fp."user_id")
+        fp."user_id" AS user_id,
+        COALESCE(fp."photo_url", proof."photo_url") AS latest_photo_url
+      FROM "feed_posts" fp
+      LEFT JOIN LATERAL (
+        SELECT pc."photo_url"
+        FROM "proof_checks" pc
+        WHERE pc."session_id" = fp."session_id"
+          AND pc."status" = 'passed'
+          AND pc."photo_url" IS NOT NULL
+        ORDER BY pc."responded_at" DESC NULLS LAST, pc."id" DESC
+        LIMIT 1
+      ) proof ON fp."show_proof_photo" = TRUE
+      WHERE fp."league_id" = ${challengeId}::uuid
+        AND fp."user_id" IN (${Prisma.join(memberIds)})
+        AND fp."created_at" >= ${league.startDate}
+        AND fp."created_at" < ${league.endDate}
+        AND COALESCE(fp."photo_url", proof."photo_url") IS NOT NULL
+      ORDER BY fp."user_id", fp."created_at" DESC, fp."id" DESC
+    `);
+    const latestPhotoByUser = new Map(
+      latestPhotos.map((photo) => [photo.user_id, photo.latest_photo_url]),
+    );
 
     const totals = new Map<
       string,
@@ -144,6 +171,7 @@ export class ChallengesService {
           sessions: total.sessions,
           verifiedMinutes: Math.round(total.verifiedMinutes),
           lastActivityAt: total.lastAt,
+          latestPhotoUrl: latestPhotoByUser.get(member.userId) ?? null,
         };
       })
       .sort(

@@ -23,6 +23,9 @@ describe('ChallengesService.leaderboard', () => {
           { userId: 'friend', totalDurationMinutes: 50, isVerified: false, endedAt: new Date('2026-08-03') },
         ]),
       },
+      $queryRaw: jest.fn().mockResolvedValue([
+        { user_id: 'friend', latest_photo_url: 'https://cdn.example/friend.jpg' },
+      ]),
     };
 
     const result = await new ChallengesService(prisma as any).leaderboard(
@@ -37,6 +40,16 @@ describe('ChallengesService.leaderboard', () => {
       [2, 'me', 30],
     ]);
     expect(result.me).toEqual({ rank: 2, metricValue: 30 });
+    expect(result.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId: 'friend',
+          latestPhotoUrl: 'https://cdn.example/friend.jpg',
+        }),
+        expect.objectContaining({ userId: 'me', latestPhotoUrl: null }),
+      ]),
+    );
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -139,6 +152,7 @@ describe('ChallengesService.details', () => {
           { userId: 'b-user', totalDurationMinutes: 50, isVerified: false, endedAt: new Date('2026-08-02') },
         ]),
       },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
 
     const result = await new ChallengesService(prisma as any).details(
