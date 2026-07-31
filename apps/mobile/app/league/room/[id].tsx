@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import FeedRow from '../../../components/feed/FeedRow';
 import type { FirebaseFeedPost } from '../../../components/feed/PostCard';
-import { MascotBlock } from '../../../components/mascot';
+import { DEFAULT_ROOM_COVER, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
@@ -65,7 +65,7 @@ export default function RoomFeedScreen() {
       {room.cover_url ? (
         <Image source={{ uri: room.cover_url }} style={styles.cover} resizeMode="cover" />
       ) : (
-        <View style={styles.coverFallback}><MascotBlock state="idle" size={96} /></View>
+        <Image source={DEFAULT_ROOM_COVER} style={styles.cover} resizeMode="cover" />
       )}
       <View style={styles.statsStrip}>
         <View style={styles.statColumn}>
@@ -131,8 +131,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: space.xl, paddingBottom: 110, flexGrow: 1 },
   title: { ...text.title1, color: c.fg, marginBottom: space.xl },
-  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg },
-  coverFallback: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  cover: { width: '100%', aspectRatio: ROOM_COVER_ASPECT_RATIO, borderRadius: radius.lg, overflow: 'hidden' },
   statsStrip: { minHeight: 72, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm },
   statColumn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
   statValue: { ...text.bodyStrong, color: c.fg },
