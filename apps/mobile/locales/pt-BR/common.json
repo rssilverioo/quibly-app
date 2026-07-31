@@ -18,10 +18,22 @@
   "tabs": {
     "home": "Início",
     "lessons": "Aulas",
+    "rooms": "Salas",
     "study": "Estudar",
     "challenges": "Desafios",
     "library": "Biblioteca",
     "profile": "Perfil"
+  },
+  "rooms": {
+    "emptyTitle": "Estude com os seus",
+    "emptySubtitle": "Crie uma sala para o seu grupo ou entre com o código que recebeu.",
+    "create": "Criar sala",
+    "code": "Código da sala",
+    "join": "Entrar",
+    "feedEmptyTitle": "Ninguém estudou ainda hoje",
+    "feedEmptySubtitle": "Comece uma sessão e seu estudo aparece aqui.",
+    "listTitle": "Suas salas",
+    "createChallenge": "Crie o próximo desafio"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

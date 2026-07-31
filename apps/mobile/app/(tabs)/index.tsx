@@ -1,360 +1,183 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl,
+  ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { ChevronRight, Plus, Users } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  Plus, Mic, FileText, Camera, Flame, AlertCircle, BookOpen, HelpCircle, ChevronRight,
-} from 'lucide-react-native';
 
-import { useAuth } from '../../contexts/AuthContext';
-import { listLessons, type LessonSummary } from '../../services/lessons';
-import { getLiveMembers, type LiveMember } from '../../services/leagues';
-
-import StreakCalendarModal from '../../components/StreakCalendarModal';
-import Press from '../../components/ui/Press';
-import Glass from '../../components/ui/Glass';
-import LiveDot from '../../components/ui/LiveDot';
-import Avatar from '../../components/ui/Avatar';
+import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard';
 import { MascotBlock } from '../../components/mascot';
-import { useTheme, text as t, space, radius } from '../../theme';
+import Press from '../../components/ui/Press';
+import { resolveRoomsHome } from '../../lib/rooms-home';
+import { getMyRooms, getRoomFeed, type RoomFeedPost, type RoomSummary } from '../../services/rooms';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { useTabBarClearance } from './_layout';
 
-const SOURCE_ICON = { audio: Mic, document: FileText, photo: Camera } as const;
-
-/**
- * Shown in place of the empty state. Each mode gets its own hue so the first
- * screen isn't monochrome — colour here is content, not decoration.
- */
-const CAPTURE_MODES = [
-  { key: 'record', Icon: Mic, tint: '#C8FF4D', titleKey: 'modeRecord', subKey: 'modeRecordSub' },
-  { key: 'pdf', Icon: FileText, tint: '#38BDF8', titleKey: 'modePdf', subKey: 'modePdfSub' },
-  { key: 'photo', Icon: Camera, tint: '#F472B6', titleKey: 'modePhoto', subKey: 'modePhotoSub' },
-] as const;
-
-function relativeDay(iso: string, locale: string): string {
-  const date = new Date(iso);
-  const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
-  if (days === 0) return locale.startsWith('pt') ? 'Hoje' : 'Today';
-  if (days === 1) return locale.startsWith('pt') ? 'Ontem' : 'Yesterday';
-  return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+function toPost(post: RoomFeedPost, roomId: string): FirebaseFeedPost {
+  return {
+    id: post.id,
+    league_id: roomId,
+    user_id: post.author.user_id,
+    username: post.author.display_name,
+    avatar_url: post.author.avatar_url,
+    session_id: post.session?.id ?? '',
+    subject_id: '',
+    subject_name: post.session?.subject.name ?? '',
+    subject_color: post.session?.subject.color ?? '',
+    show_proof_photo: post.show_proof_photo,
+    proof_photo_url: post.photo_url,
+    total_duration_minutes: post.session?.minutes ?? 0,
+    points_earned: post.session?.xp_earned ?? 0,
+    is_verified: post.session?.is_verified ?? false,
+    reactions: {},
+    comment_count: post.comment_count,
+    created_at: post.created_at,
+    caption: post.caption,
+    challenge_title: post.challenge?.title,
+  };
 }
 
-export default function LessonsScreen() {
+export default function RoomsScreen() {
   const router = useRouter();
-  const { t: tr, i18n } = useTranslation('lessons');
+  const { t: tr } = useTranslation('common');
   const { c } = useTheme();
-  const tabBarClearance = useTabBarClearance();
-  const { user, profile, refreshProfile } = useAuth();
-
-  const [lessons, setLessons] = useState<LessonSummary[]>([]);
-  const [live, setLive] = useState<LiveMember[]>([]);
+  const styles = useMemo(() => makeStyles(c), [c]);
+  const tabClearance = useTabBarClearance();
+  const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [posts, setPosts] = useState<FirebaseFeedPost[]>([]);
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showStreak, setShowStreak] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-    const [lessonList, liveMembers] = await Promise.allSettled([
-      listLessons(),
-      getLiveMembers(),
-    ]);
-    if (lessonList.status === 'fulfilled') setLessons(lessonList.value ?? []);
-    if (liveMembers.status === 'fulfilled') setLive(liveMembers.value ?? []);
-  }, [user]);
+  const load = useCallback(async () => {
+    const nextRooms = await getMyRooms();
+    setRooms(nextRooms);
+    if (nextRooms.length === 1) {
+      const page = await getRoomFeed(nextRooms[0].id);
+      setPosts(page.items.map((post) => toPost(post, nextRooms[0].id)));
+    } else {
+      setPosts([]);
+    }
+  }, []);
 
-  const hasLoaded = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      (async () => {
-        if (!hasLoaded.current) setLoading(true);
-        await Promise.allSettled([fetchData(), refreshProfile()]);
-        if (!cancelled) { setLoading(false); hasLoaded.current = true; }
-      })();
-      return () => { cancelled = true; };
-    }, [])
-  );
+  useFocusEffect(useCallback(() => {
+    let alive = true;
+    void load().catch(() => {}).finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [load]));
 
-  const onRefresh = useCallback(async () => {
+  const refresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.allSettled([fetchData(), refreshProfile()]);
+    await load().catch(() => {});
     setRefreshing(false);
-  }, [fetchData, refreshProfile]);
+  }, [load]);
 
-  const streak = profile?.current_streak ?? 0;
+  const state = resolveRoomsHome(rooms);
+  const join = () => {
+    const normalized = code.trim();
+    if (normalized) router.push(`/league/join/${encodeURIComponent(normalized)}`);
+  };
 
-  if (loading) {
+  if (loading) return <View style={styles.center}><ActivityIndicator color={c.accent} /></View>;
+
+  if (state.kind === 'empty') {
     return (
-      <View style={[styles.center, { backgroundColor: c.bg }]}>
-        <ActivityIndicator color={c.accent} />
-      </View>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.empty}>
+          <MascotBlock state="wave" size={150} />
+          <Text style={styles.title}>{tr('rooms.emptyTitle')}</Text>
+          <Text style={styles.subtitle}>{tr('rooms.emptySubtitle')}</Text>
+          <Press haptic="medium" onPress={() => router.push('/league/create')} style={styles.primaryButton}>
+            <Plus size={18} color={c.fgOnAccent} />
+            <Text style={styles.primaryText}>{tr('rooms.create')}</Text>
+          </Press>
+          <View style={styles.joinRow}>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              onSubmitEditing={join}
+              autoCapitalize="characters"
+              placeholder={tr('rooms.code')}
+              placeholderTextColor={c.fgSubtle}
+              style={styles.input}
+            />
+            <Press onPress={join} style={styles.joinButton}><Text style={styles.joinText}>{tr('rooms.join')}</Text></Press>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (state.kind === 'feed') {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <FlatList
+          data={posts}
+          keyExtractor={(post) => post.id}
+          renderItem={({ item }) => <PostCard post={item} />}
+          ItemSeparatorComponent={() => <View style={{ height: space.lg }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
+          contentContainerStyle={[styles.feed, { paddingBottom: tabClearance }]}
+          ListHeaderComponent={<Text style={styles.title}>{state.room.name}</Text>}
+          ListEmptyComponent={
+            <Press onPress={() => router.push('/session/setup')} style={styles.feedEmpty}>
+              <Text style={styles.emptyTitle}>{tr('rooms.feedEmptyTitle')}</Text>
+              <Text style={styles.subtitle}>{tr('rooms.feedEmptySubtitle')}</Text>
+            </Press>
+          }
+        />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.fgMuted} />
-          }
-        >
-          {/* Header */}
-          <Animated.View entering={FadeInDown.duration(300)} style={styles.header}>
-            <Text style={{ ...t.title2, color: c.fg }}>{tr('tabTitle')}</Text>
-            <Press
-              haptic="light"
-              scale={0.94}
-              onPress={() => setShowStreak(true)}
-              style={[styles.streakChip, { backgroundColor: c.surface, borderColor: c.border }]}
-            >
-              <Flame size={13} color={streak > 0 ? c.warning : c.fgSubtle} strokeWidth={2.4} />
-              <Text style={{ ...t.caption, color: streak > 0 ? c.fg : c.fgSubtle }}>{streak}</Text>
-            </Press>
-          </Animated.View>
-
-          {/* Social, kept to one line: who's studying right now */}
-          {live.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(300).delay(40)}>
-              <Press
-                scale={0.98}
-                onPress={() => router.push(`/league/${live[0].league_id}`)}
-                style={[styles.liveStrip, { backgroundColor: c.surface, borderColor: c.border }]}
-              >
-                <LiveDot size={6} />
-                <View style={styles.liveAvatars}>
-                  {live.slice(0, 4).map((member, i) => (
-                    <View key={member.session_id} style={{ marginLeft: i === 0 ? 0 : -10 }}>
-                      <Avatar
-                        uri={member.avatar_url}
-                        name={member.display_name}
-                        size={26}
-                        ringColor={c.surface}
-                      />
-                    </View>
-                  ))}
-                </View>
-                <Text style={{ ...t.caption, color: c.fgMuted, flex: 1 }}>
-                  {live.length === 1
-                    ? `${live[0].display_name} · ${live[0].subject_name}`
-                    : tr('studyingNow', { count: live.length })}
-                </Text>
-              </Press>
-            </Animated.View>
-          )}
-
-          {/* The one primary action */}
-          <Animated.View entering={FadeInDown.duration(300).delay(80)}>
-            <Press
-              haptic="medium"
-              scale={0.985}
-              onPress={() => router.push('/lesson/capture')}
-              style={[styles.cta, { backgroundColor: c.accent }]}
-            >
-              <Plus size={19} color={c.fgOnAccent} strokeWidth={2.6} />
-              <Text style={{ ...t.bodyStrong, color: c.fgOnAccent }}>{tr('capture')}</Text>
-            </Press>
-          </Animated.View>
-
-          {/* Lessons */}
-          {lessons.length === 0 ? (
-            /* The empty state does the teaching: the three capture modes as
-             * real, tappable cards. A paragraph in a void taught nothing and
-             * still cost the user a tap to find out what the app does. */
-            <View style={styles.empty}>
-              <Animated.View entering={FadeInDown.duration(300).delay(120)}>
-                <MascotBlock state="wave" size={148} />
-              </Animated.View>
-
-              <Animated.View entering={FadeInDown.duration(300).delay(140)}>
-                <Text style={{ ...t.overline, color: c.fgSubtle, marginBottom: space.md }}>
-                  {tr('howItWorks')}
-                </Text>
-              </Animated.View>
-
-              {CAPTURE_MODES.map((mode, i) => (
-                <Animated.View
-                  key={mode.key}
-                  entering={FadeInDown.duration(300).delay(160 + i * 60)}
-                >
-                  <Press haptic="medium" scale={0.97} onPress={() => router.push('/lesson/capture')}>
-                    <Glass variant="surface" interactive style={[styles.modeCard, { borderColor: c.border }]}>
-                    <View style={[styles.modeIcon, { backgroundColor: mode.tint + '22' }]}>
-                      <mode.Icon size={19} color={mode.tint} strokeWidth={2.2} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...t.bodyStrong, color: c.fg }}>{tr(mode.titleKey)}</Text>
-                      <Text style={{ ...t.caption, color: c.fgMuted, marginTop: 3 }}>
-                        {tr(mode.subKey)}
-                      </Text>
-                    </View>
-                      <ChevronRight size={17} color={c.fgSubtle} />
-                    </Glass>
-                  </Press>
-                </Animated.View>
-              ))}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <FlatList
+        data={state.rooms}
+        keyExtractor={(room) => room.id}
+        contentContainerStyle={[styles.list, { paddingBottom: tabClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
+        ListHeaderComponent={<Text style={styles.title}>{tr('rooms.listTitle')}</Text>}
+        renderItem={({ item }) => (
+          <Press onPress={() => router.push(`/league/feed/${item.id}`)} style={styles.roomRow}>
+            <View style={styles.roomIcon}><Users size={18} color={c.fgMuted} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.roomName}>{item.name}</Text>
+              <Text style={styles.roomMeta}>
+                {item.active_challenge?.title ?? tr('rooms.createChallenge')} · {tr('members', { count: item.member_count })}
+              </Text>
             </View>
-          ) : (
-            <View style={styles.list}>
-              {lessons.map((lesson, i) => {
-                const Icon = SOURCE_ICON[lesson.source];
-                const isProcessing = lesson.status === 'processing';
-                const isFailed = lesson.status === 'failed';
-                const derived = lesson._count.flashcard_sets + lesson._count.quizzes;
-
-                return (
-                  <Animated.View
-                    key={lesson.id}
-                    entering={FadeInDown.duration(300).delay(120 + Math.min(i, 6) * 40)}
-                  >
-                    <Press scale={0.98} onPress={() => router.push(`/lesson/${lesson.id}`)}>
-                      <Glass variant="surface" style={[styles.card, { borderColor: c.border }]}>
-                      <View style={styles.cardTop}>
-                        <View style={[styles.cardIcon, { backgroundColor: c.surfaceRaised }]}>
-                          {isFailed ? (
-                            <AlertCircle size={15} color={c.danger} strokeWidth={2.2} />
-                          ) : (
-                            <Icon size={15} color={c.fgMuted} strokeWidth={2.2} />
-                          )}
-                        </View>
-                        <Text style={{ ...t.caption, color: c.fgSubtle }}>
-                          {relativeDay(lesson.created_at, i18n.language)}
-                        </Text>
-                      </View>
-
-                      <Text numberOfLines={2} style={{ ...t.bodyStrong, color: c.fg, marginTop: space.md }}>
-                        {isProcessing ? tr('statusProcessing') : lesson.title}
-                      </Text>
-
-                      {isProcessing ? (
-                        <Text style={{ ...t.caption, color: c.fgSubtle, marginTop: 4 }}>
-                          {tr('statusProcessingSub')}
-                        </Text>
-                      ) : (
-                        !!lesson.summary && (
-                          <Text numberOfLines={2} style={{ ...t.caption, color: c.fgMuted, marginTop: 4 }}>
-                            {lesson.summary}
-                          </Text>
-                        )
-                      )}
-
-                      {derived > 0 && (
-                        <View style={styles.cardMeta}>
-                          {lesson._count.flashcard_sets > 0 && (
-                            <View style={styles.metaItem}>
-                              <BookOpen size={12} color={c.fgSubtle} />
-                              <Text style={{ ...t.caption, color: c.fgSubtle }}>
-                                {lesson._count.flashcard_sets}
-                              </Text>
-                            </View>
-                          )}
-                          {lesson._count.quizzes > 0 && (
-                            <View style={styles.metaItem}>
-                              <HelpCircle size={12} color={c.fgSubtle} />
-                              <Text style={{ ...t.caption, color: c.fgSubtle }}>
-                                {lesson._count.quizzes}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                      </Glass>
-                    </Press>
-                  </Animated.View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* The native tab bar floats over the content — leave room for it. */}
-          <View style={{ height: tabBarClearance }} />
-        </ScrollView>
-      </SafeAreaView>
-
-      <StreakCalendarModal
-        visible={showStreak}
-        onClose={() => setShowStreak(false)}
-        currentStreak={streak}
-        longestStreak={profile?.longest_streak ?? 0}
+            {item.unread_posts > 0 && <View style={styles.unread}><Text style={styles.unreadText}>{item.unread_posts}</Text></View>}
+            <ChevronRight size={18} color={c.fgSubtle} />
+          </Press>
+        )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { paddingHorizontal: space.xl, paddingTop: space.sm },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: space.lg,
-  },
-  streakChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: space.md,
-    paddingVertical: 7,
-    borderRadius: radius.full,
-    borderWidth: 1,
-  },
-
-  liveStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    marginBottom: space.md,
-  },
-  liveAvatars: { flexDirection: 'row', alignItems: 'center' },
-
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
-    paddingVertical: 18,
-    borderRadius: radius.lg,
-  },
-
-  empty: { marginTop: space.xxl, gap: space.md },
-  modeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  modeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  list: { gap: space.md, marginTop: space.xl },
-  card: { padding: space.lg, borderRadius: radius.lg, borderWidth: 1 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardMeta: { flexDirection: 'row', gap: space.md, marginTop: space.md },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
+  title: { ...text.title2, color: c.fg, marginBottom: space.xl },
+  subtitle: { ...text.body, color: c.fgMuted, textAlign: 'center', lineHeight: 22 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: space.xl, paddingBottom: 80 },
+  emptyTitle: { ...text.title3, color: c.fg, textAlign: 'center', marginBottom: space.xs },
+  primaryButton: { marginTop: space.xl, height: 52, width: '100%', borderRadius: radius.lg, backgroundColor: c.accent, flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { ...text.bodyStrong, color: c.fgOnAccent },
+  joinRow: { flexDirection: 'row', gap: space.sm, width: '100%', marginTop: space.md },
+  input: { flex: 1, height: 50, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, paddingHorizontal: space.lg, color: c.fg, backgroundColor: c.surface, ...text.body },
+  joinButton: { height: 50, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
+  joinText: { ...text.label, color: c.fg },
+  feed: { paddingHorizontal: space.xl, paddingTop: space.md, flexGrow: 1 },
+  feedEmpty: { alignItems: 'center', paddingHorizontal: space.xl, paddingTop: 100 },
+  list: { paddingHorizontal: space.xl, paddingTop: space.md },
+  roomRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  roomIcon: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
+  roomName: { ...text.bodyStrong, color: c.fg },
+  roomMeta: { ...text.caption, color: c.fgMuted, marginTop: 3 },
+  unread: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  unreadText: { ...text.caption, color: c.fgOnAccent },
 });

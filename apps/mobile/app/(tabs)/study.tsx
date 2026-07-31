@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Play, ChevronRight, Layers } from 'lucide-react-native';
+import { Play, ChevronRight, Layers, Camera } from 'lucide-react-native';
 import type { FlashcardSet } from '@quibly/shared';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,7 @@ import { useTabBarClearance } from './_layout';
 export default function StudyScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('home');
+  const { t: lessonsTr } = useTranslation('lessons');
   const { c } = useTheme();
   const tabBarClearance = useTabBarClearance();
   const { profile } = useAuth();
@@ -116,6 +117,25 @@ export default function StudyScreen() {
             ))}
           </Animated.View>
 
+          <Animated.View entering={FadeInDown.duration(300).delay(175)} style={styles.lessonCapture}>
+            <Press
+              scale={0.98}
+              onPress={() => router.push('/lesson/capture')}
+              style={[styles.deckRow, { backgroundColor: c.surface, borderColor: c.border }]}
+            >
+              <View style={[styles.deckIcon, { backgroundColor: c.surfaceRaised }]}>
+                <Camera size={16} color={c.fgMuted} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...t.bodyStrong, color: c.fg }}>{lessonsTr('capture')}</Text>
+                <Text style={{ ...t.caption, color: c.fgMuted, marginTop: 2 }}>
+                  {lessonsTr('captureSub')}
+                </Text>
+              </View>
+              <ChevronRight size={17} color={c.fgSubtle} />
+            </Press>
+          </Animated.View>
+
           {flashcardSets.length > 0 && (
             <Animated.View entering={FadeInDown.duration(300).delay(190)} style={styles.section}>
               <View style={styles.sectionHead}>
@@ -186,6 +206,7 @@ const styles = StyleSheet.create({
   },
 
   statsRow: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
+  lessonCapture: { marginTop: space.xl },
   statCard: {
     flex: 1,
     padding: space.lg,

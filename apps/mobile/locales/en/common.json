@@ -18,10 +18,22 @@
   "tabs": {
     "home": "Home",
     "lessons": "Lessons",
+    "rooms": "Rooms",
     "study": "Study",
     "challenges": "Challenges",
     "library": "Library",
     "profile": "Profile"
+  },
+  "rooms": {
+    "emptyTitle": "Study with your people",
+    "emptySubtitle": "Create a room for your group or enter the code you received.",
+    "create": "Create room",
+    "code": "Room code",
+    "join": "Join",
+    "feedEmptyTitle": "Nobody has studied yet today",
+    "feedEmptySubtitle": "Start a session and your study will show up here.",
+    "listTitle": "Your rooms",
+    "createChallenge": "Create the next challenge"
   },
   "members": "Members",
   "members_one": "{{count}} member",
