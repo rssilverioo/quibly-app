@@ -354,13 +354,13 @@ model LeagueMember {
 model FeedPost {
   id             String   @id @default(uuid()) @db.Uuid
   leagueId       String   @map("league_id") @db.Uuid
-  sessionId      String   @map("session_id") @db.Uuid
+  sessionId      String?  @map("session_id") @db.Uuid
   userId         String   @map("user_id")
   showProofPhoto Boolean  @default(false) @map("show_proof_photo")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   league    League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  session   StudySession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   StudySession?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user      Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
   reactions FeedReaction[]
   comments  FeedComment[]

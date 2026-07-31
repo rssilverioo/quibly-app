@@ -94,16 +94,18 @@ export class FeedService {
 
       const { reactions: _reactions, ...postWithoutReactions } = post;
       const proofPhotoUrl = post.showProofPhoto
-        ? post.session.proofChecks[0]?.photoUrl ?? null
+        ? post.session?.proofChecks[0]?.photoUrl ?? null
         : null;
       return {
         ...postWithoutReactions,
         photoUrl: proofPhotoUrl,
-        session: {
-          ...post.session,
-          minutes: Number(post.session.totalDurationMinutes),
-          proofPhotoUrl,
-        },
+        session: post.session
+          ? {
+              ...post.session,
+              minutes: Number(post.session.totalDurationMinutes),
+              proofPhotoUrl,
+            }
+          : null,
         user: {
           ...post.user,
           username: displayNameMap.get(post.userId) ?? post.user.username,
