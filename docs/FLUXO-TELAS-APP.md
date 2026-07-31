@@ -17,9 +17,20 @@ Todo desenho abaixo é subordinado a isso. O teste de qualquer tela nova:
 não publicar?* Se existe, a tela está errada.
 
 O servidor já cumpre a sua metade: `sessions.service.ts:649` cria o `FeedPost`
-dentro da mesma transação que pontua a sessão. A mecânica central está viva no
-backend e invisível no app. O trabalho do mobile não é construí-la — é parar de
-escondê-la.
+ao encerrar a sessão. A mecânica central está viva no backend e invisível no
+app. O trabalho do mobile não é construí-la — é parar de escondê-la.
+
+⚠️ **Mas não é atômico, e isso importa para esta tela.** O
+`leagueMember.update` (o SP) e o `feedPost.create` (o post) são chamadas soltas
+dentro de um `Promise.all`, sem `$transaction` (`sessions.service.ts:637-657`).
+Se o `create` falhar, o SP já foi incrementado: **pontuou e não postou** — que é
+exatamente o modo de falha que mata a §3, e hoje ele é silencioso. Correção
+levantada pelo CEO e endereçada ao Raiz.
+
+Consequência de tela enquanto isso não fecha: a tela pós-timer **não pode
+assumir** que o post existe só porque a sessão encerrou. Ela renderiza a partir
+do post que o `end` devolver; se não vier post, ela mostra o resumo da sessão e
+um caminho de recuperação — nunca um card fantasma que finge que publicou.
 
 ---
 
@@ -176,6 +187,10 @@ O segundo em que o usuário para o timer:
    GymRats. Destrutiva, discreta, e um `DELETE` — nunca um "publicar" invertido.
 8. **Matar o app aqui não desfaz nada.** É o teste da §3: se fechar o app na
    tela de publicar perde o post, a tela é um ato separado disfarçado.
+   **Critério de aceite explícito, e o primeiro a rodar em qualquer revisão
+   desta tela:** iniciar sessão → encerrar → matar o app pelo seletor antes de
+   tocar em qualquer coisa → reabrir → o post está no feed da sala, íntegro.
+   Se falhar, a tela está errada, por mais bonita que esteja.
 9. **Level-up toca por cima do card e termina nele.** Hoje `LevelUpAnimation`
    chama `goHome()` (`active.tsx:323`) e joga o usuário na home — a comemoração
    enterra o post.
@@ -185,7 +200,58 @@ O segundo em que o usuário para o timer:
 ⚠️ **Depende do contrato:** a resposta do `end` precisa devolver o post criado
 (id + sala). Sem isso a tela nasce com um spinner procurando no feed o post que
 acabou de criar. Perguntas 1, 2, 3 e 5 ao Raiz.
-⚠️ **Depende da Retina:** a estrutura do card.
+
+---
+
+## 7.1 Uma sessão, N salas — o fan-out
+
+**Decidido pelo CEO em 2026-07-31: o fan-out fica.** `sessions.service.ts:637`
+replica o post em toda sala em que o usuário é membro, e isso é o comportamento
+certo — a sessão é o registro de estudo *da pessoa*, não pertence a um grupo só.
+
+A consequência é minha: o cabeçalho da §7 está no singular e a tela precisa
+dizer a verdade quando forem três salas. Como resolve:
+
+**Uma sala** — "Publicado em Sala do Cursinho · agora". Como escrito na §7.
+
+**N salas** — "Publicado em 3 salas · agora", e abaixo uma fileira de chips com
+os nomes. Cada chip carrega a atribuição daquela sala quando houver
+("Cursinho · Sprint de Julho"), porque o desafio é por sala e o card é um só.
+Tocar num chip vai para o feed daquela sala.
+
+O chip é o lugar onde o fan-out fica *legível* sem virar decisão: ele informa
+onde o post caiu, depois de ele já ter caído. Em nenhum momento a tela oferece
+escolher salas **antes** — seleção prévia é o ato separado de publicar voltando
+pela porta dos fundos, com outro nome.
+
+**"Ver no feed" com N salas.** Um botão, um destino: a sala com desafio ativo de
+prazo mais próximo; sem desafio em nenhuma, a de atividade mais recente. É a
+sala onde o post tem mais chance de ser visto hoje. As outras seguem a um toque
+pelos chips.
+
+**Apagar com N salas.** Um gesto apaga em todas — é uma sessão e um
+arrependimento só, e obrigar a pessoa a apagar três vezes é punir quem já
+decidiu. Para o caso real de querer sair de *uma* sala (o post de estudo que faz
+sentido no grupo do cursinho e não no da família), cada chip tem um `×`
+discreto: remove daquela sala e mantém nas outras.
+
+**Legenda e foto editam todas as cópias.** É uma sessão replicada, não três
+posts independentes. Legenda por sala seria escrever três posts — exatamente o
+trabalho que a §3 existe para eliminar.
+
+**Zero salas — o buraco que nem o doc nem o código cobriam.** Sem sala,
+`userLeagueMembers` é vazio, nenhum `FeedPost` é criado, e a mecânica central
+simplesmente não acontece. Hoje isso é silencioso. A tela passa a mostrar o
+mesmo card (a sessão foi real, o dado é real) com o cabeçalho "Nenhuma sala
+ainda" e uma única ação: criar sala ou entrar por link.
+
+❓ **Pergunta aberta, não decidida por mim:** ao entrar na primeira sala, as
+sessões recentes viram post retroativamente? Sem isso, quem estuda antes de ter
+grupo entra na sala com o feed vazio e sem prova do que já fez — e o primeiro
+dia é onde a §3 mais precisa aparecer. É pergunta de produto e de contrato,
+levo ao CEO e ao Raiz antes de desenhar qualquer coisa.
+
+⚠️ **Depende da Retina:** a estrutura do card. *(respondida — ver §8)*
 
 ---
 
@@ -201,8 +267,62 @@ Hoje já divergiram: `app/league/feed/[id].tsx` (933 linhas) e
 `FirebaseFeedPost`, `timeAgo` e `getInitials` copiados em ambos. Viram
 `components/feed/PostCard.tsx`.
 
-Estrutura (hierarquia, estados, o que é prop) está sendo definida com a Retina.
-**Não construir antes.**
+**Estrutura fechada com a Retina em 2026-07-31.** Ela registra o racional em
+`docs/MARCA.md` na árvore dela; aqui fica o que eu codo.
+
+```
+1. ProofPhoto      opcional · largura total · ~4:3 · radius.lg
+                   sem foto = o bloco NÃO EXISTE (nada de área tracejada)
+2. Byline          avatar 32 + nome (text.bodyStrong) + tempo relativo
+3. Subject         ponto 8px na cor da matéria + nome em text.title3
+                   ⚠ a cor da matéria colore o PONTO, nunca o texto
+4. DataRow         pills outline: [⏱ 47 min ✓] [⚡ +120 XP] · minutos sempre 1º
+5. Caption         text.body quando existe · linha-convite quando editable e
+                   vazia · ausente quando nenhuma das duas
+6. ChallengeLine   text.caption/c.fgSubtle · "Conta para Sprint de Julho"
+```
+
+Props: `post`, `editable?`, `loading?`, `onEditCaption?`, `onAddPhoto?`.
+**Reações e comentários não são props do card** — são chrome do feed
+(`<PostSocialFooter/>`), porque o card é o que o *servidor criou quando a sessão
+terminou* e a camada social é o que os *outros* fizeram depois. Consequência
+direta para a §7: a tela pós-timer monta só `<PostCard/>`. Num post de dois
+segundos as contagens são sempre zero, e uma fileira zerada logo abaixo da
+comemoração é anticlímax.
+
+As decisões dela que eu não teria tomado sozinho, e que mudam o que eu ia
+escrever:
+
+- **Nenhuma diferença visual entre as duas variantes.** Sem glow, sem borda de
+  destaque, sem estado "fresco". O motivo é melhor que o meu: um destaque que
+  decai comunica "isto ainda é seu, ainda está acontecendo" — que é a leitura de
+  **rascunho**, exatamente o que a §3 não pode permitir. O card tem que parecer
+  terminado desde o primeiro frame. A comemoração mora na moldura (cabeçalho e
+  level-up), não no card.
+- **Minutos é o herói, mas herói não quer dizer grande.** O `pointsText` de hoje
+  (22px, peso 800, lime) vira pill de 13–15px. Hierarquia por posição e
+  exclusão, não por escala — no GymRats não existe um número grande sequer.
+- **Não verificado não mostra nada.** Sem selo cinza, sem "não verificado".
+  Marcar o negativo é acusação, e num grupo de 8 amigos isso envenena o feed.
+  Verificado é um `✓` colado no pill de minutos, não um pill próprio.
+- **Sem esqueleto para a foto da prova** — não sabemos se ela existe, e um bloco
+  grande que aparece e some é pior que nada.
+- **O lime sai do card.** Fica para o FAB, o prazo apertando e a sua linha no
+  placar. No GymRats a cor da tela são as fotos das pessoas; pintar o chrome
+  rouba da foto, e a foto é o produto.
+
+Ela também retirou uma proposta própria (trocar o card cheio pela linha compacta
+do GymRats), com o argumento certo: lá a foto ilustra, aqui a foto **é a prova**
+— prova em thumbnail de 56px é prova arquivada, não prova publicada.
+
+O que ela pediu e é chrome do feed, não do card: separadores de dia
+(HOJE / ONTEM / TER, 28 JAN) em `text.overline` + `c.fgSubtle`.
+
+O que **não pode existir** na tela pós-timer, e vale como checklist de revisão:
+barra fixa no rodapé com botão primário grande (assinatura de formulário);
+qualquer verbo no futuro ou imperativo ("Publicar", "Concluir", "Finalizar");
+botão "Pular" ou "Agora não" — pular só existe onde há etapa, e oferecer pular
+**ensina** que havia algo a cumprir.
 
 ---
 
