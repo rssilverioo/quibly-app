@@ -30,7 +30,7 @@ export interface Palette {
   fg: string;
   /** Secondary text, labels */
   fgMuted: string;
-  /** Tertiary text, timestamps, disabled */
+  /** Disabled/non-text detail. Readable timestamps and metadata use `fgMuted`. */
   fgSubtle: string;
   /** Text placed on top of `accent` */
   fgOnAccent: string;
@@ -47,6 +47,14 @@ export interface Palette {
   success: string;
   warning: string;
   danger: string;
+
+  /** Product deadline. Calm deadlines stay neutral; use this only for urgency. */
+  deadline: string;
+  /** Low-emphasis background paired with `deadline`. */
+  deadlineSoft: string;
+
+  /** Static loading placeholder. */
+  skeleton: string;
 
   /** Podium */
   gold: string;
@@ -68,7 +76,7 @@ const dark: Palette = {
 
   fg: '#F5F5F7',
   fgMuted: '#8E8E9A',
-  fgSubtle: '#5C5C68',
+  fgSubtle: '#686874',
   fgOnAccent: '#0A0A0C',
 
   accent: '#C8FF4D',
@@ -80,6 +88,11 @@ const dark: Palette = {
   success: '#4ADE80',
   warning: '#FBBF24',
   danger: '#FF5A5A',
+
+  deadline: '#FF8C3B',
+  deadlineSoft: 'rgba(255,140,59,0.16)',
+
+  skeleton: '#22222B',
 
   gold: '#FFC94D',
   silver: '#C4C4CE',
@@ -99,7 +112,7 @@ const light: Palette = {
 
   fg: '#0A0A0C',
   fgMuted: '#6B6B78',
-  fgSubtle: '#9A9AA6',
+  fgSubtle: '#8E8E9A',
   fgOnAccent: '#0A0A0C',
 
   // On light, raw lime fails contrast as text — it stays a *fill*,
@@ -110,9 +123,14 @@ const light: Palette = {
   live: '#E02424',
   liveSoft: 'rgba(224,36,36,0.10)',
 
-  success: '#16A34A',
-  warning: '#D97706',
+  success: '#137A38',
+  warning: '#A55200',
   danger: '#DC2626',
+
+  deadline: '#A84C08',
+  deadlineSoft: 'rgba(168,76,8,0.14)',
+
+  skeleton: '#E7E7EB',
 
   gold: '#E5A100',
   silver: '#8E8E9A',
