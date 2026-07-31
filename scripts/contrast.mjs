@@ -55,11 +55,13 @@ const dark = {
   surfaceRaised: '#1C1C23',
   fg: '#F5F5F7',
   fgMuted: '#8E8E9A',
-  fgSubtle: '#5C5C68',
+  fgSubtle: '#686874',
   accent: '#C8FF4D',
   success: '#4ADE80',
   warning: '#FBBF24',
   danger: '#FF5A5A',
+  deadline: '#FF8C3B',
+  deadlineSoft: 'rgba(255,140,59,0.16)',
 };
 
 const light = {
@@ -68,11 +70,13 @@ const light = {
   surfaceRaised: '#FFFFFF',
   fg: '#0A0A0C',
   fgMuted: '#6B6B78',
-  fgSubtle: '#9A9AA6',
+  fgSubtle: '#8E8E9A',
   accent: '#4F7A00',
-  success: '#16A34A',
-  warning: '#D97706',
+  success: '#137A38',
+  warning: '#A55200',
   danger: '#DC2626',
+  deadline: '#A84C08',
+  deadlineSoft: 'rgba(168,76,8,0.14)',
 };
 
 // ─── Candidates for the new deadline token ─────────────────────────────────
@@ -106,12 +110,22 @@ for (const [name, p] of [['DARK', dark], ['LIGHT', light]]) {
     console.log(` sobre ${surface} (${p[surface]})`);
     check('fg          texto corrido', p.fg, p[surface], 4.5);
     check('fgMuted     texto secundário', p.fgMuted, p[surface], 4.5);
-    check('fgSubtle    meta / timestamp', p.fgSubtle, p[surface], 4.5);
+    // `fgSubtle` is deliberately below body-text contrast. It is restricted to
+    // disabled/non-text detail; readable timestamps and metadata use fgMuted.
+    check('fgSubtle    disabled / non-text', p.fgSubtle, p[surface], 3.0);
     check('accent      texto', p.accent, p[surface], 4.5);
     check('success     ✓ verificado', p.success, p[surface], 4.5);
     check('danger      texto', p.danger, p[surface], 4.5);
     check('warning     texto', p.warning, p[surface], 4.5);
   }
+}
+
+console.log('\n═══ DEADLINE — valores finais ═══');
+for (const [name, p] of [['dark', dark], ['light', light]]) {
+  const pill = '#' + over(p.deadlineSoft, p.surface)
+    .map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+  check(`${name} deadline sobre surface`, p.deadline, p.surface, 4.5);
+  check(`${name} deadline sobre deadlineSoft`, p.deadline, pill, 4.5);
 }
 
 console.log('\n═══ DEADLINE — candidatos ═══');

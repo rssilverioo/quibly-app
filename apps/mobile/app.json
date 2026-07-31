@@ -37,7 +37,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0A0C"
+        "backgroundColor": "#C8FF4D"
       },
       "package": "com.quibly.app",
       "googleServicesFile": "./google-services.json",
@@ -86,7 +86,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#C8FF4D"
         }
       ],

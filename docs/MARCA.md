@@ -153,7 +153,7 @@ trabalho. Da esquerda para a direita, de cima para baixo:
 | 3 | **Subject** | ponto de 8px na cor da matéria + nome em `text.title3`. **A cor da matéria não colore o texto** — só o ponto. |
 | 4 | **DataRow** | pills outline: `⏱ 47 min ✓` · `⚡ +120 XP`. Minutos sempre primeiro. |
 | 5 | **Caption** | `text.body` / `c.fg` quando existe; linha-convite quando editável e vazia; ausente nos demais casos. |
-| 6 | **ChallengeLine** | `text.caption` / `c.fgSubtle` — "Conta para Sprint de Julho". Sem cor, sem pill, sem troféu: é contexto, não conquista. |
+| 6 | **ChallengeLine** | `text.caption` / `c.fgMuted` — "Conta para Sprint de Julho". Sem cor, sem pill, sem troféu: é contexto, não conquista. |
 
 **O número herói é MINUTOS** — é a North Star (`ARCHITECTURE §1`) e é a prova do
 que a pessoa fez. XP é a pontuação que nós calculamos; importa no placar, e o
@@ -175,7 +175,7 @@ servidor criou quando a sessão terminou; a camada social é o que os outros
 fizeram depois, e envolve o card por fora. Consequência: a tela pós-timer não
 monta rodapé social — num post de 2 segundos as contagens são sempre zero.
 
-**Separadores de dia** entre os posts (`text.overline` / `c.fgSubtle`):
+**Separadores de dia** entre os posts (`text.overline` / `c.fgMuted`):
 HOJE / ONTEM / TER, 28 JAN. É o único elemento da lista compacta que sobrevive, e
 é o que dá pulso a um feed com prazo.
 
@@ -204,7 +204,7 @@ estado sem legenda lê como incompleto — incompleto lê como pendente, e pende
 é formulário. **A ausência tem que parecer decisão, não vazio.** Daí:
 
 - A legenda vazia **não é um input**: sem borda, sem fundo, sem moldura. É a
-  própria linha de legenda do card, em `text.body` / `c.fgSubtle`, com o texto
+  própria linha de legenda do card, em `text.body` / `c.fgMuted`, com o texto
   "Adicionar uma legenda" — mesma posição e mesma métrica de uma legenda real.
   Toca e edita no lugar.
 - Sem contador de caracteres. **Sem "(opcional)" escrito** — dizer "opcional" já
@@ -224,6 +224,49 @@ estado sem legenda lê como incompleto — incompleto lê como pendente, e pende
   ver exatamente o que os amigos verão), um destaque que decai comunica "isto
   ainda é seu, ainda está acontecendo": a leitura de rascunho que precisamos
   evitar. **A comemoração mora na moldura** — cabeçalho e level-up — não no card.
+
+### 3.5 O card do desafio
+
+Fixo no topo do feed da sala, compacto e sem capa obrigatória. Ele responde a
+três perguntas em uma passada: **qual é o desafio, quanto falta e onde estou**.
+
+| Bloco | Regra |
+|---|---|
+| Estado | `text.overline` / `fgMuted`: "DESAFIO ATIVO". Não usa cor. |
+| Nome | `text.title3` / `fg`. É o título do card. |
+| Prazo | calmo = `text.label` / `fgMuted`, sem fundo; apertando = pill `deadlineSoft` + `deadline`; encerrado = passado em `fgMuted`. |
+| Progresso | barra de 4–6px; trilho `surfacePressed`; preenchimento `deadline` apenas quando o prazo aperta. |
+| Minha posição | "Você está em **#3 de 8**" em `fgMuted` + `fg`. Sem medalha e sem lime. |
+| Métrica | valor secundário alinhado à direita: "47 min". A unidade vem do desafio. |
+
+**Uma cor por superfície.** O primeiro teste visual colocou `deadline` laranja
+e `#3 de 8` lime no mesmo card. Mesmo com contraste numérico correto, o conjunto
+pareceu um semáforo. A posição, portanto, não usa lime aqui. O lime fica para a
+linha do próprio usuário no placar; neste card, quando há urgência, a única cor
+é `deadline`.
+
+Sem desafio ativo, a mesma área vira uma chamada neutra: "Nenhum desafio
+rolando" + ação "Criar desafio" em `accent`. Não se desenha um card vazio.
+
+### 3.6 A linha do placar
+
+O placar é uma lista única; o pódio sai por inteiro. Cada linha tem 64–72px e
+quatro zonas estáveis:
+
+| Zona | Regra |
+|---|---|
+| Avatar | 40px, sem aro de medalha. Placeholder usa superfície neutra. |
+| Pessoa | nome em `text.bodyStrong`; "você" é texto, não badge. |
+| Métrica | abaixo do nome em `text.label` / `fgMuted`: "347 min" ou a unidade definida pelo desafio. |
+| Posição | alinhada à direita como ordinal: numeral em `text.title3`, `º` menor em `text.caption`, ambos em `fg`. Sem `#`. |
+
+Empates usam ranking competitivo padrão: `1º, 2º, 2º, 4º`. O líder não recebe
+coroa, ouro ou linha maior. A ordem já comunica quem lidera.
+
+A linha do próprio usuário é a única que usa marca: fundo `accentSoft` e uma
+barra de 3px em `accent` à esquerda. O texto continua em `fg`; não se pinta
+posição nem métrica de lime. Assim, localizar-se é imediato sem criar uma
+segunda hierarquia paralela à classificação.
 
 ---
 
@@ -250,9 +293,15 @@ bold, sufixo menor. Pódio é linguagem de ranking global permanente; num grupo 
 Contraste continua sendo requisito, não gosto. `SUBJECT_COLORS` foi afinada para
 fundo escuro e por isso **não colore texto** — só preenchimentos e pontos.
 
-**Ainda não decidido:** os valores exatos de `deadline` / `deadlineSoft`. O
-vermelho de urgência precisa conviver com o lime sem virar semáforo, e precisa
-passar contraste nas duas paletas. Fecha junto com a entrega 2 (card do desafio).
+**Valores fechados na entrega 2:** `deadline` é `#FF8C3B` no escuro e `#A84C08`
+no claro. `deadlineSoft` usa a mesma matiz a 16% no escuro e 14% no claro. O
+teste visual lado a lado determinou a regra de não coabitar com lime dentro do
+card do desafio; a auditoria automatizada confirma contraste de 6,17:1 no pill
+escuro e 4,64:1 no claro.
+
+`fgSubtle` fica restrito a detalhe desabilitado ou não textual (mínimo 3:1).
+Timestamp e metadado que precisam ser lidos usam `fgMuted` (mínimo 4,5:1). Isso
+preserva três níveis visuais sem fingir que texto de baixo contraste é acessível.
 
 ---
 
@@ -296,6 +345,14 @@ estratégia do rato do GymRats, que é uma forma sólida legível em 16px. A gra
 azul é a coisa mais desalinhada do repositório e é a primeira impressão do
 produto. *(Entrega 4. O nome, o bundle id e as fichas de loja não mudam.)*
 
+**Implementação fechada:** silhueta near-black sobre campo lime no ícone
+principal; inversão lime sobre near-black preservada como variante dark; marca
+lime transparente no login; silhueta near-black transparente no adaptive icon,
+com campo lime definido pela plataforma. A forma mantém castelo, ameias, porta
+e bandeira e remove rosto, membros, tijolos, sombra e gradientes. Continua
+legível no export de 16px. O wordmark `quibly-text.png` permanece: o símbolo
+muda, o nome não.
+
 **Ajuste de escopo:** ligar 8 estados e arquivar o resto. Sessenta arquivos
 mantidos por causa de oito não se paga.
 
@@ -321,6 +378,6 @@ prazo.
 | # | Entrega | Estado |
 |---|---|---|
 | 1 | Card do post no feed | direção definida (§3), alinhada com o Pulso; produção depende do `PostCard.tsx` único |
-| 2 | Card do desafio | não começou · fecha os valores de `deadline` |
-| 3 | Linha do placar | não começou · recomendação de aposentar o pódio já registrada |
-| 4 | Ícone do app e logo | não começou · decisão do castelo em silhueta registrada (§5) |
+| 2 | Card do desafio | direção e tokens fechados (§3.5 e §4) |
+| 3 | Linha do placar | direção fechada (§3.6); pódio aposentado |
+| 4 | Ícone do app e logo | produzidos (§5); urso removido e wordmark preservado |
