@@ -25,27 +25,35 @@ import type {
   LeaderboardPeriod,
 } from '@quibly/shared';
 import { inviteUrl } from '@quibly/shared/constants';
-import { staticDark as c } from '../../theme';
+import { useTheme, type Palette } from '../../theme';
 
-const COLORS = {
+const getColors = (c: Palette) => ({
   background: c.bg,
-  surface: c.bg,
-  surfaceLight: c.surface,
-  border: c.surfaceRaised,
+  surface: c.surface,
+  surfaceLight: c.surfaceRaised,
+  border: c.border,
   primary: c.accent,
   primaryLight: c.accent,
   secondary: c.accent,
   accent: c.danger,
   warning: c.warning,
-  success: c.accent,
+  success: c.success,
   error: c.danger,
   text: c.fg,
-  textSecondary: c.fgSubtle,
-  textMuted: c.fgMuted,
+  textSecondary: c.fgMuted,
+  textMuted: c.fgSubtle,
   gold: c.gold,
   silver: c.silver,
   bronze: c.bronze,
-};
+});
+
+function useLeagueStyles() {
+  const { c } = useTheme();
+  return useMemo(() => {
+    const COLORS = getColors(c);
+    return { c, COLORS, styles: makeStyles(c) };
+  }, [c]);
+}
 
 type TabKey = 'leaderboard' | 'feed' | 'info';
 
@@ -56,7 +64,7 @@ function formatDateRange(start: string, end: string): string {
   return `${s.toLocaleDateString('en-US', opts)} - ${e.toLocaleDateString('en-US', opts)}`;
 }
 
-function getRankColor(rank: number): string {
+function getRankColor(rank: number, COLORS: ReturnType<typeof getColors>): string {
   if (rank === 1) return COLORS.gold;
   if (rank === 2) return COLORS.silver;
   if (rank === 3) return COLORS.bronze;
@@ -73,8 +81,9 @@ function LeaderboardRow({
   isCurrentUser: boolean;
 }) {
   const { t } = useTranslation('leagues');
+  const { COLORS, styles } = useLeagueStyles();
   const initial = entry.username ? entry.username[0].toUpperCase() : '?';
-  const rankColor = getRankColor(entry.rank);
+  const rankColor = getRankColor(entry.rank, COLORS);
 
   return (
     <View style={[styles.lbRow, isCurrentUser && styles.lbRowHighlight]}>
@@ -126,6 +135,7 @@ function InfoTabContent({
   loadingMembers: boolean;
 }) {
   const { t } = useTranslation('leagues');
+  const { COLORS, styles } = useLeagueStyles();
 
   const modeStyles = useMemo(() => ({
     easy: { bg: COLORS.success + '22', text: COLORS.success, label: t('modes.easy') },
@@ -276,6 +286,7 @@ function InfoTabContent({
 
 export default function LeagueDetailScreen() {
   const { t } = useTranslation('leagues');
+  const { COLORS, styles } = useLeagueStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
 
@@ -556,7 +567,9 @@ export default function LeagueDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => {
+  const COLORS = getColors(c);
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -643,7 +656,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.primary,
   },
   tabItemText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -677,7 +690,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   periodButtonText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -744,7 +757,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   lbHandle: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 12,
     marginTop: 1,
   },
@@ -757,7 +770,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   lbMeta: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 11,
     marginTop: 2,
   },
@@ -768,7 +781,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 14,
   },
 
@@ -856,7 +869,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   inviteButtonText: {
-    color: COLORS.text,
+    color: c.fgOnAccent,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -896,7 +909,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   memberRole: {
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontSize: 11,
     textTransform: 'capitalize',
     marginTop: 1,
@@ -917,7 +930,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rematchButtonText: {
-    color: COLORS.text,
+    color: c.fgOnAccent,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -935,4 +948,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-});
+  });
+};
