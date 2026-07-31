@@ -14,6 +14,12 @@ import { UpdateLeagueDto } from './dto/update-league.dto';
 import { RematchDto } from './dto/rematch.dto';
 import { Prisma, type LeagueStatus } from '@prisma/client';
 
+export type SpResetScope = { leagueId: string } | { allLeagues: true };
+
+function spResetWhere(scope: SpResetScope) {
+  return 'leagueId' in scope ? { leagueId: scope.leagueId } : {};
+}
+
 const INVITE_CODE_ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const INVITE_CODE_LENGTH = 8;
@@ -139,7 +145,7 @@ export class LeaguesService {
     return league;
   }
 
-  async findById(leagueId: string, userId: string) {
+  private async assertCanViewLeague(leagueId: string, userId: string) {
     const league = await this.prisma.league.findUnique({
       where: { id: leagueId },
     });
@@ -147,10 +153,6 @@ export class LeaguesService {
     if (!league) {
       throw new NotFoundException('League not found');
     }
-
-    const memberCount = await this.prisma.leagueMember.count({
-      where: { leagueId },
-    });
 
     if (league.privacy === 'private') {
       const membership = await this.prisma.leagueMember.findUnique({
@@ -163,6 +165,16 @@ export class LeaguesService {
         );
       }
     }
+
+    return league;
+  }
+
+  async findById(leagueId: string, userId: string) {
+    const league = await this.assertCanViewLeague(leagueId, userId);
+
+    const memberCount = await this.prisma.leagueMember.count({
+      where: { leagueId },
+    });
 
     return { ...league, member_count: memberCount };
   }
@@ -387,8 +399,11 @@ export class LeaguesService {
 
   async getLeaderboard(
     leagueId: string,
+    userId: string,
     period: 'weekly' | 'monthly' | 'all_time',
   ) {
+    await this.assertCanViewLeague(leagueId, userId);
+
     const orderByField =
       period === 'weekly'
         ? 'weeklySp'
@@ -429,23 +444,29 @@ export class LeaguesService {
     }));
   }
 
-  async getEndResults(leagueId: string) {
-    const league = await this.prisma.league.findUnique({
-      where: { id: leagueId },
-    });
-
-    if (!league) {
-      throw new NotFoundException('League not found');
-    }
+  async getEndResults(leagueId: string, userId: string) {
+    const league = await this.assertCanViewLeague(leagueId, userId);
 
     if (league.status !== 'completed') {
       throw new BadRequestException('League has not completed yet');
     }
 
-    const leaderboard = await this.getLeaderboard(leagueId, 'all_time');
+    const leaderboard = await this.getLeaderboard(leagueId, userId, 'all_time');
 
     return {
-      league,
+      league: {
+        id: league.id,
+        name: league.name,
+        description: league.description,
+        ownerId: league.ownerId,
+        startDate: league.startDate,
+        endDate: league.endDate,
+        privacy: league.privacy,
+        mode: league.mode,
+        status: league.status,
+        maxMembers: league.maxMembers,
+        createdAt: league.createdAt,
+      },
       podium: leaderboard.slice(0, 3),
       full_rankings: leaderboard,
     };
@@ -534,7 +555,9 @@ export class LeaguesService {
     });
   }
 
-  async getMembers(leagueId: string) {
+  async getMembers(leagueId: string, userId: string) {
+    await this.assertCanViewLeague(leagueId, userId);
+
     const members = await this.prisma.leagueMember.findMany({
       where: { leagueId },
       include: {
@@ -572,14 +595,16 @@ export class LeaguesService {
     });
   }
 
-  async resetWeeklySp(): Promise<void> {
+  async resetWeeklySp(scope: SpResetScope): Promise<void> {
     await this.prisma.leagueMember.updateMany({
+      where: spResetWhere(scope),
       data: { weeklySp: 0 },
     });
   }
 
-  async resetMonthlySp(): Promise<void> {
+  async resetMonthlySp(scope: SpResetScope): Promise<void> {
     await this.prisma.leagueMember.updateMany({
+      where: spResetWhere(scope),
       data: { monthlySp: 0 },
     });
   }
