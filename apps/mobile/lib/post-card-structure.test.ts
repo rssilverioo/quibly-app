@@ -43,4 +43,8 @@ describe('PostCard structure', () => {
     );
     expect(postCard).not.toContain('proofSubmitted');
   });
+
+  it('does not invent session metrics for a standalone photo post', () => {
+    expect(postCard).toContain("post.kind !== 'standalone'");
+  });
 });

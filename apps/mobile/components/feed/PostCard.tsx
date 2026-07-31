@@ -12,6 +12,7 @@ import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 export interface FirebaseFeedPost {
   id: string;
+  kind?: 'session' | 'standalone';
   league_id: string;
   user_id: string;
   username: string;
@@ -22,8 +23,8 @@ export interface FirebaseFeedPost {
   subject_color: string;
   show_proof_photo: boolean;
   proof_photo_url: string | null;
-  total_duration_minutes: number;
-  points_earned: number;
+  total_duration_minutes?: number;
+  points_earned?: number;
   is_verified: boolean;
   reactions: Record<string, string[]>;
   comment_count: number;
@@ -145,17 +146,19 @@ export default function PostCard({
         </View>
       ) : null}
 
-      <View style={styles.dataRow}>
-        <View style={styles.dataPill}>
-          <Text style={styles.minutesText}>
-            ⏱ {t('minutesShort', { count: post.total_duration_minutes })}
-          </Text>
-          {post.is_verified ? <Text style={styles.verified}> ✓</Text> : null}
+      {post.kind !== 'standalone' ? (
+        <View style={styles.dataRow}>
+          <View style={styles.dataPill}>
+            <Text style={styles.minutesText}>
+              ⏱ {t('minutesShort', { count: post.total_duration_minutes ?? 0 })}
+            </Text>
+            {post.is_verified ? <Text style={styles.verified}> ✓</Text> : null}
+          </View>
+          <View style={styles.dataPill}>
+            <Text style={styles.xpText}>⚡ +{post.points_earned ?? 0} XP</Text>
+          </View>
         </View>
-        <View style={styles.dataPill}>
-          <Text style={styles.xpText}>⚡ +{post.points_earned} XP</Text>
-        </View>
-      </View>
+      ) : null}
 
       {post.caption ? (
         <TouchableOpacity

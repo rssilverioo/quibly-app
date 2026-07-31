@@ -18,6 +18,7 @@ import { useTabBarClearance } from './_layout';
 function toPost(post: RoomFeedPost, roomId: string): FirebaseFeedPost {
   return {
     id: post.id,
+    kind: post.session ? 'session' : 'standalone',
     league_id: roomId,
     user_id: post.author.user_id,
     username: post.author.display_name,
