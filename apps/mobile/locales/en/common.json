@@ -83,6 +83,8 @@
     ,"nightOwl": "Most night owl check-ins"
     ,"detailsUnavailable": "Group details are unavailable right now."
     ,"tryAgain": "Try again"
+    ,"post": "Post"
+    ,"postUnavailable": "Post unavailable"
   },
   "members": "Members",
   "members_one": "{{count}} member",
