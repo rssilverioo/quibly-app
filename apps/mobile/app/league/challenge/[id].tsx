@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import CastleMark from '../../../components/brand/CastleMark';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
+import { ordinal } from '../../../lib/ordinal';
 import { challengeTimeLeft } from '../../../lib/rooms-home';
 import { rankingThumbnailUrl } from '../../../lib/ranking-thumbnail';
 import { getChallengeLeaderboard, type ChallengeLeaderboard } from '../../../services/rooms';
@@ -16,7 +17,7 @@ import { useTheme, type Palette, radius, space, text } from '../../../theme';
 export default function ChallengeLeaderboardScreen() {
   const { id, roomId } = useLocalSearchParams<{ id: string; roomId?: string }>();
   const router = useRouter();
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [data, setData] = useState<ChallengeLeaderboard | null>(null);
@@ -87,8 +88,7 @@ export default function ChallengeLeaderboardScreen() {
                 <Text style={styles.metric}>{item.metric_value} {data.challenge.metric_unit}</Text>
               </View>
               <View style={styles.rankWrap}>
-                <Text style={styles.rank}>{item.rank}</Text>
-                <Text style={styles.ordinal}>º</Text>
+                <Text style={styles.rank}>{ordinal(item.rank, i18n.language)}</Text>
               </View>
               <ChevronRight size={17} color={c.fgSubtle} />
             </Press>

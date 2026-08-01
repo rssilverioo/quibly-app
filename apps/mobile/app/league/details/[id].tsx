@@ -8,17 +8,10 @@ import { useTranslation } from 'react-i18next';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
+import { ordinal } from '../../../lib/ordinal';
 import { leaveLeague } from '../../../services/leagues';
 import { getMyRooms, getRoomDetails, type ChallengeDetails, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
-
-function ordinal(rank: number, locale: string) {
-  if (locale.startsWith('pt')) return `${rank}º`;
-  const mod100 = rank % 100;
-  const suffix = mod100 >= 11 && mod100 <= 13 ? 'th'
-    : rank % 10 === 1 ? 'st' : rank % 10 === 2 ? 'nd' : rank % 10 === 3 ? 'rd' : 'th';
-  return `${rank}${suffix}`;
-}
 
 export default function RoomDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
