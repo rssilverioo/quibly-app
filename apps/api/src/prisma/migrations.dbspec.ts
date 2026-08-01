@@ -1,4 +1,5 @@
-import { execFileSync } from 'child_process';
+import { ExecFileSyncOptionsWithStringEncoding, execFileSync } from 'child_process';
+import { readdirSync } from 'fs';
 import { join } from 'path';
 import { PrismaClient } from '@prisma/client';
 
@@ -46,12 +47,34 @@ if (isCI && !hasDb) {
 }
 
 function prisma(args: string[], env: Record<string, string> = {}): string {
-  return execFileSync('npx', ['prisma', ...args], {
+  const options: ExecFileSyncOptionsWithStringEncoding = {
     cwd: API_DIR,
     encoding: 'utf8',
     env: { ...process.env, ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  };
+
+  try {
+    return execFileSync('npx', ['prisma', ...args], options);
+  } catch (error) {
+    // execFileSync's default message hides the output that explains a Prisma
+    // failure. Preserve it so a drift check names the tables/columns that
+    // disagree instead of leaving CI with only "Command failed".
+    const failed = error as Error & {
+      stdout?: string | Buffer;
+      stderr?: string | Buffer;
+    };
+    const stdout = failed.stdout?.toString().trim();
+    const stderr = failed.stderr?.toString().trim();
+    const diagnostics = [stdout, stderr].filter(Boolean).join('\n');
+
+    // Rethrowing the same error (rather than wrapping it) keeps the original
+    // stack and exit code intact for anything that inspects them.
+    if (diagnostics) {
+      failed.message = `${failed.message}\n${diagnostics}`;
+    }
+    throw failed;
+  }
 }
 
 // `describe.skip` keeps the file loadable (and typechecked) without a database.
@@ -84,9 +107,9 @@ suite('prisma migrations', () => {
       `SELECT migration_name, finished_at FROM "_prisma_migrations" ORDER BY started_at`,
     );
 
-    const onDisk = require('fs')
-      .readdirSync(MIGRATIONS_DIR)
-      .filter((entry: string) => !entry.endsWith('.toml'));
+    const onDisk = readdirSync(MIGRATIONS_DIR).filter(
+      (entry) => !entry.endsWith('.toml'),
+    );
 
     expect(applied.map((row) => row.migration_name).sort()).toEqual(
       onDisk.sort(),
