@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { LogBox, Platform } from 'react-native';
+import { LogBox, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +12,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { firebaseConfigError } from '../lib/firebase';
 import { useSessionStore } from '../stores/session.store';
 import { useTheme, hydrateTheme } from '../theme';
 import {
@@ -192,6 +193,20 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, isLoading, segments]);
 
+  // Checked before the loading gate on purpose. With Firebase misconfigured,
+  // `onAuthStateChanged` never fires, `isLoading` never clears, and the
+  // `return null` below leaves the splash up forever with nothing logged —
+  // which is how build 26 reached TestFlight and stalled there. Name the
+  // missing variables on screen instead of hanging.
+  if (firebaseConfigError) {
+    return (
+      <View style={[styles.configError, { backgroundColor: c.bg }]}>
+        <Text style={[styles.configErrorTitle, { color: c.fg }]}>Configuração ausente</Text>
+        <Text style={[styles.configErrorBody, { color: c.fgMuted }]}>{firebaseConfigError}</Text>
+      </View>
+    );
+  }
+
   if (isLoading) return null;
 
   return (
@@ -249,3 +264,9 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  configError: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
+  configErrorTitle: { fontSize: 20, fontWeight: '700' },
+  configErrorBody: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
+});
