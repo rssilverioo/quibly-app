@@ -139,7 +139,7 @@ function RootLayoutNav() {
         // Every one of these originates in a league. The old code sent feed
         // events to `/(tabs)/challenges`, a tab that doesn't exist.
         if (isLeagueEvent && data?.leagueId) {
-          router.push(`/league/${data.leagueId}` as any);
+          router.push(`/league/room/${data.leagueId}` as any);
         }
       },
     );

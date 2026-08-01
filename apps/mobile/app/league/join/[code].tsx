@@ -96,7 +96,7 @@ export default function JoinLeagueScreen() {
       const league = await joinLeague(user.uid, code, displayName.trim());
       track('room_joined', { mode: preview?.mode ?? 'unknown' });
       Alert.alert(t('join.joinedTitle'), t('join.joinedMessage', { name: league.name }), [
-        { text: t('common:ok'), onPress: () => router.replace(`/league/${league.id}`) },
+        { text: t('common:ok'), onPress: () => router.replace(`/league/room/${league.id}`) },
       ]);
     } catch (err: any) {
       Alert.alert(t('common:error'), err?.message ?? t('join.joinError'));
@@ -158,7 +158,7 @@ export default function JoinLeagueScreen() {
             <Text style={styles.successMessage}>{t('join.alreadyInLeague', { name: preview.name })}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => router.replace(`/league/${preview.id}`)}
+              onPress={() => router.replace(`/league/room/${preview.id}`)}
               activeOpacity={0.7}
             >
               <Text style={styles.primaryButtonText}>{t('join.goToLeague')}</Text>

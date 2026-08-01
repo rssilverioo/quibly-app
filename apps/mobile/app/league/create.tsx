@@ -182,7 +182,7 @@ export default function CreateLeagueScreen() {
 
   const handleGoToLeague = () => {
     if (!createdLeague) return;
-    router.replace(`/league/${createdLeague.id}`);
+    router.replace(`/league/room/${createdLeague.id}`);
   };
 
   // Success Screen

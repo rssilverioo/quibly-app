@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, CalendarCheck, CalendarDays, Clock3, Share2, Sunrise, Moon } from 'lucide-react-native';
+import { ArrowLeft, CalendarCheck, CalendarDays, Clock3, LogOut, Share2, Sunrise, Moon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
+import { leaveLeague } from '../../../services/leagues';
 import { getMyRooms, getRoomDetails, type ChallengeDetails, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
@@ -44,6 +45,28 @@ export default function RoomDetailsScreen() {
     }
   }, [id]);
   useEffect(() => { void load(); }, [load]);
+
+  // Leaving lived only on the legacy `league/[id]` screen. That screen is no
+  // longer navigated to, so the action moves here rather than becoming
+  // unreachable — Details is where GymRats keeps room-level actions too.
+  const onLeave = useCallback(() => {
+    Alert.alert(t('leagues:detail.leaveConfirmTitle'), t('leagues:detail.leaveConfirmMessage'), [
+      { text: t('common:cancel'), style: 'cancel' },
+      {
+        text: t('leagues:detail.leave'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!id) return;
+          try {
+            await leaveLeague(id);
+            router.replace('/(tabs)');
+          } catch (err) {
+            Alert.alert(t('common:error'), (err as Error)?.message ?? t('leagues:detail.leaveError'));
+          }
+        },
+      },
+    ]);
+  }, [id, router, t]);
 
   if (loading || !room || !details) return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -101,6 +124,11 @@ export default function RoomDetailsScreen() {
         ))}
         {details.group_stats.most_early_bird ? <Superlative Icon={Sunrise} data={details.group_stats.most_early_bird} label={t('rooms.earlyBird')} styles={styles} color={c.fgMuted} /> : null}
         {details.group_stats.most_night_owl ? <Superlative Icon={Moon} data={details.group_stats.most_night_owl} label={t('rooms.nightOwl')} styles={styles} color={c.fgMuted} /> : null}
+
+        <Press onPress={onLeave} style={styles.leaveRow}>
+          <LogOut size={20} color={c.danger} />
+          <Text style={styles.leaveText}>{t('leagues:detail.leaveLeague')}</Text>
+        </Press>
       </ScrollView>
       <RoomTabBar roomId={room.id} challengeId={details.challenge.id} active="details" />
     </SafeAreaView>
@@ -129,6 +157,8 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   inviteCode: { ...text.title2, color: c.fg, letterSpacing: 3 },
   inviteLink: { ...text.bodyStrong, color: c.accent },
   sectionTitle: { ...text.title3, color: c.fg, marginTop: space.xl, marginBottom: space.md },
+  leaveRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xl, paddingVertical: space.md },
+  leaveText: { ...text.bodyStrong, color: c.danger },
   rankingRow: { height: 64, flexDirection: 'row', alignItems: 'center', gap: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
   name: { ...text.bodyStrong, color: c.fg },
   meta: { ...text.caption, color: c.fgMuted, marginTop: 2 },

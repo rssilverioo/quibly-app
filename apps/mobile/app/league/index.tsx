@@ -70,7 +70,7 @@ export default function LeaguesListScreen() {
           renderItem={({ item }) => {
             const sc = statusColor(item.status);
             return (
-              <TouchableOpacity style={styles.card} onPress={() => router.push(`/league/${item.id}`)} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.card} onPress={() => router.push(`/league/room/${item.id}`)} activeOpacity={0.85}>
                 <View style={styles.cardLeft}>
                   <View style={styles.trophyCircle}>
                     <Trophy size={22} color={c.warning} />
