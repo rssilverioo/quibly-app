@@ -1,7 +1,39 @@
 import type { FirebaseFeedPost } from '../components/feed/PostCard';
 import type { RoomFeedPost } from '../services/rooms';
 
-export function roomFeedPostToCardPost(post: RoomFeedPost, roomId = ''): FirebaseFeedPost {
+/**
+ * The two sides count reactions differently. The room API sends
+ * `{ '🔥': 3 }` plus `user_reactions: ['🔥']`; the card wants
+ * `{ '🔥': [userId, …] }`, using the array length as the count and
+ * `includes(currentUserId)` to decide whether the pill reads as selected.
+ *
+ * Passing `currentUserId` lets us rebuild a list that satisfies both. The
+ * filler ids are synthetic — the API never sends who reacted, only how many —
+ * so they are only ever counted, never displayed or compared to a real id.
+ */
+function expandReactions(
+  counts: Record<string, number> | undefined,
+  mine: string[] | undefined,
+  currentUserId: string,
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [emoji, count] of Object.entries(counts ?? {})) {
+    if (count <= 0) continue;
+    const reactedByMe = (mine ?? []).includes(emoji);
+    const others = Array.from(
+      { length: reactedByMe ? count - 1 : count },
+      (_, i) => `anon:${emoji}:${i}`,
+    );
+    out[emoji] = reactedByMe && currentUserId ? [currentUserId, ...others] : others;
+  }
+  return out;
+}
+
+export function roomFeedPostToCardPost(
+  post: RoomFeedPost,
+  roomId = '',
+  currentUserId = '',
+): FirebaseFeedPost {
   return {
     id: post.id,
     kind: post.session ? 'session' : 'standalone',
@@ -18,7 +50,7 @@ export function roomFeedPostToCardPost(post: RoomFeedPost, roomId = ''): Firebas
     total_duration_minutes: post.session?.minutes,
     points_earned: post.session?.xp_earned,
     is_verified: post.session?.is_verified ?? false,
-    reactions: {},
+    reactions: expandReactions(post.reactions, post.user_reactions, currentUserId),
     comment_count: post.comment_count,
     created_at: post.created_at,
     caption: post.caption,

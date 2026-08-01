@@ -11,6 +11,7 @@ import { roomCoverForId, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-co
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
+import { useAuth } from '../../../contexts/AuthContext';
 import { cacheFeedPost } from '../../../lib/feed-detail-cache';
 import { feedDayLabel, roomFeedPostToCardPost, startsNewFeedDay } from '../../../lib/feed-post';
 import { challengeTimeLeft, isStudyChallenge } from '../../../lib/rooms-home';
@@ -22,6 +23,7 @@ export default function RoomFeedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t, i18n } = useTranslation('common');
+  const { user } = useAuth();
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [room, setRoom] = useState<RoomSummary | null>(null);
@@ -37,9 +39,9 @@ export default function RoomFeedScreen() {
     setRoom(current);
     if (!current) return;
     const [page, liveMembers] = await Promise.all([getRoomFeed(id), getLiveMembers()]);
-    setPosts(page.items.map((post) => roomFeedPostToCardPost(post, id)));
+    setPosts(page.items.map((post) => roomFeedPostToCardPost(post, id, user?.uid ?? '')));
     setLive(liveMembers.filter((member) => member.league_id === id));
-  }, [id]);
+  }, [id, user?.uid]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
