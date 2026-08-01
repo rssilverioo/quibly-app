@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { palettes, type Palette, type ThemeMode } from './colors';
 
 export { text, space, radius, motion, PRESS_SCALE, SUBJECT_COLORS } from './tokens';
-export { BRAND_LIME, NIGHT_GRADIENT, type Palette, type ThemeMode } from './colors';
+export { BRAND_BLUE, NIGHT_GRADIENT, type Palette, type ThemeMode } from './colors';
 
 const STORAGE_KEY = '@quibly/theme-mode';
 
@@ -75,7 +75,7 @@ export const staticDark: Palette = palettes.dark;
  * swapped — no other edit — and they land on the dark palette. The shared
  * constant stays untouched because it's a cross-package export.
  *
- * `primary` maps to the lime accent, so anything painting text with
+ * `primary` maps to the azure accent, so anything painting text with
  * `COLORS.text` on a `COLORS.primary` fill needs `fgOnAccent` instead. Those
  * pairings were audited when this was introduced.
  */

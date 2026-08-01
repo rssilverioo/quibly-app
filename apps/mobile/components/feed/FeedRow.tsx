@@ -45,8 +45,11 @@ export default function FeedRow({ post, locale, onPress }: FeedRowProps) {
 
 const makeStyles = (c: Palette) => StyleSheet.create({
   row: { height: 72, flexDirection: 'row', alignItems: 'center', gap: space.md },
-  thumbnail: { width: 56, height: 56, borderRadius: radius.full },
-  fallback: { width: 56, height: 56, borderRadius: radius.full, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  // Rounded square, measured off the GymRats reference (~9pt on a 56pt tile).
+  // A circle would crop ~21% of the proof photo, and the photo is the product.
+  // The 56x56 geometry itself is owner-approved — see feed-row-structure.test.ts.
+  thumbnail: { width: 56, height: 56, borderRadius: radius.sm },
+  fallback: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   content: { flex: 1, justifyContent: 'center' },
   title: { ...text.bodyStrong, color: c.fg },
   byline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },

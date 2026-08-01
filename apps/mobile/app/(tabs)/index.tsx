@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Mascot, MascotBlock } from '../../components/mascot';
+import { roomCoverThumbForId, ROOM_ROW_THUMB } from '../../assets/room-covers';
+import { MascotBlock } from '../../components/mascot';
 import Press from '../../components/ui/Press';
 import { getMyRooms, type RoomSummary } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
@@ -79,9 +80,11 @@ export default function RoomsScreen() {
         ListHeaderComponent={<Text style={styles.title}>{t('rooms.listTitle')}</Text>}
         renderItem={({ item }) => (
           <Press onPress={() => router.push(`/league/room/${item.id}`)} style={styles.roomRow}>
-            <View style={styles.avatar}>
-              <Mascot state="idle" size={34} plate={false} animate={false} />
-            </View>
+            <Image
+              source={item.cover_url ? { uri: item.cover_url } : roomCoverThumbForId(item.id)}
+              style={styles.cover}
+              resizeMode="cover"
+            />
             <Text style={styles.roomName} numberOfLines={1}>{item.name}</Text>
             <ChevronRight size={18} color={c.fgSubtle} />
           </Press>
@@ -97,7 +100,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   list: { paddingHorizontal: space.xl, paddingTop: space.md },
   title: { ...text.title1, color: c.fg, marginBottom: space.xl },
   roomRow: { height: 72, flexDirection: 'row', alignItems: 'center', gap: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
-  avatar: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  // A banner, not an avatar: 16:9 like the room hero it previews. Square-cropping
+  // the cover turned the artwork into a sticker and cut the rabbit off-centre.
+  cover: { ...ROOM_ROW_THUMB, borderRadius: radius.sm, backgroundColor: c.surfaceRaised, overflow: 'hidden' },
   roomName: { ...text.bodyStrong, color: c.fg, flex: 1 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: space.xl, paddingBottom: 80 },
   emptyTitle: { ...text.title2, color: c.fg, marginBottom: space.sm },

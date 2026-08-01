@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import FeedRow from '../../../components/feed/FeedRow';
 import type { FirebaseFeedPost } from '../../../components/feed/PostCard';
-import { DEFAULT_ROOM_COVER, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
+import { roomCoverForId, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
@@ -62,11 +62,12 @@ export default function RoomFeedScreen() {
 
   const hero = challenge ? (
     <Press onPress={() => router.push(`/league/challenge/${challenge.id}`)}>
-      {room.cover_url ? (
-        <Image source={{ uri: room.cover_url }} style={styles.cover} resizeMode="cover" />
-      ) : (
-        <Image source={DEFAULT_ROOM_COVER} style={styles.cover} resizeMode="cover" />
-      )}
+      <Image
+        source={room.cover_url ? { uri: room.cover_url } : roomCoverForId(room.id)}
+        style={styles.cover}
+        resizeMode="cover"
+      />
+
       <View style={styles.statsStrip}>
         <View style={styles.statColumn}>
           <Avatar uri={challenge.leader?.avatar_url ?? null} name={challenge.leader?.display_name ?? ''} size={28} />
@@ -131,7 +132,17 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: space.xl, paddingBottom: 110, flexGrow: 1 },
   title: { ...text.title1, color: c.fg, marginBottom: space.xl },
-  cover: { width: '100%', aspectRatio: ROOM_COVER_ASPECT_RATIO, borderRadius: radius.lg, overflow: 'hidden' },
+  // A capa é uma FAIXA, não um plano de fundo. O `maxHeight` existe porque só a
+  // proporção não basta: em tela larga o 16:9 vira um bloco que domina a tela e
+  // empurra a faixa de estatísticas e o feed para fora do primeiro olhar.
+  cover: {
+    width: '100%',
+    aspectRatio: ROOM_COVER_ASPECT_RATIO,
+    maxHeight: 170,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    backgroundColor: c.surface,
+  },
   statsStrip: { minHeight: 72, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm },
   statColumn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
   statValue: { ...text.bodyStrong, color: c.fg },

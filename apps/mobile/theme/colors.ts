@@ -7,6 +7,10 @@
  *
  * The palette is dark-first: Quibly is used at night, and the accent
  * only reads as "live / on air" against a near-black ground.
+ *
+ * The accent is azure as of 2026-07-31, replacing the lime. Decided by the
+ * product owner together with the rabbit banners the blue is sampled from;
+ * this supersedes the "lime fica" row in docs/DIRECAO-PRODUTO.md.
  */
 
 export type ThemeMode = 'dark' | 'light';
@@ -79,8 +83,11 @@ const dark: Palette = {
   fgSubtle: '#686874',
   fgOnAccent: '#0A0A0C',
 
-  accent: '#C8FF4D',
-  accentSoft: 'rgba(200,255,77,0.14)',
+  // Sampled from the rabbit banners (their fills run #4495F3–#549FF4).
+  // 6.95:1 against `bg` — above WCAG AAA for text, so it still carries
+  // buttons and live states without a second variant.
+  accent: '#4C9AFF',
+  accentSoft: 'rgba(76,154,255,0.14)',
 
   live: '#FF4D4D',
   liveSoft: 'rgba(255,77,77,0.16)',
@@ -115,10 +122,11 @@ const light: Palette = {
   fgSubtle: '#8E8E9A',
   fgOnAccent: '#0A0A0C',
 
-  // On light, raw lime fails contrast as text — it stays a *fill*,
-  // and text-on-light uses the deep variant.
-  accent: '#4F7A00',
-  accentSoft: 'rgba(200,255,77,0.35)',
+  // On light, the bright azure fails contrast as text (2.94:1) — it stays a
+  // *fill*, and text-on-light uses the deep variant. #0043BA is the stroke
+  // colour of the rabbit line art itself, so the two themes share one origin.
+  accent: '#0043BA',
+  accentSoft: 'rgba(76,154,255,0.35)',
 
   live: '#E02424',
   liveSoft: 'rgba(224,36,36,0.10)',
@@ -142,13 +150,13 @@ const light: Palette = {
 export const palettes: Record<ThemeMode, Palette> = { dark, light };
 
 /**
- * The lime fill is identical in both themes — it's the brand mark.
+ * The azure fill is identical in both themes — it's the brand mark.
  * Only *text* on light backgrounds swaps to the deep variant.
  */
-export const BRAND_LIME = '#C8FF4D';
+export const BRAND_BLUE = '#4C9AFF';
 
 /**
  * Night sky behind the login screen. Intermediate stops only — the ends come
  * from the palette, so the gradient always meets the app it opens into.
  */
-export const NIGHT_GRADIENT = ['#101018', '#161622', '#1C1C2A'] as const;
+export const NIGHT_GRADIENT = ['#0D1220', '#121A2C', '#182540'] as const;
