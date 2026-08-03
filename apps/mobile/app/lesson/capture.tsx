@@ -147,7 +147,10 @@ export default function CaptureScreen() {
               <Text style={{ ...t.overline, color: c.live }}>{tr('recording')}</Text>
             </View>
 
-            <Text style={{ ...t.display, color: c.fg, marginTop: space.lg }}>
+            {/* `title1`, não `display`: 64pt saiu do app inteiro (§3.2.1). O
+                único número acima de 28 é o do timer de sessão, e este
+                cronômetro de gravação segue a mesma régua. */}
+            <Text style={{ ...t.title1, color: c.fg, marginTop: space.lg }}>
               {formatClock(recorderState.durationMillis ?? 0)}
             </Text>
 

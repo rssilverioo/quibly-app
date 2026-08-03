@@ -37,7 +37,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0A0C"
+        "backgroundColor": "#4C9AFF"
       },
       "package": "com.quibly.app",
       "googleServicesFile": "./google-services.json",
@@ -86,8 +86,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
-          "color": "#C8FF4D"
+          "icon": "./assets/notification-icon.png",
+          "color": "#4C9AFF"
         }
       ],
       "@react-native-community/datetimepicker",
@@ -100,7 +100,8 @@
       ],
       "expo-audio",
       "./plugins/withFirebaseModularHeaders",
-      "./plugins/withLiveActivity"
+      "./plugins/withLiveActivity",
+      "./plugins/withResourceBundleSigning"
     ],
     "experiments": {
       "typedRoutes": true

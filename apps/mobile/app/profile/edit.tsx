@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -17,23 +17,27 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateProfile } from '../../services/auth';
-import { staticDark as c } from '../../theme';
+import { useTheme, type Palette, text as ty, space, radius } from '../../theme';
 
-const COLORS = {
-  background: c.bg,
-  surface: c.bg,
-  surfaceLight: c.surface,
-  border: c.surfaceRaised,
-  primary: c.accent,
-  primaryLight: c.accent,
-  text: c.fg,
-  textSecondary: c.fgSubtle,
-  textMuted: c.fgMuted,
-  error: c.danger,
-};
+/*
+ * O mapa de cor que existia aqui era o defeito que `MARCA.md §2` item 4
+ * documenta, inteiro, num arquivo só:
+ *
+ *   surface: c.bg          → o card tinha a cor da página
+ *   border: c.surfaceRaised → a borda tinha a cor de outra superfície
+ *   textSecondary: c.fgSubtle / textMuted: c.fgMuted → invertidos, o que
+ *     fazia o texto secundário ficar MAIS apagado que o terciário
+ *
+ * E o botão de salvar pintava `c.fg` (#17171B) sobre `c.accent` (#0043BA):
+ * 2,1:1, ilegível. O par do accent é `fgOnAccent`.
+ *
+ * Não sobrou mapa: a tela lê `c` direto, como todas as outras.
+ */
 
 export default function EditProfileScreen() {
   const { t } = useTranslation('profile');
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const { profile, setProfile } = useAuth();
 
   const [username, setUsername] = useState(profile?.username ?? '');
@@ -101,7 +105,7 @@ export default function EditProfileScreen() {
             activeOpacity={0.7}
             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
           >
-            <ArrowLeft size={18} color={COLORS.primaryLight} style={{ marginRight: 4 }} />
+            <ArrowLeft size={18} color={c.accent} style={{ marginRight: 4 }} />
             <Text style={styles.backText}>{t('common:back')}</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{t('edit.title')}</Text>
@@ -113,11 +117,11 @@ export default function EditProfileScreen() {
           <TextInput
             style={[styles.input, errors.username ? styles.inputError : null]}
             placeholder={t('edit.usernamePlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={c.fgSubtle}
             value={username}
             onChangeText={handleAutoHandle}
             autoCorrect={false}
-            selectionColor={COLORS.primaryLight}
+            selectionColor={c.accent}
             maxLength={30}
           />
           {errors.username ? (
@@ -133,12 +137,12 @@ export default function EditProfileScreen() {
             <TextInput
               style={[styles.handleInput, errors.handle ? styles.inputError : null]}
               placeholder={t('edit.handlePlaceholder')}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={c.fgSubtle}
               value={handle}
               onChangeText={(v) => setHandle(v.toLowerCase())}
               autoCapitalize="none"
               autoCorrect={false}
-              selectionColor={COLORS.primaryLight}
+              selectionColor={c.accent}
               maxLength={30}
             />
           </View>
@@ -157,13 +161,13 @@ export default function EditProfileScreen() {
           <TextInput
             style={[styles.input, styles.inputMultiline]}
             placeholder={t('edit.bioPlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={c.fgSubtle}
             value={bio}
             onChangeText={setBio}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            selectionColor={COLORS.primaryLight}
+            selectionColor={c.accent}
             maxLength={200}
           />
         </View>
@@ -176,7 +180,7 @@ export default function EditProfileScreen() {
           activeOpacity={0.7}
         >
           {saving ? (
-            <ActivityIndicator size="small" color={COLORS.text} />
+            <ActivityIndicator size="small" color={c.fgOnAccent} />
           ) : (
             <Text style={styles.saveButtonText}>{t('edit.saveChanges')}</Text>
           )}
@@ -187,56 +191,56 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: c.bg },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  header: { paddingTop: 12, paddingBottom: 8 },
-  backText: { color: COLORS.primaryLight, fontSize: 16, fontWeight: '600' },
-  title: { color: COLORS.text, fontSize: 28, fontWeight: '700', marginBottom: 24 },
-  field: { marginBottom: 20 },
-  label: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '500', marginBottom: 8 },
-  labelOptional: { color: COLORS.textMuted, fontWeight: '400' },
+  scrollContent: { paddingHorizontal: space.lg, paddingBottom: space.xxxl },
+  header: { paddingTop: space.md, paddingBottom: space.sm },
+  backText: { ...ty.label, color: c.accent },
+  title: { ...ty.title2, color: c.fg, marginBottom: space.xl },
+  field: { marginBottom: space.xl },
+  label: { ...ty.label, color: c.fgMuted, marginBottom: space.sm },
+  labelOptional: { color: c.fgSubtle },
   input: {
-    backgroundColor: COLORS.surface,
+    ...ty.body,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: COLORS.text,
-    fontSize: 16,
+    borderColor: c.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    color: c.fg,
   },
-  inputError: { borderColor: COLORS.error },
-  inputMultiline: { minHeight: 80, paddingTop: 14 },
+  inputError: { borderColor: c.danger },
+  inputMultiline: { minHeight: 80, paddingTop: space.md },
   handleInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingLeft: 16,
+    borderColor: c.border,
+    borderRadius: radius.sm,
+    paddingLeft: space.lg,
   },
-  handlePrefix: { color: COLORS.textMuted, fontSize: 16, fontWeight: '600', marginRight: 2 },
+  handlePrefix: { ...ty.body, color: c.fgMuted, marginRight: 2 },
   handleInput: {
+    ...ty.body,
     flex: 1,
-    paddingVertical: 14,
-    paddingRight: 16,
-    color: COLORS.text,
-    fontSize: 16,
+    paddingVertical: space.md,
+    paddingRight: space.lg,
+    color: c.fg,
     borderWidth: 0,
   },
-  errorText: { color: COLORS.error, fontSize: 12, marginTop: 6 },
-  hint: { color: COLORS.textMuted, fontSize: 12, marginTop: 6 },
+  errorText: { ...ty.caption, color: c.danger, marginTop: space.xs },
+  hint: { ...ty.caption, color: c.fgMuted, marginTop: space.xs },
   saveButton: {
-    height: 52,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    height: 54,
+    backgroundColor: c.accent,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: space.md,
   },
   saveButtonDisabled: { opacity: 0.6 },
-  saveButtonText: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+  saveButtonText: { ...ty.bodyStrong, color: c.fgOnAccent },
 });

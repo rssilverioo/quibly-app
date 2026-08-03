@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: space.xl,
+    paddingHorizontal: space.lg,
     paddingTop: space.md,
     paddingBottom: space.lg,
   },
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
 
   segmented: {
     flexDirection: 'row',
-    marginHorizontal: space.xl,
+    marginHorizontal: space.lg,
     marginBottom: space.lg,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
   segmentBtn: { flex: 1, paddingVertical: space.md, alignItems: 'center', borderRadius: radius.sm },
 
-  listContent: { paddingHorizontal: space.xl, gap: space.sm },
+  listContent: { paddingHorizontal: space.lg, gap: space.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   card: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.md,
     padding: space.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   cardIcon: {

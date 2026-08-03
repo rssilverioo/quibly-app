@@ -1,828 +1,176 @@
-import React, { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
   ActivityIndicator,
-  Share,
-  Platform,
-  Modal,
   KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Minus, Plus, PartyPopper } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
+
+import Press from '../../components/ui/Press';
 import { useAuth } from '../../contexts/AuthContext';
-import { createLeague } from '../../services/leagues';
-import type { League, LeagueMode, LeaguePrivacy } from '@quibly/shared';
+import { createRoom, type CreatedRoom } from '../../services/rooms';
 import { inviteUrl } from '@quibly/shared/constants';
-import { staticDark as c } from '../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { track } from '../../lib/analytics';
 
-const COLORS = {
-  background: c.bg,
-  surface: c.bg,
-  surfaceLight: c.surface,
-  border: c.surfaceRaised,
-  primary: c.accent,
-  primaryLight: c.accent,
-  secondary: c.accent,
-  accent: c.danger,
-  warning: c.warning,
-  success: c.accent,
-  error: c.danger,
-  text: c.fg,
-  textSecondary: c.fgSubtle,
-  textMuted: c.fgMuted,
-  gold: c.gold,
-  silver: c.silver,
-  bronze: c.bronze,
-};
+/**
+ * Criar sala — dois campos, e só.
+ *
+ * `FLUXO §5` e `DESIGN-GYMRATS §5.6`: prazo, modo, tamanho do grupo e
+ * público/privado são propriedades do **desafio**, não da sala, e moram em
+ * `challenge/new.tsx`. Isto aqui saiu de 840 linhas para o que a tela realmente
+ * pergunta: como a sala se chama e como você aparece nela.
+ *
+ * A tela manda os dois campos e nada mais. Datas, modo, privacidade e teto de
+ * membros são preenchidos pelo `POST /rooms` no servidor — este cliente já os
+ * inventou por um tempo, contra `POST /leagues`, e não precisa mais.
+ */
 
-function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-function formatDateDisplay(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
-}
-
-function parseISODate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function addDays(dateStr: string, days: number): string {
-  const date = new Date(dateStr);
-  date.setDate(date.getDate() + days);
-  return formatDateISO(date);
-}
-
-export default function CreateLeagueScreen() {
-  const { t } = useTranslation('leagues');
+export default function CreateRoomScreen() {
+  const { t } = useTranslation('common');
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const { user } = useAuth();
 
-  const modeOptions = useMemo(() => [
-    { key: 'easy' as LeagueMode, label: t('modes.easy'), description: t('modes.easyDescription'), color: COLORS.success },
-    { key: 'competitive' as LeagueMode, label: t('modes.competitive'), description: t('modes.competitiveDescription'), color: COLORS.primary },
-    { key: 'hardcore' as LeagueMode, label: t('modes.hardcore'), description: t('modes.hardcoreDescription'), color: COLORS.accent },
-  ], [t]);
-
-  const quickDurations = useMemo(() => [
-    { label: t('create.quickDuration.7days'), days: 7 },
-    { label: t('create.quickDuration.30days'), days: 30 },
-    { label: t('create.quickDuration.90days'), days: 90 },
-    { label: t('create.quickDuration.1year'), days: 365 },
-  ], [t]);
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState(formatDateISO(new Date()));
-  const [endDate, setEndDate] = useState(addDays(formatDateISO(new Date()), 30));
-  const [mode, setMode] = useState<LeagueMode>('competitive');
-  const [privacy, setPrivacy] = useState<LeaguePrivacy>('private');
-  const [maxMembers, setMaxMembers] = useState(50);
   const [creating, setCreating] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<CreatedRoom | null>(null);
 
-  // Success state
-  const [createdLeague, setCreatedLeague] = useState<League | null>(null);
+  const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
 
-  const handleQuickDuration = (days: number) => {
-    setEndDate(addDays(startDate, days));
-  };
-
-  const handleStartDateChange = (_event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === 'android') setShowStartPicker(false);
-    if (date) setStartDate(formatDateISO(date));
-  };
-
-  const handleEndDateChange = (_event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === 'android') setShowEndPicker(false);
-    if (date) setEndDate(formatDateISO(date));
-  };
-
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      Alert.alert(t('common:error'), t('create.nameRequired'));
-      return;
-    }
-    if (!displayName.trim()) {
-      Alert.alert(t('common:error'), t('create.displayNameRequired'));
-      return;
-    }
-    if (!startDate || !endDate) {
-      Alert.alert(t('common:error'), t('create.datesRequired'));
-      return;
-    }
+  const onCreate = async () => {
+    if (!canSubmit) return;
     if (!user) {
-      Alert.alert(t('common:error'), t('create.loginRequired'));
+      setError(t('rooms.loginRequired'));
       return;
     }
-
+    setError(null);
     setCreating(true);
     try {
-      const league = await createLeague(user.uid, {
-        name: name.trim(),
-        description: description.trim() || undefined,
-        start_date: startDate,
-        end_date: endDate,
-        privacy,
-        mode,
-        max_members: maxMembers,
-        display_name: displayName.trim(),
-      });
-      setCreatedLeague(league);
-      track('room_created', { mode, privacy });
-    } catch (err: any) {
-      Alert.alert(t('common:error'), err?.message ?? t('create.createError'));
+      setCreated(await createRoom(name.trim(), displayName.trim()));
+      track('room_created');
+    } catch (err) {
+      // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
+      // para ação destrutiva, não para "não deu certo".
+      setError((err as Error)?.message ?? t('rooms.createRoomError'));
     } finally {
       setCreating(false);
     }
   };
 
-  const handleCopyCode = async () => {
-    if (!createdLeague) return;
+  const onShare = async () => {
+    if (!created) return;
     try {
-      const result = await Share.share({ message: inviteUrl(createdLeague.invite_code) });
-      if (result.action === Share.sharedAction) track('invite_shared', { room_id: createdLeague.id });
+      const result = await Share.share({ message: inviteUrl(created.invite_code) });
+      if (result.action === Share.sharedAction) track('invite_shared', { room_id: created.id });
     } catch {
-      // User cancelled
+      // O usuário cancelou a folha de compartilhamento.
     }
   };
 
-  const handleShare = async () => {
-    if (!createdLeague) return;
-    try {
-      const result = await Share.share({
-        message: t('create.shareMessage', { name: createdLeague.name, url: inviteUrl(createdLeague.invite_code) }),
-      });
-      if (result.action === Share.sharedAction) track('invite_shared', { room_id: createdLeague.id });
-    } catch {
-      // User cancelled share
-    }
-  };
+  const header = (
+    <View style={styles.header}>
+      <Press onPress={() => router.back()} style={styles.close}><X size={22} color={c.fg} /></Press>
+      <Text style={styles.headerTitle}>{created ? created.name : t('rooms.newRoom')}</Text>
+      <View style={styles.close} />
+    </View>
+  );
 
-  const handleGoToLeague = () => {
-    if (!createdLeague) return;
-    router.replace(`/league/${createdLeague.id}`);
-  };
-
-  // Success Screen
-  if (createdLeague) {
+  // Depois de criar, a MESMA tela vira o convite. Sem alerta de parabéns: o que
+  // a pessoa precisa agora é do código na mão.
+  if (created) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.successContainer}>
-          <PartyPopper size={56} color={COLORS.primary} style={{ marginBottom: 16 }} />
-          <Text style={styles.successTitle}>{t('created.title')}</Text>
-          <Text style={styles.successSubtitle}>{t('created.subtitle')}</Text>
-
-          <View style={styles.codeBox}>
-            <Text style={styles.codeLabel}>{t('created.inviteCode')}</Text>
-            <Text style={styles.codeText}>{createdLeague.invite_code}</Text>
-          </View>
-
-          <View style={styles.successActions}>
-            <TouchableOpacity
-              style={styles.successButton}
-              onPress={handleCopyCode}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.successButtonText}>{t('created.copyCode')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.successButton, styles.successButtonOutline]}
-              onPress={handleShare}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.successButtonText, styles.successButtonOutlineText]}>{t('created.share')}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.goToLeagueButton}
-            onPress={handleGoToLeague}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.goToLeagueText}>{t('created.goToLeague')}</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {header}
+        <View style={styles.content}>
+          <Text style={styles.label}>{t('rooms.code')}</Text>
+          <Text style={styles.code}>{created.invite_code}</Text>
+          <Press onPress={onShare} style={styles.linkRow}>
+            <Text style={styles.link}>{t('rooms.shareInvite')}</Text>
+          </Press>
+        </View>
+        <View style={styles.footer}>
+          <Press onPress={() => router.replace(`/league/room/${created.id}`)} style={styles.button}>
+            <Text style={styles.buttonText}>{t('rooms.openRoom')}</Text>
+          </Press>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <ArrowLeft size={18} color={COLORS.primaryLight} style={{ marginRight: 4 }} />
-            <Text style={styles.backButtonText}>{t('common:back')}</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>{t('create.title')}</Text>
-        </View>
-
-        {/* League Name */}
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('create.leagueName')}</Text>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {header}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextInput
-            style={styles.input}
-            placeholder={t('create.leagueNamePlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            style={styles.field}
             value={name}
             onChangeText={setName}
-            autoCorrect={false}
-            selectionColor={COLORS.primaryLight}
+            placeholder={t('rooms.roomNamePlaceholder')}
+            placeholderTextColor={c.fgSubtle}
             maxLength={60}
+            returnKeyType="next"
           />
-        </View>
-
-        {/* Display Name */}
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('create.displayName')}</Text>
           <TextInput
-            style={styles.input}
-            placeholder={t('create.displayNamePlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
+            style={[styles.field, styles.fieldSpaced]}
             value={displayName}
             onChangeText={setDisplayName}
-            autoCorrect={false}
-            selectionColor={COLORS.primaryLight}
-            maxLength={30}
+            placeholder={t('rooms.displayNamePlaceholder')}
+            placeholderTextColor={c.fgSubtle}
+            maxLength={40}
+            returnKeyType="done"
+            onSubmitEditing={onCreate}
           />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </ScrollView>
+        <View style={styles.footer}>
+          <Press onPress={onCreate} disabled={!canSubmit} style={[styles.button, !canSubmit && styles.buttonDisabled]}>
+            {creating
+              ? <ActivityIndicator color={c.fgOnAccent} />
+              : <Text style={styles.buttonText}>{t('rooms.create')}</Text>}
+          </Press>
         </View>
-
-        {/* Description */}
-        <View style={styles.field}>
-          <Text style={styles.label}>
-            {t('create.description')} <Text style={styles.labelOptional}>{t('common:optional')}</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, styles.inputMultiline]}
-            placeholder={t('create.descriptionPlaceholder')}
-            placeholderTextColor={COLORS.textMuted}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            selectionColor={COLORS.primaryLight}
-            maxLength={300}
-          />
-        </View>
-
-        {/* Start Date */}
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('create.startDate')}</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowStartPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dateButtonText}>{formatDateDisplay(startDate)}</Text>
-          </TouchableOpacity>
-          {Platform.OS === 'android' && showStartPicker && (
-            <DateTimePicker
-              value={parseISODate(startDate)}
-              mode="date"
-              minimumDate={new Date()}
-              onChange={handleStartDateChange}
-            />
-          )}
-        </View>
-
-        {/* End Date */}
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('create.endDate')}</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowEndPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dateButtonText}>{formatDateDisplay(endDate)}</Text>
-          </TouchableOpacity>
-          {Platform.OS === 'android' && showEndPicker && (
-            <DateTimePicker
-              value={parseISODate(endDate)}
-              mode="date"
-              minimumDate={parseISODate(addDays(startDate, 1))}
-              onChange={handleEndDateChange}
-            />
-          )}
-        </View>
-
-        {/* iOS Date Picker Modal */}
-        {Platform.OS === 'ios' && (showStartPicker || showEndPicker) && (
-          <Modal transparent animationType="fade">
-            <TouchableOpacity
-              style={styles.pickerOverlay}
-              activeOpacity={1}
-              onPress={() => { setShowStartPicker(false); setShowEndPicker(false); }}
-            >
-              <View style={styles.pickerContainer}>
-                <View style={styles.pickerHeader}>
-                  <Text style={styles.pickerTitle}>
-                    {showStartPicker ? t('create.startDate') : t('create.endDate')}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => { setShowStartPicker(false); setShowEndPicker(false); }}
-                  >
-                    <Text style={styles.pickerDone}>{t('common:done')}</Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={showStartPicker ? parseISODate(startDate) : parseISODate(endDate)}
-                  mode="date"
-                  display="spinner"
-                  minimumDate={showStartPicker ? new Date() : parseISODate(addDays(startDate, 1))}
-                  onChange={showStartPicker ? handleStartDateChange : handleEndDateChange}
-                  textColor={COLORS.text}
-                  themeVariant="dark"
-                />
-              </View>
-            </TouchableOpacity>
-          </Modal>
-        )}
-
-        {/* Quick Duration Buttons */}
-        <View style={styles.quickDurationRow}>
-          {quickDurations.map((item) => {
-            const isSelected = endDate === addDays(startDate, item.days);
-            return (
-              <TouchableOpacity
-                key={item.days}
-                style={[styles.quickDurationButton, isSelected && styles.quickDurationButtonActive]}
-                onPress={() => handleQuickDuration(item.days)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[styles.quickDurationText, isSelected && styles.quickDurationTextActive]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Mode Selector */}
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('create.mode')}</Text>
-          <View style={styles.modeGrid}>
-            {modeOptions.map((option) => {
-              const isSelected = mode === option.key;
-              return (
-                <TouchableOpacity
-                  key={option.key}
-                  style={[
-                    styles.modeCard,
-                    isSelected && { borderColor: option.color, backgroundColor: option.color + '11' },
-                  ]}
-                  onPress={() => setMode(option.key)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.modeLabel, isSelected && { color: option.color }]}>
-                    {option.label}
-                  </Text>
-                  <Text style={styles.modeDescription}>{option.description}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Privacy Toggle */}
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('create.privacy')}</Text>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleButton, privacy === 'public' && styles.toggleButtonActive]}
-              onPress={() => setPrivacy('public')}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[styles.toggleText, privacy === 'public' && styles.toggleTextActive]}
-              >
-                {t('common:public')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleButton, privacy === 'private' && styles.toggleButtonActive]}
-              onPress={() => setPrivacy('private')}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[styles.toggleText, privacy === 'private' && styles.toggleTextActive]}
-              >
-                {t('common:private')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Max Members Slider */}
-        <View style={styles.field}>
-          <View style={styles.sliderHeader}>
-            <Text style={styles.label}>{t('create.maxMembers')}</Text>
-            <Text style={styles.sliderValue}>{maxMembers}</Text>
-          </View>
-          <View style={styles.sliderRow}>
-            <TouchableOpacity
-              style={styles.sliderButton}
-              onPress={() => setMaxMembers(Math.max(2, maxMembers - 5))}
-              activeOpacity={0.7}
-            >
-              <Minus size={18} color={COLORS.text} />
-            </TouchableOpacity>
-
-            <View style={styles.sliderTrack}>
-              <View
-                style={[styles.sliderFill, { width: `${((maxMembers - 2) / 98) * 100}%` }]}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.sliderButton}
-              onPress={() => setMaxMembers(Math.min(100, maxMembers + 5))}
-              activeOpacity={0.7}
-            >
-              <Plus size={18} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.sliderLabels}>
-            <Text style={styles.sliderLabelText}>2</Text>
-            <Text style={styles.sliderLabelText}>100</Text>
-          </View>
-        </View>
-
-        {/* Create Button */}
-        <TouchableOpacity
-          style={[styles.createButton, creating && styles.createButtonDisabled]}
-          onPress={handleCreate}
-          disabled={creating}
-          activeOpacity={0.7}
-        >
-          {creating ? (
-            <ActivityIndicator size="small" color={COLORS.text} />
-          ) : (
-            <Text style={styles.createButtonText}>{t('create.createButton')}</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-
-  // Header
-  header: {
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  backButtonText: {
-    color: COLORS.primaryLight,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 24,
-  },
-
-  // Fields
+const makeStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
+  header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.md },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { ...text.bodyStrong, color: c.fg },
+  content: { paddingHorizontal: space.lg, paddingTop: space.lg },
   field: {
-    marginBottom: 20,
-  },
-  label: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  labelOptional: {
-    color: COLORS.textMuted,
-    fontWeight: '400',
-  },
-  input: {
-    backgroundColor: COLORS.surface,
+    height: 54,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: COLORS.text,
-    fontSize: 16,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    paddingHorizontal: space.lg,
+    ...text.body,
+    color: c.fg,
   },
-  inputMultiline: {
-    minHeight: 80,
-    paddingTop: 14,
-  },
-  dateButton: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  dateButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  pickerContainer: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  pickerTitle: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  pickerDone: {
-    color: COLORS.primaryLight,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Quick Duration
-  quickDurationRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  quickDurationButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  quickDurationButtonActive: {
-    backgroundColor: COLORS.primary + '22',
-    borderColor: COLORS.primary,
-  },
-  quickDurationText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  quickDurationTextActive: {
-    color: COLORS.primaryLight,
-  },
-
-  // Mode
-  modeGrid: {
-    gap: 10,
-  },
-  modeCard: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 16,
-  },
-  modeLabel: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  modeDescription: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-
-  // Privacy Toggle
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  toggleButton: {
-    flex: 1,
-    height: 44,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleButtonActive: {
-    backgroundColor: COLORS.primary + '22',
-    borderColor: COLORS.primary,
-  },
-  toggleText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  toggleTextActive: {
-    color: COLORS.primaryLight,
-  },
-
-  // Slider
-  sliderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sliderValue: {
-    color: COLORS.primaryLight,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  sliderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  sliderButton: {
-    width: 36,
-    height: 36,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sliderButtonText: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  sliderTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  sliderFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 3,
-  },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 48,
-    marginTop: 4,
-  },
-  sliderLabelText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-
-  // Create Button
-  createButton: {
-    height: 52,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  createButtonDisabled: {
-    opacity: 0.6,
-  },
-  createButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  // Success Screen
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  successIcon: {
-    fontSize: 56,
-    marginBottom: 16,
-  },
-  successTitle: {
-    color: COLORS.text,
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  successSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 15,
-    marginBottom: 32,
-  },
-  codeBox: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 24,
-  },
-  codeLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  codeText: {
-    color: COLORS.primaryLight,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: 4,
-  },
-  successActions: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-    marginBottom: 20,
-  },
-  successButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successButtonOutline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  successButtonText: {
-    color: COLORS.text,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  successButtonOutlineText: {
-    color: COLORS.primaryLight,
-  },
-  goToLeagueButton: {
-    paddingVertical: 12,
-  },
-  goToLeagueText: {
-    color: COLORS.primaryLight,
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  fieldSpaced: { marginTop: space.lg },
+  error: { ...text.caption, color: c.danger, marginTop: space.sm },
+  label: { ...text.caption, color: c.fgMuted },
+  code: { ...text.title3, color: c.fg, letterSpacing: 3, marginTop: space.xs },
+  linkRow: { minHeight: 44, justifyContent: 'center' },
+  link: { ...text.bodyStrong, color: c.accent },
+  footer: { padding: space.lg },
+  button: { height: 54, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  buttonDisabled: { opacity: 0.4 },
+  buttonText: { ...text.bodyStrong, color: c.fgOnAccent },
 });

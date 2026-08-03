@@ -18,10 +18,103 @@
   "tabs": {
     "home": "Início",
     "lessons": "Aulas",
+    "rooms": "Salas",
     "study": "Estudar",
     "challenges": "Desafios",
     "library": "Biblioteca",
     "profile": "Perfil"
+  },
+  "rooms": {
+    "emptyTitle": "Estude com os seus",
+    "emptySubtitle": "Crie uma sala para o seu grupo ou entre com o código que recebeu.",
+    "create": "Criar sala",
+    "code": "Código da sala",
+    "join": "Entrar",
+    "feedEmptyTitle": "Ninguém estudou ainda hoje",
+    "feedEmptySubtitle": "Comece uma sessão e seu estudo aparece aqui.",
+    "photoFeedEmptySubtitle": "Poste uma foto e seu estudo aparece aqui.",
+    "listTitle": "Suas salas",
+    "createChallenge": "Crie o próximo desafio"
+    ,"postPhoto": "Postar foto"
+    ,"startTimer": "Ligar timer"
+    ,"newPost": "Nova foto"
+    ,"captionPlaceholder": "Conte o que você estudou"
+    ,"takePhoto": "Tirar foto"
+    ,"choosePhoto": "Escolher foto"
+    ,"publishPhoto": "Postar no feed"
+    ,"publishing": "Postando…"
+    ,"studyingNow": "ESTUDANDO AGORA"
+    ,"minutesNow_one": "há {{count}} min"
+    ,"minutesNow_other": "há {{count}} min"
+    ,"activeChallenge": "DESAFIO ATIVO"
+    ,"daysLeft_one": "falta 1 dia"
+    ,"daysLeft_other": "faltam {{count}} dias"
+    ,"yourRank": "Você está em #{{rank}} de {{count}}"
+    ,"notRanked": "Comece a estudar para entrar no placar"
+    ,"leaderboard": "PLACAR"
+    ,"you": "você"
+    ,"noChallenge": "SEM DESAFIO ATIVO"
+    ,"newChallenge": "Novo desafio"
+    ,"challengeName": "Nome do desafio"
+    ,"challengeMode": "COMO O GRUPO PARTICIPA"
+    ,"photoMode": "Foto"
+    ,"photoModeSubtitle": "Poste uma foto do que estudou. Sem timer."
+    ,"studyMode": "Estudo"
+    ,"studyModeSubtitle": "Use o timer e apareça estudando agora."
+    ,"duration": "PRAZO"
+    ,"durationDays": "{{count}} dias"
+    ,"createChallengeAction": "Criar desafio"
+    ,"memberHistory": "Histórico no desafio"
+    ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} no desafio"
+    ,"memberNoPosts": "Nenhum estudo publicado neste desafio ainda."
+    ,"daysLeftLabel": "dias restantes"
+    ,"started": "Começou em {{date}}"
+    ,"finishes": "Termina em {{date}}"
+    ,"invite": "Convidar"
+    ,"rankingsPreview": "Rankings"
+    ,"daysActive_one": "1 dia ativo"
+    ,"daysActive_other": "{{count}} dias ativos"
+    ,"allRankings": "Todos os rankings"
+    ,"groupStats": "Estatísticas do grupo"
+    ,"totalCheckIns": "Check-ins totais"
+    ,"totalDaysActive": "Dias ativos no total"
+    ,"averageCheckIns": "Média de check-ins por dia"
+    ,"earlyBird": "Mais estudos de manhã cedo"
+    ,"nightOwl": "Mais check-ins de madrugada"
+    ,"detailsUnavailable": "Os detalhes do grupo estão indisponíveis agora."
+    ,"tryAgain": "Tentar novamente"
+    ,"loadFailed": "Não deu para carregar as suas salas agora."
+    ,"post": "Post"
+    ,"postUnavailable": "Post indisponível"
+    ,"photoFeedEmptyTitle": "Ninguém postou ainda hoje"
+    ,"leader": "Líder"
+    ,"roomUnavailable": "Não deu para abrir a sala"
+    ,"rankingsTitle": "Classificação"
+    ,"rankingsUnavailable": "Não deu para abrir a classificação"
+    ,"leaderboardEmpty": "Ninguém pontuou ainda"
+    ,"challengeWinner": "{{name}} venceu"
+    ,"challengeEnded": "O desafio terminou"
+    ,"backToFeed": "Voltar para o feed"
+    ,"newRoom": "Nova sala"
+    ,"roomNamePlaceholder": "Nome da sala"
+    ,"displayNamePlaceholder": "Como você aparece"
+    ,"shareInvite": "Compartilhar convite"
+    ,"openRoom": "Abrir a sala"
+    ,"createRoomError": "Não deu para criar a sala"
+    ,"loginRequired": "Entre na sua conta para criar uma sala"
+    ,"invited": "Você foi convidado"
+    ,"inviteInvalid": "Esse convite não existe mais"
+    ,"inviteAnotherCode": "Digitar outro código"
+    ,"joinError": "Não deu para entrar na sala"
+    ,"roomFull": "Esta sala está cheia"
+    ,"roomEnded": "Este desafio já terminou"
+    ,"chatEmpty": "Ninguém falou ainda"
+    ,"chatEmptySubtitle": "Mande a primeira mensagem para o grupo."
+    ,"chatPlaceholder": "Mensagem"
+    ,"chatUnavailable": "Não deu para abrir a conversa"
+    ,"createChallengeError": "Não deu para criar o desafio"
+    ,"postError": "Não deu para publicar a foto"
+    ,"feedUnavailable": "Não deu para carregar o feed da sala."
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
@@ -29,6 +122,7 @@
   "sp": "SP",
   "xp": "XP",
   "unknown": "Desconhecido",
+  "retry": "Tentar de novo",
   "optional": "(opcional)",
   "verified": "Verificado",
   "notNow": "Agora não"

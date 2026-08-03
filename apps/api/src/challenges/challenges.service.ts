@@ -250,10 +250,27 @@ export class ChallengesService {
     const memberById = new Map(
       challenge.members.map((member) => [member.userId, member]),
     );
+    /**
+     * **Check-in é a pessoa ter aparecido no dia, não o número de fotos.**
+     *
+     * Quem posta três fotos numa terça apareceu uma vez, não três — as três
+     * continuam no feed, porque o feed é o registro do que aconteceu; a
+     * contagem é outra coisa, e mede presença. Contar posts premiava quem
+     * fotografa muito em vez de quem aparece sempre, que é exatamente o
+     * contrário do que a sala mede.
+     *
+     * Por isso tudo aqui é `Set` de datas locais, e não contador: a soma sai
+     * de `.size`, e repetir o mesmo dia não mexe no número.
+     */
     const activeDaysByUser = new Map<string, Set<string>>();
     const groupActiveDays = new Set<string>();
-    const earlyBirdCounts = new Map<string, number>();
-    const nightOwlCounts = new Map<string, number>();
+    const earlyBirdDays = new Map<string, Set<string>>();
+    const nightOwlDays = new Map<string, Set<string>>();
+    const marcarDia = (mapa: Map<string, Set<string>>, userId: string, dia: string) => {
+      const dias = mapa.get(userId) ?? new Set<string>();
+      dias.add(dia);
+      mapa.set(userId, dias);
+    };
 
     for (const checkIn of checkIns) {
       const timezone = memberById.get(checkIn.userId)?.user.timezone;
@@ -261,21 +278,16 @@ export class ChallengesService {
         ? this.localDateAndHour(checkIn.createdAt, timezone)
         : null;
       if (!local) continue;
-      const userDays = activeDaysByUser.get(checkIn.userId) ?? new Set<string>();
-      userDays.add(local.date);
-      activeDaysByUser.set(checkIn.userId, userDays);
+      marcarDia(activeDaysByUser, checkIn.userId, local.date);
       groupActiveDays.add(local.date);
 
+      // Madrugador e coruja seguem a mesma régua: são dias em que a pessoa
+      // apareceu naquela faixa de hora. Três fotos antes das 9h de uma
+      // segunda são uma manhã, não três.
       if (local.hour >= 5 && local.hour < 9) {
-        earlyBirdCounts.set(
-          checkIn.userId,
-          (earlyBirdCounts.get(checkIn.userId) ?? 0) + 1,
-        );
+        marcarDia(earlyBirdDays, checkIn.userId, local.date);
       } else if (local.hour >= 0 && local.hour < 5) {
-        nightOwlCounts.set(
-          checkIn.userId,
-          (nightOwlCounts.get(checkIn.userId) ?? 0) + 1,
-        );
+        marcarDia(nightOwlDays, checkIn.userId, local.date);
       }
     }
 
@@ -288,9 +300,10 @@ export class ChallengesService {
             1,
             Math.max(0, (now.getTime() - challenge.startDate.getTime()) / durationMs),
           );
-    const superlative = (counts: Map<string, number>) => {
-      const winner = [...counts.entries()].sort(
-        ([userA, countA], [userB, countB]) => countB - countA || userA.localeCompare(userB),
+    const superlative = (dias: Map<string, Set<string>>) => {
+      const winner = [...dias.entries()].sort(
+        ([userA, diasA], [userB, diasB]) =>
+          diasB.size - diasA.size || userA.localeCompare(userB),
       )[0];
       if (!winner) return null;
       const member = memberById.get(winner[0]);
@@ -299,10 +312,17 @@ export class ChallengesService {
             userId: member.userId,
             displayName: member.displayName,
             avatarUrl: member.user.avatarUrl,
-            checkIns: winner[1],
+            checkIns: winner[1].size,
           }
         : null;
     };
+
+    // Um check-in por pessoa por dia, somado sobre todo mundo. Não é
+    // `groupActiveDays.size`, que ignora quantas pessoas apareceram no dia.
+    const totalCheckIns = [...activeDaysByUser.values()].reduce(
+      (soma, dias) => soma + dias.size,
+      0,
+    );
 
     return {
       room: {
@@ -325,14 +345,14 @@ export class ChallengesService {
         activeDays: activeDaysByUser.get(entry.userId)?.size ?? 0,
       })),
       groupStats: {
-        totalCheckIns: checkIns.length,
+        totalCheckIns,
         totalDaysActive: groupActiveDays.size,
         averageCheckInsPerDay:
           groupActiveDays.size === 0
             ? 0
-            : Number((checkIns.length / groupActiveDays.size).toFixed(2)),
-        earlyBird: superlative(earlyBirdCounts),
-        nightOwl: superlative(nightOwlCounts),
+            : Number((totalCheckIns / groupActiveDays.size).toFixed(2)),
+        earlyBird: superlative(earlyBirdDays),
+        nightOwl: superlative(nightOwlDays),
       },
     };
   }

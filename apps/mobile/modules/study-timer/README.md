@@ -83,6 +83,47 @@ Falta, e precisa de aparelho físico com dev build:
 4. iOS: Live Activity aparece na tela de bloqueio, o timer corre sozinho
 5. iOS: Dynamic Island (só do iPhone 14 Pro para cima) e as ações de deep link
 
+## O bug que ninguém viu (03/08)
+
+Por meses o módulo **não existia no iOS**. Faltava `ios/StudyTimer.podspec`, e o
+autolinking da Expo descarta em silêncio qualquer módulo sem podspec
+(`platforms/apple/apple.js`: `if (!podspecFiles.length) return null`). Nenhum
+warning, nenhum erro de build.
+
+A partir daí a falha atravessava três camadas até virar silêncio absoluto:
+`requireNativeModule('StudyTimer')` lançava → `resolve()` devolvia `null` →
+`isAvailable === false` → todo `if (!StudyTimer) return` em
+`services/study-timer.ts` retornava antes de tocar no ActivityKit. A Live
+Activity nunca falhou: ela nunca foi tentada.
+
+Duas coisas mascararam isso:
+
+- **O Android sempre funcionou.** Ele é encontrado por `android/build.gradle`,
+  outro caminho, que não precisa de podspec. O bug parecia específico do iOS
+  quando era só um arquivo faltando.
+- **O `catch {}` vazio.** A tolerância a falha estava certa; ser mudo, não.
+  Hoje o wrapper loga (uma vez por condição, sem alertar o usuário).
+
+A prova de que este Swift nunca entrou em build nenhuma: quando o podspec foi
+adicionado, ele **não compilou** — `StudyTimerModule.swift` guardava
+`#available(iOS 16.1, *)` em volta das APIs de `ActivityContent`, que são 16.2.
+Um erro que teria aparecido na primeira compilação, se houvesse uma. Um arquivo
+fora de qualquer target não tem erro de compilação; tem ausência de compilação,
+que se parece com sucesso.
+
+**Lição para o próximo módulo local:** `expo-module.config.json` + Swift não
+bastam no iOS. Sem podspec, o módulo é ignorado sem avisar. `npx
+expo-modules-autolinking resolve -p ios --json` é o jeito rápido de conferir se
+o módulo está mesmo na lista.
+
+## Ainda falta: a Widget Extension
+
+Com o podspec, o módulo carrega e o ActivityKit é chamado — mas a Live Activity
+continua sem aparecer, porque `plugins/withLiveActivity.js` está **desligado**
+(`QUIBLY_LIVE_ACTIVITY=1` para ligar). Sem ele o app não embarca `.appex` nem
+declara `NSSupportsLiveActivities`, e `areActivitiesEnabled` devolve `false`.
+São dois bugs independentes; consertar um não conserta o outro.
+
 ## Risco conhecido: o tipo compilado duas vezes
 
 `StudyTimerAttributes.swift` é compilado no app (via o Pod do módulo Expo) **e**
@@ -90,8 +131,19 @@ na extensão. O ActivityKit casa os dois lados pelo *nome* do tipo, não pelo
 módulo, então na prática funciona — é o arranjo que a maioria dos projetos usa.
 
 Mas é frágil: se as duas cópias divergirem em um campo, o sistema recusa a
-atividade **em silêncio, sem erro de compilação**. Se a Live Activity não
-aparecer no aparelho, é o primeiro lugar para olhar.
+atividade **em silêncio, sem erro de compilação**.
+
+Um esclarecimento que economiza tempo, porque este aviso já mandou gente
+investigar o lugar errado: **hoje não existe divergência possível.** Só há uma
+cópia versionada, em `ios/StudyTimerAttributes.swift`, e o plugin gera a outra
+com `fs.copyFileSync` a cada prebuild. As duas são o mesmo arquivo, byte por
+byte, por construção. A divergência só passa a ser possível se alguém editar à
+mão `ios/QuiblyWidget/` — que é saída de prebuild e não deve ser editada.
+
+Ou seja: se a Live Activity não aparecer, confira primeiro se o módulo está
+autolinkado (`expo-modules-autolinking resolve -p ios`) e se o build tem
+`.appex` + `NSSupportsLiveActivities`. As duas cópias são a última suspeita, não
+a primeira.
 
 A alternativa robusta é um framework compartilhado entre os dois targets. Vale
 fazer se este arranjo der problema, não antes.

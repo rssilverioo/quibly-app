@@ -38,8 +38,8 @@ export default function TabsLayout() {
       }}
     >
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: 'square.stack', selected: 'square.stack.fill' }} />
-        <Label>{tr('tabs.lessons', { defaultValue: 'Aulas' })}</Label>
+        <Icon sf={{ default: 'person.3', selected: 'person.3.fill' }} />
+        <Label>{tr('tabs.rooms', { defaultValue: 'Salas' })}</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="study">

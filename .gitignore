@@ -30,3 +30,6 @@ apps/mobile/.expo/
 # Misc
 *.log
 coverage/
+
+# Estado do Maestri (papéis de agente) — ferramenta, não produto.
+.maestri/

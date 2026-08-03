@@ -1,543 +1,245 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
   FlatList,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { FONTS } from '@quibly/shared/constants';
-import { legacyColors as COLORS } from '../../../theme';
-import { ArrowLeft, Send } from 'lucide-react-native';
-import { useAuth } from '../../../contexts/AuthContext';
-import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
+import { ArrowLeft, RotateCcw, Send } from 'lucide-react-native';
 import type { ChatMessage } from '@quibly/shared';
 
-// ─── Constants ───
+import { Mascot } from '../../../components/mascot';
+import Avatar from '../../../components/ui/Avatar';
+import Press from '../../../components/ui/Press';
+import RoomTabBar from '../../../components/rooms/RoomTabBar';
+import { useAuth } from '../../../contexts/AuthContext';
+import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
+import { getMyRooms } from '../../../services/rooms';
+import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
-const MAX_INPUT_LINES = 4;
-const INPUT_LINE_HEIGHT = 20;
 const MIN_INPUT_HEIGHT = 40;
-const MAX_INPUT_HEIGHT = MIN_INPUT_HEIGHT + INPUT_LINE_HEIGHT * (MAX_INPUT_LINES - 1);
+const MAX_INPUT_HEIGHT = MIN_INPUT_HEIGHT + 20 * 3;
+/** Um carimbo de hora a cada bloco de conversa, não a cada bolha. */
+const TIME_BLOCK_MS = 60 * 60 * 1000;
 
-// ─── Helpers ───
-
-function formatTimestamp(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+/** Mensagem que não chegou ao servidor. Fica na tela, apagada, com um ↻. */
+interface FailedMessage {
+  localId: string;
+  content: string;
 }
 
-function getInitials(name: string | null): string {
-  if (!name) return '?';
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-// ─── Components ───
-
-function Avatar({ uri, name, size = 32 }: { uri: string | null; name: string | null; size?: number }) {
-  if (uri) {
-    return (
-      <Image
-        source={{ uri }}
-        style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.avatarFallback,
-        { width: size, height: size, borderRadius: size / 2 },
-      ]}
-    >
-      <Text style={[styles.avatarFallbackText, { fontSize: size * 0.38 }]}>
-        {getInitials(name)}
-      </Text>
-    </View>
-  );
-}
-
-function SystemMessage({ message }: { message: ChatMessage }) {
-  return (
-    <View style={styles.systemMessageContainer}>
-      <View style={styles.systemDivider} />
-      <Text style={styles.systemMessageText}>{message.content}</Text>
-      <View style={styles.systemDivider} />
-    </View>
-  );
-}
-
-function MessageBubble({
-  message,
-  isMine,
-}: {
-  message: ChatMessage;
-  isMine: boolean;
-}) {
-  return (
-    <View style={[styles.messageRow, isMine ? styles.messageRowRight : styles.messageRowLeft]}>
-      {/* Avatar for other users */}
-      {!isMine && (
-        <View style={styles.messageAvatarContainer}>
-          <Avatar uri={(message as any).avatar_url} name={(message as any).username} size={28} />
-        </View>
-      )}
-
-      <View style={[styles.messageBubbleWrapper, isMine ? styles.bubbleWrapperRight : styles.bubbleWrapperLeft]}>
-        {/* Username for other users */}
-        {!isMine && (
-          <Text style={styles.messageUsername}>{(message as any).username ?? 'Unknown'}</Text>
-        )}
-
-        {/* Message bubble */}
-        <View style={[styles.messageBubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
-          <Text style={[styles.messageText, isMine ? styles.messageTextMine : styles.messageTextOther]}>
-            {message.content}
-          </Text>
-          <Text style={[styles.messageTime, isMine ? styles.messageTimeMine : styles.messageTimeOther]}>
-            {formatTimestamp(message.created_at)}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ─── Main Screen ───
-
-export default function LeagueChatScreen() {
-  const { t } = useTranslation('leagues');
-  const { id: leagueId } = useLocalSearchParams<{ id: string }>();
+export default function RoomChatScreen() {
+  const { t, i18n } = useTranslation('common');
+  const { id: roomId, challengeId } = useLocalSearchParams<{ id: string; challengeId?: string }>();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [failed, setFailed] = useState<FailedMessage[]>([]);
+  const [roomName, setRoomName] = useState('');
   const [inputText, setInputText] = useState('');
   const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const flatListRef = useRef<FlatList<ChatMessage>>(null);
-
-  // ─── Real-time subscription ───
+  const [loading, setLoading] = useState(true);
+  const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
-    if (!leagueId) return;
-
-    const unsubscribe = subscribeToMessages(leagueId, (allMessages) => {
-      // Messages come in ascending order, reverse for inverted FlatList
-      setMessages([...allMessages].reverse());
-      setIsLoading(false);
+    if (!roomId) return;
+    // Lista invertida: a mais nova em cima do array, embaixo na tela.
+    const unsubscribe = subscribeToMessages(roomId, (all) => {
+      setMessages([...all].reverse());
+      setLoading(false);
     });
-
     return () => unsubscribe();
-  }, [leagueId]);
+  }, [roomId]);
 
-  // ─── Send message ───
+  useEffect(() => {
+    if (!roomId) return;
+    void getMyRooms()
+      .then((rooms) => setRoomName(rooms.find((room) => room.id === roomId)?.name ?? ''))
+      .catch(() => {});
+  }, [roomId]);
 
-  const handleSendMessage = useCallback(async () => {
+  const deliver = useCallback(async (content: string, localId?: string) => {
+    if (!roomId || !user) return;
+    try {
+      await sendChatMessage(roomId, user.uid, content);
+      if (localId) setFailed((current) => current.filter((item) => item.localId !== localId));
+    } catch {
+      // Nunca `Alert.alert`: a bolha fica na tela, apagada, com um ↻.
+      setFailed((current) => localId
+        ? current
+        : [...current, { localId: `local:${Date.now()}`, content }]);
+    }
+  }, [roomId, user]);
+
+  const onSend = useCallback(() => {
     const trimmed = inputText.trim();
-    if (!trimmed || !leagueId || !user) return;
-
-    // Clear input immediately
+    if (!trimmed) return;
     setInputText('');
     setInputHeight(MIN_INPUT_HEIGHT);
+    void deliver(trimmed);
+  }, [deliver, inputText]);
 
-    try {
-      await sendChatMessage(leagueId, user.uid, trimmed);
-    } catch {
-      // Message will not appear since real-time subscription handles it
+  const timeStamp = useCallback((iso: string) => new Date(iso).toLocaleTimeString(i18n.language, {
+    hour: '2-digit', minute: '2-digit',
+  }), [i18n.language]);
+
+  const renderMessage = useCallback(({ item, index }: { item: ChatMessage; index: number }) => {
+    if (item.message_type === 'system') {
+      return <Text style={styles.stamp}>{item.content}</Text>;
     }
-  }, [inputText, leagueId, user]);
 
-  // ─── Input handling ───
+    // `index + 1` é a mensagem ANTERIOR no tempo, porque a lista é invertida.
+    const previous = messages[index + 1];
+    const startsBlock = !previous
+      || new Date(item.created_at).getTime() - new Date(previous.created_at).getTime() > TIME_BLOCK_MS;
+    const mine = item.user_id === user?.uid;
+    const author = (item as { username?: string }).username ?? item.profile?.username ?? '';
+    const avatar = (item as { avatar_url?: string | null }).avatar_url ?? item.profile?.avatar_url ?? null;
 
-  const handleContentSizeChange = useCallback(
-    (e: { nativeEvent: { contentSize: { height: number } } }) => {
-      const newHeight = Math.min(
-        Math.max(e.nativeEvent.contentSize.height, MIN_INPUT_HEIGHT),
-        MAX_INPUT_HEIGHT
-      );
-      setInputHeight(newHeight);
-    },
-    []
-  );
-
-  // ─── Render ───
-
-  const renderMessage = useCallback(
-    ({ item }: { item: ChatMessage }) => {
-      if (item.message_type === 'system') {
-        return <SystemMessage message={item} />;
-      }
-
-      const isMine = item.user_id === user?.uid;
-
-      return (
-        <MessageBubble
-          message={item}
-          isMine={isMine}
-        />
-      );
-    },
-    [user?.uid]
-  );
-
-  const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
-
-  const ListEmptyComponent = useMemo(() => {
-    if (isLoading) return null;
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>{t('noMessages')}</Text>
-        <Text style={styles.emptySubtext}>{t('noMessagesSub')}</Text>
+      <View>
+        {startsBlock ? <Text style={styles.stamp}>{timeStamp(item.created_at)}</Text> : null}
+        <View style={[styles.row, mine ? styles.rowMine : styles.rowOther]}>
+          {/* Avatar alinhado ao PÉ da bolha, como na referência. */}
+          {!mine ? <View style={styles.avatar}><Avatar uri={avatar} name={author} size={28} /></View> : null}
+          <View style={styles.column}>
+            {/* A referência repete o nome em toda bolha, mesmo em sequência. */}
+            {!mine && author ? <Text style={styles.author}>{author}</Text> : null}
+            <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+              <Text style={mine ? styles.textMine : styles.textOther}>{item.content}</Text>
+            </View>
+          </View>
+        </View>
       </View>
     );
-  }, [isLoading]);
+  }, [messages, styles, timeStamp, user?.uid]);
 
   const canSend = inputText.trim().length > 0;
 
-  if (isLoading) {
+  const header = (
+    <View style={styles.header}>
+      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+      <Text style={styles.headerTitle} numberOfLines={1}>{roomName}</Text>
+      <View style={styles.back} />
+    </View>
+  );
+
+  if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-            <ArrowLeft size={22} color={COLORS.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('chatTitle')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        {header}
+        <View style={styles.center}><ActivityIndicator color={c.accent} /></View>
+        <RoomTabBar roomId={roomId!} challengeId={challengeId || null} active="chat" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-          <Text style={styles.backButtonText}>{'\u2039'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('chatTitle')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {header}
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Message List */}
         <FlatList
-          ref={flatListRef}
+          ref={listRef}
           data={messages}
           renderItem={renderMessage}
-          keyExtractor={keyExtractor}
+          keyExtractor={(item) => item.id}
           inverted
-          style={styles.messageList}
-          contentContainerStyle={styles.messageListContent}
-          ListEmptyComponent={ListEmptyComponent}
+          contentContainerStyle={styles.list}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={(
+            <View style={styles.emptyBlock}>
+              <Mascot state="wave" size={120} animate={false} />
+              <Text style={styles.emptyTitle}>{t('rooms.chatEmpty')}</Text>
+              <Text style={styles.emptyBody}>{t('rooms.chatEmptySubtitle')}</Text>
+            </View>
+          )}
         />
 
-        {/* Input Bar */}
+        {/* As que não chegaram vivem fora da lista invertida, logo acima da
+            barra de composição: são as mais novas e a lista não as conhece. */}
+        {failed.map((item) => (
+          <View key={item.localId} style={[styles.row, styles.rowMine, styles.rowFailed, styles.failedRow]}>
+            <View style={[styles.bubble, styles.bubbleMine]}>
+              <Text style={styles.textMine}>{item.content}</Text>
+            </View>
+            <Press onPress={() => void deliver(item.content, item.localId)} style={styles.retry}>
+              <RotateCcw size={16} color={c.danger} />
+            </Press>
+          </View>
+        ))}
+
         <View style={styles.inputBar}>
           <View style={styles.inputWrapper}>
             <TextInput
-              style={[styles.textInput, { height: inputHeight }]}
+              style={[styles.input, { height: inputHeight }]}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Message..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholder={t('rooms.chatPlaceholder')}
+              placeholderTextColor={c.fgSubtle}
               multiline
               maxLength={2000}
-              onContentSizeChange={handleContentSizeChange}
-              onSubmitEditing={handleSendMessage}
+              onContentSizeChange={(e) => setInputHeight(
+                Math.min(Math.max(e.nativeEvent.contentSize.height, MIN_INPUT_HEIGHT), MAX_INPUT_HEIGHT),
+              )}
               blurOnSubmit={false}
-              returnKeyType="default"
             />
           </View>
-          <TouchableOpacity
-            style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
-            onPress={handleSendMessage}
-            disabled={!canSend}
-            activeOpacity={0.7}
-          >
-            <Send size={18} color={canSend ? COLORS.text : COLORS.textMuted} />
-          </TouchableOpacity>
+          <Press onPress={onSend} disabled={!canSend} style={[styles.send, !canSend && styles.sendDisabled]}>
+            <Send size={18} color={c.fgOnAccent} />
+          </Press>
         </View>
       </KeyboardAvoidingView>
+      <RoomTabBar roomId={roomId!} challengeId={challengeId || null} active="chat" />
     </SafeAreaView>
   );
 }
 
-// ─── Styles ───
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-
-  // ─── Header ───
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    color: COLORS.primary,
-    fontSize: 28,
-    fontFamily: FONTS.medium,
-    marginTop: -2,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontFamily: FONTS.semiBold,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-
-  // ─── Loading ───
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // ─── Empty State ───
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    // Inverted FlatList flips this, so we need to flip text back
-    transform: [{ scaleY: -1 }],
-  },
-  emptyText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    fontFamily: FONTS.semiBold,
-    marginBottom: 4,
-  },
-  emptySubtext: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontFamily: FONTS.regular,
-  },
-
-  // ─── Message List ───
-  messageList: {
-    flex: 1,
-  },
-  messageListContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
-  // ─── Message Row ───
-  messageRow: {
-    flexDirection: 'row',
-    marginVertical: 3,
-    paddingHorizontal: 4,
-  },
-  messageRowLeft: {
-    justifyContent: 'flex-start',
-  },
-  messageRowRight: {
-    justifyContent: 'flex-end',
-  },
-
-  // ─── Avatar ───
-  messageAvatarContainer: {
-    marginRight: 8,
-    alignSelf: 'flex-end',
-    marginBottom: 2,
-  },
-  avatar: {
-    backgroundColor: COLORS.surfaceLight,
-  },
-  avatarFallback: {
-    backgroundColor: COLORS.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFallbackText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONTS.semiBold,
-  },
-
-  // ─── Bubble ───
-  messageBubbleWrapper: {
-    maxWidth: '75%',
-  },
-  bubbleWrapperLeft: {
-    alignItems: 'flex-start',
-  },
-  bubbleWrapperRight: {
-    alignItems: 'flex-end',
-  },
-  messageUsername: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontFamily: FONTS.medium,
-    marginBottom: 2,
-    marginLeft: 12,
-  },
-  messageBubble: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 18,
-    minWidth: 48,
-  },
-  bubbleMine: {
-    backgroundColor: COLORS.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleOther: {
-    backgroundColor: COLORS.surface,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  messageText: {
-    fontSize: 15,
-    fontFamily: FONTS.regular,
-    lineHeight: 20,
-  },
-  messageTextMine: {
-    color: COLORS.text,
-  },
-  messageTextOther: {
-    color: COLORS.text,
-  },
-  messageTime: {
-    fontSize: 10,
-    fontFamily: FONTS.regular,
-    marginTop: 3,
-  },
-  messageTimeMine: {
-    color: 'rgba(255, 255, 255, 0.55)',
-    textAlign: 'right',
-  },
-  messageTimeOther: {
-    color: COLORS.textMuted,
-    textAlign: 'left',
-  },
-
-  // ─── System Message ───
-  systemMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  systemDivider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  systemMessageText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontFamily: FONTS.medium,
-    textAlign: 'center',
-    flexShrink: 1,
-    maxWidth: '70%',
-  },
-
-  // ─── Input Bar ───
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.background,
-    gap: 8,
-  },
-  inputWrapper: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 8 : 4,
-    justifyContent: 'center',
-  },
-  textInput: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontFamily: FONTS.regular,
-    maxHeight: MAX_INPUT_HEIGHT,
-    textAlignVertical: 'center',
-  },
-  sendButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: COLORS.surfaceLight,
-  },
-  sendButtonText: {
-    color: COLORS.onPrimary,
-    fontSize: 15,
-    fontFamily: FONTS.semiBold,
-  },
-  sendButtonTextDisabled: {
-    color: COLORS.textMuted,
-  },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { ...text.bodyStrong, color: c.fg, flex: 1, textAlign: 'center' },
+  list: { paddingHorizontal: space.lg, paddingVertical: space.sm, flexGrow: 1 },
+  stamp: { ...text.caption, color: c.fgMuted, textAlign: 'center', height: 32, lineHeight: 32 },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginVertical: 3 },
+  rowMine: { justifyContent: 'flex-end' },
+  rowOther: { justifyContent: 'flex-start' },
+  rowFailed: { opacity: 0.4 },
+  failedRow: { paddingHorizontal: space.lg },
+  avatar: { alignSelf: 'flex-end' },
+  column: { maxWidth: '78%' },
+  author: { ...text.caption, color: c.fgMuted, marginBottom: 4 },
+  // 34 com uma linha, +20 por linha extra — o `minHeight` mais o padding
+  // vertical produzem os dois números sozinhos. REF 33,4 / 52,8.
+  bubble: { minHeight: 34, paddingVertical: space.sm, paddingHorizontal: 14, borderRadius: radius.md, justifyContent: 'center' },
+  bubbleMine: { backgroundColor: c.accent },
+  bubbleOther: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  textMine: { ...text.body, color: c.fgOnAccent },
+  textOther: { ...text.body, color: c.fg },
+  retry: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  emptyBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ scaleY: -1 }] },
+  emptyTitle: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
+  emptyBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.sm },
+  inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.bg },
+  inputWrapper: { flex: 1, backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, paddingHorizontal: space.lg, justifyContent: 'center' },
+  input: { ...text.body, color: c.fg, maxHeight: MAX_INPUT_HEIGHT, textAlignVertical: 'center' },
+  send: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  sendDisabled: { opacity: 0.4 },
 });

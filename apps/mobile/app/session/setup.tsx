@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Plus, Minus } from 'lucide-react-native';
 import type { Subject, TimerMode } from '@quibly/shared';
+import { TIMER_PRESETS } from '@quibly/shared/constants';
 import { useTranslation } from 'react-i18next';
 
 import { useSessionStore } from '../../stores/session.store';
@@ -39,15 +40,38 @@ export default function SessionSetupScreen() {
   const [newSubjectColor, setNewSubjectColor] = useState<string>(SUBJECT_COLORS[0]);
   const [creatingSubject, setCreatingSubject] = useState(false);
 
-  // Stopwatch sits first on purpose: it is the default mode in YPT and the one
-  // most used by people who study for hours, for whom a fixed 25-minute block
-  // is friction rather than structure.
+  // Cronômetro vem primeiro de propósito: é o modo padrão do YPT e o mais usado
+  // por quem estuda horas, para quem um bloco fixo de 25 minutos é atrito, não
+  // estrutura.
+  //
+  // **São dois modos, e só dois.** `deep_focus` e `custom` eram o mesmo modo que
+  // o pomodoro com números diferentes — viraram os atalhos abaixo (50/10) e a
+  // própria configuração do pomodoro. O `TimerMode` continua com quatro membros
+  // porque o servidor guarda esse valor em sessões que já existem: o union é o
+  // histórico, esta tela é o presente. Ver `session.store.ts:setTimerMode`.
   const timerModes = useMemo(() => [
     { mode: 'stopwatch' as TimerMode, label: tr('setup.stopwatch'), subtitle: tr('setup.stopwatchSubtitle') },
     { mode: 'pomodoro' as TimerMode, label: tr('setup.pomodoro'), subtitle: tr('setup.pomodoroSubtitle') },
-    { mode: 'deep_focus' as TimerMode, label: tr('setup.deepFocus'), subtitle: tr('setup.deepFocusSubtitle') },
-    { mode: 'custom' as TimerMode, label: tr('setup.custom'), subtitle: tr('setup.customSubtitle') },
   ], [tr]);
+
+  // Os presets deixaram de ser modos e viraram atalhos de duração. Perder o
+  // acesso de um toque ao 50/10 seria regressão.
+  // Números vêm de `TIMER_PRESETS`, não escritos aqui: a pastilha tem que dizer
+  // exatamente o que `applyTimerPreset` aplica.
+  const durationPresets = useMemo(
+    () => (['pomodoro', 'deep_focus'] as const).map((key) => ({ key, ...TIMER_PRESETS[key] })),
+    [],
+  );
+
+  // Uma sessão gravada antes desta tela pode voltar do servidor como
+  // `deep_focus` ou `custom`. Os dois são pomodoro com outras durações — então
+  // colapsam para `pomodoro` mantendo `workDuration`/`breakDuration` intactos,
+  // que é exatamente o que o usuário tinha. Nenhum card ficaria selecionado sem
+  // isso, e `startSession` mandaria um modo que a tela não oferece mais.
+  const isPomodoro = store.timerMode !== 'stopwatch';
+  useEffect(() => {
+    if (isPomodoro && store.timerMode !== 'pomodoro') store.setTimerMode('pomodoro');
+  }, [store.timerMode]);
 
   useEffect(() => {
     if (user) {
@@ -201,8 +225,8 @@ export default function SessionSetupScreen() {
                     style={[
                       styles.pill,
                       {
-                        backgroundColor: selected ? c.surfaceRaised : c.surface,
-                        borderColor: selected ? subject.color : c.border,
+                        backgroundColor: selected ? c.accentSoft : c.surface,
+                        borderColor: selected ? c.accent : c.border,
                       },
                     ]}
                   >
@@ -230,7 +254,10 @@ export default function SessionSetupScreen() {
             </Text>
             <View style={styles.modeRow}>
               {timerModes.map((option) => {
-                const selected = store.timerMode === option.mode;
+                // `isPomodoro` e não igualdade estrita: no primeiro quadro depois
+                // de retomar uma sessão `deep_focus`, o efeito acima ainda não
+                // rodou e nenhum card apareceria selecionado.
+                const selected = option.mode === 'stopwatch' ? !isPomodoro : isPomodoro;
                 return (
                   <Press
                     key={option.mode}
@@ -256,7 +283,8 @@ export default function SessionSetupScreen() {
                       numberOfLines={1}
                       style={{
                         ...t.caption,
-                        color: selected ? 'rgba(10,10,12,0.6)' : c.fgSubtle,
+                        color: selected ? c.fgOnAccent : c.fgSubtle,
+                        opacity: selected ? 0.75 : 1,
                         marginTop: 2,
                       }}
                     >
@@ -268,12 +296,39 @@ export default function SessionSetupScreen() {
             </View>
           </Animated.View>
 
-          {/* Custom durations */}
-          {store.timerMode === 'custom' && (
+          {/* Durações do pomodoro — sempre visíveis quando o modo é pomodoro.
+              Era isto que o `custom` fazia; agora é o pomodoro em si, com 25/5
+              de padrão e os presets como atalhos. */}
+          {isPomodoro && (
             <Animated.View
               entering={FadeInDown.duration(280)}
               style={[styles.customCard, { backgroundColor: c.surface, borderColor: c.border }]}
             >
+              <View style={styles.presetRow}>
+                {durationPresets.map((preset) => {
+                  const active =
+                    store.workDuration === preset.work && store.breakDuration === preset.break;
+                  return (
+                    <Press
+                      key={preset.key}
+                      scale={0.94}
+                      onPress={() => store.applyTimerPreset(preset.key)}
+                      style={[
+                        styles.presetPill,
+                        {
+                          backgroundColor: active ? c.accentSoft : c.surfaceRaised,
+                          borderColor: active ? c.accent : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Text style={{ ...t.label, color: active ? c.fg : c.fgMuted }}>
+                        {tr('setup.presetPill', { work: preset.work, break: preset.break })}
+                      </Text>
+                    </Press>
+                  );
+                })}
+              </View>
+
               {[
                 {
                   label: tr('setup.workDuration'),
@@ -422,9 +477,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: space.lg, paddingTop: space.xs },
   iconBtn: { padding: space.sm },
-  scroll: { paddingHorizontal: space.xl, paddingTop: space.md },
+  scroll: { paddingHorizontal: space.lg, paddingTop: space.md },
   section: { marginTop: space.xxl },
-  rail: { gap: space.sm, paddingRight: space.xl },
+  rail: { gap: space.sm, paddingRight: space.lg },
 
   pill: {
     flexDirection: 'row',
@@ -451,16 +506,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
   },
 
   customCard: {
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
     padding: space.lg,
     marginTop: space.lg,
+  },
+  presetRow: { flexDirection: 'row', gap: space.sm, marginBottom: space.sm },
+  presetPill: {
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
   },
   durationRow: {
     flexDirection: 'row',
@@ -482,12 +544,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: space.xl,
+    paddingHorizontal: space.lg,
     paddingBottom: 36,
     paddingTop: space.lg,
   },
   cta: {
-    paddingVertical: 18,
+    height: 54,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

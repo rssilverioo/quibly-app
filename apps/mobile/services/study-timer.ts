@@ -3,6 +3,7 @@ import StudyTimer, {
   isAvailable,
   type NotificationAction,
 } from '../modules/study-timer/src';
+import { captureException } from '../lib/sentry';
 
 /**
  * Thin, failure-tolerant wrapper around the native live-timer surface.
@@ -11,18 +12,76 @@ import StudyTimer, {
  * the foreground service and the Live Activity are conveniences layered on top
  * of a session that is already safe on the server. A user must never fail to
  * start studying because a notification channel misbehaved.
+ *
+ * ## Tolerante não é o mesmo que mudo
+ *
+ * A versão original deste arquivo abria cada função com `if (!StudyTimer)
+ * return` e fechava cada `try` com um `catch {}` vazio. A intenção estava
+ * certa; o efeito colateral custou caro. O módulo nativo **não existia no
+ * iOS** — faltava o `StudyTimer.podspec`, então o autolinking da Expo descartava
+ * o módulo em silêncio e `requireNativeModule` lançava. Cada chamada retornava
+ * na primeira linha e a Live Activity nunca chegou a ser tentada uma vez
+ * sequer. Sem log, sem crash, sem teste que pegasse: a falha era invisível por
+ * construção, e assim ficou até alguém reparar que o cronômetro não aparecia na
+ * tela de bloqueio.
+ *
+ * A lição não é parar de engolir o erro — é que engolir só é aceitável se
+ * alguém for avisado. Estas notas vão para o log do dispositivo (visível em
+ * `xcrun simctl spawn booted log stream` e no console do Xcode) e para o Sentry
+ * quando houver DSN. Nenhuma delas chega ao usuário: ele continua estudando
+ * sem saber que o mostrador falhou, que era o objetivo desde o começo.
  */
+
+/**
+ * Cada condição é reportada uma vez por execução do app.
+ *
+ * `updateLiveTimer` é chamado a cada heartbeat, de 30 em 30 segundos. Um log
+ * por chamada afogaria o console em minutos e treinaria todo mundo a ignorá-lo
+ * — que é como um log deixa de ser um log. Uma linha por problema distinto é
+ * o suficiente para diagnosticar; a segunda ocorrência não acrescenta nada.
+ */
+const reported = new Set<string>();
+
+function note(key: string, message: string, error?: unknown): void {
+  if (reported.has(key)) return;
+  reported.add(key);
+
+  const detail = error instanceof Error ? `: ${error.message}` : '';
+  // `warn`, não `error`: nada aqui compromete a sessão, que é medida no
+  // servidor. Elevar para erro faria um mostrador ausente competir com falhas
+  // que de fato custam tempo de estudo ao usuário.
+  console.warn(`[study-timer] ${message}${detail}`);
+  if (error !== undefined) captureException(error, { scope: 'study-timer', op: key });
+}
+
+/**
+ * O módulo nativo ausente é um fato só, não um por função.
+ *
+ * Reportado uma vez, no primeiro uso — e não no import, porque em Expo Go a
+ * ausência é esperada e um aviso no boot seria ruído em toda sessão de
+ * desenvolvimento.
+ */
+function missing(op: string): boolean {
+  if (StudyTimer) return false;
+  note(
+    'unavailable',
+    `módulo nativo indisponível (op: ${op}). ` +
+      'Esperado no Expo Go e na web; em dev build significa que o autolinking ' +
+      'não encontrou o módulo — confira modules/study-timer/ios/StudyTimer.podspec.',
+  );
+  return true;
+}
 
 export async function startLiveTimer(
   subject: string,
   elapsedSeconds: number,
   isRunning: boolean,
 ): Promise<void> {
-  if (!StudyTimer) return;
+  if (missing('start')) return;
   try {
-    await StudyTimer.start(subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning);
-  } catch {
-    /* best effort — see the note above */
+    await StudyTimer!.start(subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning);
+  } catch (error) {
+    note('start', 'falha ao iniciar o cronômetro externo', error);
   }
 }
 
@@ -31,20 +90,20 @@ export async function updateLiveTimer(
   elapsedSeconds: number,
   isRunning: boolean,
 ): Promise<void> {
-  if (!StudyTimer) return;
+  if (missing('update')) return;
   try {
-    await StudyTimer.update(subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning);
-  } catch {
-    /* best effort */
+    await StudyTimer!.update(subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning);
+  } catch (error) {
+    note('update', 'falha ao atualizar o cronômetro externo', error);
   }
 }
 
 export async function stopLiveTimer(): Promise<void> {
-  if (!StudyTimer) return;
+  if (missing('stop')) return;
   try {
-    await StudyTimer.stop();
-  } catch {
-    /* best effort */
+    await StudyTimer!.stop();
+  } catch (error) {
+    note('stop', 'falha ao encerrar o cronômetro externo', error);
   }
 }
 
@@ -55,8 +114,8 @@ export async function stopLiveTimer(): Promise<void> {
 export function onLiveTimerAction(
   handler: (action: NotificationAction) => void,
 ): () => void {
-  if (!StudyTimer) return () => {};
-  const sub = StudyTimer.addListener('onNotificationAction', ({ action }) => handler(action));
+  if (missing('addListener')) return () => {};
+  const sub = StudyTimer!.addListener('onNotificationAction', ({ action }) => handler(action));
   return () => sub.remove();
 }
 
@@ -105,17 +164,20 @@ export function getBatteryWarning(): BatteryWarning | null {
       manufacturer,
       isAggressive: AGGRESSIVE_OEMS.includes(manufacturer.toLowerCase()),
     };
-  } catch {
+  } catch (error) {
+    // Falhar aqui significa não pedir a isenção de bateria, e num Xiaomi isso
+    // custa horas de estudo ao usuário — vale saber que aconteceu.
+    note('batteryWarning', 'não foi possível checar a otimização de bateria', error);
     return null;
   }
 }
 
 export async function openBatterySettings(): Promise<void> {
-  if (!StudyTimer) return;
+  if (missing('openBatterySettings')) return;
   try {
-    await StudyTimer.openBatterySettings();
-  } catch {
-    /* best effort */
+    await StudyTimer!.openBatterySettings();
+  } catch (error) {
+    note('openBatterySettings', 'não foi possível abrir os ajustes de bateria', error);
   }
 }
 

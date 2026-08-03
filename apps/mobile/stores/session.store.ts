@@ -76,6 +76,8 @@ interface SessionState {
   setTimerMode: (mode: TimerMode) => void;
   setWorkDuration: (minutes: number) => void;
   setBreakDuration: (minutes: number) => void;
+  /** Atalho de duração: aplica um preset de uma vez só. Ver `setTimerMode`. */
+  applyTimerPreset: (preset: keyof typeof TIMER_PRESETS) => void;
   setSubjectId: (id: string) => void;
   setSubjectName: (name: string) => void;
   setSubjectColor: (color: string) => void;
@@ -197,28 +199,32 @@ export const useSessionStore = create<SessionState>((set, get) => {
   return {
     ...initialState,
 
-    setTimerMode: (mode: TimerMode) => {
-      if (mode === 'pomodoro') {
-        set({
-          timerMode: mode,
-          workDuration: TIMER_PRESETS.pomodoro.work,
-          breakDuration: TIMER_PRESETS.pomodoro.break,
-        });
-      } else if (mode === 'deep_focus') {
-        set({
-          timerMode: mode,
-          workDuration: TIMER_PRESETS.deep_focus.work,
-          breakDuration: TIMER_PRESETS.deep_focus.break,
-        });
-      } else {
-        // `custom` keeps whatever the user picked; `stopwatch` has no target
-        // duration at all, so the values are simply never read.
-        set({ timerMode: mode });
-      }
-    },
+    /**
+     * Troca o modo — e **só** o modo.
+     *
+     * Antes daqui saíam também `workDuration`/`breakDuration`, sobrescritos com
+     * o preset sempre que o modo era (re)selecionado. Isso funcionava enquanto
+     * `pomodoro` era fixo em 25/5 e a configuração morava num modo à parte
+     * (`custom`). Agora o pomodoro é configurável: se este método continuasse
+     * aplicando o preset, tocar em "Pomodoro" logo depois de ajustar para 40/8
+     * jogaria a escolha do usuário fora. O preset agora só é aplicado quando
+     * ele pede — pelos atalhos, via `applyTimerPreset`.
+     *
+     * Sobre o `TimerMode`: o union ainda tem quatro membros
+     * (`pomodoro | deep_focus | custom | stopwatch`) porque o servidor guarda
+     * esse valor em sessões que já existem — `deep_focus` e `custom` são
+     * **histórico** e continuam entrando por `adoptSession`. A tela é o
+     * presente e oferece dois: `pomodoro` e `stopwatch`.
+     */
+    setTimerMode: (mode: TimerMode) => set({ timerMode: mode }),
 
     setWorkDuration: (minutes) => set({ workDuration: minutes }),
     setBreakDuration: (minutes) => set({ breakDuration: minutes }),
+    applyTimerPreset: (preset) =>
+      set({
+        workDuration: TIMER_PRESETS[preset].work,
+        breakDuration: TIMER_PRESETS[preset].break,
+      }),
     setSubjectId: (id) => set({ subjectId: id }),
     setSubjectName: (name) => set({ subjectName: name }),
     setSubjectColor: (color) => set({ subjectColor: color }),
@@ -250,6 +256,21 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
     adoptSession: (session: LiveSession) => {
       const isPaused = session.status === 'paused';
+      // `work_duration` e `break_duration` são opcionais no contrato da API —
+      // `stopwatch` não tem duração de fase nenhuma, e uma sessão antiga pode
+      // ter vindo sem elas. Atribuir direto punha `undefined` num campo
+      // `number`, e o timer imprimia `NaN:NaN` ao retomar a sessão; a
+      // notificação de fim de fase era agendada para `NaN` segundos junto.
+      // O preset do próprio modo é a resposta certa. Para `custom` sem valor,
+      // pomodoro é um piso razoável — e qualquer número real é melhor que
+      // `NaN`.
+      //
+      // Este ramo é a porta de entrada do histórico: a tela de setup só produz
+      // `pomodoro` e `stopwatch`, mas sessões gravadas antes disso chegam aqui
+      // como `deep_focus` ou `custom` e **têm que continuar sendo aceitas**.
+      // Não estreite isso para dois modos.
+      const preset =
+        session.timer_mode === 'deep_focus' ? TIMER_PRESETS.deep_focus : TIMER_PRESETS.pomodoro;
       set({
         currentSession: session,
         // Seed from the server's count, not from zero — on a relaunch this is
@@ -261,8 +282,8 @@ export const useSessionStore = create<SessionState>((set, get) => {
         isPaused,
         isDisconnected: false,
         timerMode: session.timer_mode,
-        workDuration: session.work_duration,
-        breakDuration: session.break_duration,
+        workDuration: session.work_duration ?? preset.work,
+        breakDuration: session.break_duration ?? preset.break,
         subjectId: session.subject_id,
         leagueId: session.league_id,
         phase: 'work',

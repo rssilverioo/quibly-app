@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
-import { LogBox, Platform } from 'react-native';
+import { LogBox, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+} from '@expo-google-fonts/nunito';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { firebaseConfigError } from '../lib/firebase';
 import { useSessionStore } from '../stores/session.store';
 import { useTheme, hydrateTheme } from '../theme';
 import {
@@ -32,6 +33,17 @@ import { initSentry, captureException } from '../lib/sentry';
 // permanent warning trains you to ignore the ones that matter.
 // Scoped to this single message on purpose: never ignoreAllLogs.
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
+
+// A única exceção à regra acima, e ela não vale no desenvolvimento normal.
+// Durante a captura de telas (`npm run print:ios`) o overlay do LogBox se
+// empilha exatamente sobre a barra de abas — que é justamente um elemento que
+// precisamos julgar contra a referência. Print com aviso por cima esconde a
+// interface que ele deveria provar.
+//
+// Atrás de variável de ambiente porque cegar o LogBox por padrão é como a
+// regra acima nasceu: aviso permanente treina você a ignorar os que importam.
+// Quem roda o app na mão continua vendo tudo.
+if (process.env.EXPO_PUBLIC_SEM_LOGBOX === '1') LogBox.ignoreAllLogs();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -139,7 +151,7 @@ function RootLayoutNav() {
         // Every one of these originates in a league. The old code sent feed
         // events to `/(tabs)/challenges`, a tab that doesn't exist.
         if (isLeagueEvent && data?.leagueId) {
-          router.push(`/league/${data.leagueId}` as any);
+          router.push(`/league/room/${data.leagueId}` as any);
         }
       },
     );
@@ -192,6 +204,20 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, isLoading, segments]);
 
+  // Checked before the loading gate on purpose. With Firebase misconfigured,
+  // `onAuthStateChanged` never fires, `isLoading` never clears, and the
+  // `return null` below leaves the splash up forever with nothing logged —
+  // which is how build 26 reached TestFlight and stalled there. Name the
+  // missing variables on screen instead of hanging.
+  if (firebaseConfigError) {
+    return (
+      <View style={[styles.configError, { backgroundColor: c.bg }]}>
+        <Text style={[styles.configErrorTitle, { color: c.fg }]}>Configuração ausente</Text>
+        <Text style={[styles.configErrorBody, { color: c.fgMuted }]}>{firebaseConfigError}</Text>
+      </View>
+    );
+  }
+
   if (isLoading) return null;
 
   return (
@@ -221,11 +247,18 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const { mode } = useTheme();
+  // Os quatro pesos que `FONTS` nomeia em @quibly/shared. Carregar de menos
+  // aqui não dá erro: o texto simplesmente cai para a fonte do sistema, que é
+  // o tipo de bug que ninguém vê no simulador e todo mundo vê na loja.
+  //
+  // A Inter continua instalada (`@expo-google-fonts/inter` no package.json) de
+  // propósito, como plano B: se a Nunito falhar em runtime, voltar é trocar
+  // estas quatro linhas e o bloco FONTS do shared, sem npm install no meio.
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
   });
 
   // Restore the saved theme before the first paint of any screen.
@@ -249,3 +282,9 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  configError: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
+  configErrorTitle: { fontSize: 20, fontWeight: '700' },
+  configErrorBody: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
+});

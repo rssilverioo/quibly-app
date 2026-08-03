@@ -45,5 +45,6 @@
     "15": "Regular",
     "30": "Sério",
     "60": "Intenso"
-  }
+  },
+  "saveFailed": "Não deu para salvar. Tente de novo."
 }

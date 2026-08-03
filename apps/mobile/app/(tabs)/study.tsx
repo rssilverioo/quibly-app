@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Play, ChevronRight, Layers } from 'lucide-react-native';
+import { Play, ChevronRight, Layers, Camera } from 'lucide-react-native';
 import type { FlashcardSet } from '@quibly/shared';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,7 @@ import { useTabBarClearance } from './_layout';
 export default function StudyScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('home');
+  const { t: lessonsTr } = useTranslation('lessons');
   const { c } = useTheme();
   const tabBarClearance = useTabBarClearance();
   const { profile } = useAuth();
@@ -56,14 +57,10 @@ export default function StudyScreen() {
             <Text style={{ ...t.title2, color: c.fg }}>{tr('startStudying')}</Text>
           </Animated.View>
 
-          {/* Total time is the hero — it's the number people come back for. */}
-          <Animated.View entering={FadeInDown.duration(300).delay(50)} style={styles.hero}>
-            <Text style={{ ...t.overline, color: c.fgSubtle }}>{tr('totalHours')}</Text>
-            <View style={styles.heroRow}>
-              <Text style={{ ...t.display, color: c.fg }}>{totalHours}</Text>
-              <Text style={{ ...t.title3, color: c.fgMuted, marginBottom: 10 }}>h</Text>
-            </View>
-          </Animated.View>
+          {/* O herói de 64pt saiu. Ele repetia, em `text.display`, exatamente o
+              primeiro mosaico da faixa de números logo abaixo — e a referência
+              não tem número grande em lugar nenhum (§2.2, §7). Hierarquia aqui
+              vem de posição: a ação primária vem antes do dado. */}
 
           {/* Resume takes priority over starting fresh */}
           {isPaused && (
@@ -116,6 +113,25 @@ export default function StudyScreen() {
             ))}
           </Animated.View>
 
+          <Animated.View entering={FadeInDown.duration(300).delay(175)} style={styles.lessonCapture}>
+            <Press
+              scale={0.98}
+              onPress={() => router.push('/lesson/capture')}
+              style={[styles.deckRow, { backgroundColor: c.surface, borderColor: c.border }]}
+            >
+              <View style={[styles.deckIcon, { backgroundColor: c.surfaceRaised }]}>
+                <Camera size={16} color={c.fgMuted} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...t.bodyStrong, color: c.fg }}>{lessonsTr('capture')}</Text>
+                <Text style={{ ...t.caption, color: c.fgMuted, marginTop: 2 }}>
+                  {lessonsTr('captureSub')}
+                </Text>
+              </View>
+              <ChevronRight size={17} color={c.fgSubtle} />
+            </Press>
+          </Animated.View>
+
           {flashcardSets.length > 0 && (
             <Animated.View entering={FadeInDown.duration(300).delay(190)} style={styles.section}>
               <View style={styles.sectionHead}>
@@ -160,17 +176,14 @@ export default function StudyScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: space.xl, paddingTop: space.md },
-
-  hero: { marginTop: space.xl, marginBottom: space.xl },
-  heroRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, marginTop: space.sm },
+  scroll: { paddingHorizontal: space.lg, paddingTop: space.md },
 
   resumeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     padding: space.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
     marginBottom: space.md,
   },
@@ -181,15 +194,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
-    paddingVertical: 18,
+    height: 54,
     borderRadius: radius.lg,
+    marginTop: space.lg,
   },
 
   statsRow: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
+  lessonCapture: { marginTop: space.xl },
   statCard: {
     flex: 1,
     padding: space.lg,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
   },
@@ -207,7 +222,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.md,
     padding: space.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   deckIcon: {

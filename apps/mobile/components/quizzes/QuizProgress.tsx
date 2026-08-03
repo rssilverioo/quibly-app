@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { FONTS } from '@quibly/shared/constants';
-import { staticDark as c } from '../../theme';
+import React, { useMemo } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { useTheme, type Palette, space } from '../../theme';
 
 interface QuizProgressProps {
   total: number;
@@ -10,6 +9,8 @@ interface QuizProgressProps {
 }
 
 export default function QuizProgress({ total, current, answers }: QuizProgressProps) {
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const progress = total > 0 ? ((current + 1) / total) * 100 : 0;
 
   return (
@@ -21,8 +22,10 @@ export default function QuizProgress({ total, current, answers }: QuizProgressPr
   );
 }
 
-const styles = StyleSheet.create({
-  container: { paddingHorizontal: 20, paddingVertical: 8 },
-  barTrack: { height: 8, backgroundColor: c.border, borderRadius: 4, overflow: 'hidden' },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  container: { paddingHorizontal: 20, paddingVertical: space.sm },
+  // O trilho era `c.border`, hairline de 1,25:1 no claro — a barra vazia sumia.
+  // Trilho é preenchimento, e o preenchimento neutro da paleta é `surfaceRaised`.
+  barTrack: { height: 8, backgroundColor: c.surfaceRaised, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: c.accent, borderRadius: 4 },
 });

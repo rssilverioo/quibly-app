@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Flame, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
-import { FONTS } from '@quibly/shared/constants';
-import { legacyColors as COLORS } from '../theme';
+import { useTheme, type Palette, radius, space, text } from '../theme';
 import { getStudyDates, type StudyDate } from '../services/sessions';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -51,6 +50,8 @@ export default function StreakCalendarModal({
   longestStreak,
 }: StreakCalendarModalProps) {
   const { t, i18n } = useTranslation('home');
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const isPt = i18n.language?.startsWith('pt');
   const monthNames = isPt ? MONTH_NAMES_PT : MONTH_NAMES_EN;
   const weekDays = isPt ? WEEK_DAYS_PT : WEEK_DAYS;
@@ -116,19 +117,19 @@ export default function StreakCalendarModal({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('streakCalendar.title')}</Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <X size={24} color={COLORS.textSecondary} />
+            <X size={24} color={c.fgMuted} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.streakRow}>
           <View style={styles.streakItem}>
-            <Flame size={20} color={COLORS.warning} fill={COLORS.warning} />
+            <Flame size={20} color={c.warning} fill={c.warning} />
             <Text style={styles.streakValue}>{currentStreak}</Text>
             <Text style={styles.streakLabel}>{t('streakCalendar.current')}</Text>
           </View>
           <View style={styles.streakDivider} />
           <View style={styles.streakItem}>
-            <Flame size={20} color={COLORS.accent} fill={COLORS.accent} />
+            <Flame size={20} color={c.accent} fill={c.accent} />
             <Text style={styles.streakValue}>{longestStreak}</Text>
             <Text style={styles.streakLabel}>{t('streakCalendar.longest')}</Text>
           </View>
@@ -136,7 +137,7 @@ export default function StreakCalendarModal({
 
         <View style={styles.monthNav}>
           <TouchableOpacity onPress={goToPrevMonth} style={styles.navButton}>
-            <ChevronLeft size={24} color={COLORS.text} />
+            <ChevronLeft size={24} color={c.fg} />
           </TouchableOpacity>
           <Text style={styles.monthTitle}>
             {monthNames[month - 1]} {year}
@@ -146,13 +147,13 @@ export default function StreakCalendarModal({
             style={styles.navButton}
             disabled={isCurrentMonth}
           >
-            <ChevronRight size={24} color={isCurrentMonth ? COLORS.textMuted : COLORS.text} />
+            <ChevronRight size={24} color={isCurrentMonth ? c.fgSubtle : c.fg} />
           </TouchableOpacity>
         </View>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={c.accent} />
           </View>
         ) : (
           <>
@@ -219,70 +220,64 @@ export default function StreakCalendarModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: c.bg,
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: space.lg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: space.xl,
   },
   headerTitle: {
-    fontSize: 22,
-    fontFamily: FONTS.bold,
-    color: COLORS.text,
+    ...text.title2,
+    color: c.fg,
   },
   streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
+    backgroundColor: c.surface,
+    borderRadius: radius.md,
+    padding: space.lg,
+    marginBottom: space.xl,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
   streakItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: space.xs,
   },
   streakValue: {
-    fontSize: 28,
-    fontFamily: FONTS.bold,
-    color: COLORS.text,
+    ...text.title2,
+    color: c.fg,
   },
   streakLabel: {
-    fontSize: 12,
-    fontFamily: FONTS.medium,
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...text.overline,
+    color: c.fgMuted,
   },
   streakDivider: {
     width: 1,
     height: 48,
-    backgroundColor: COLORS.border,
+    backgroundColor: c.border,
   },
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: space.lg,
   },
   navButton: {
-    padding: 8,
+    padding: space.sm,
   },
   monthTitle: {
-    fontSize: 18,
-    fontFamily: FONTS.semiBold,
-    color: COLORS.text,
+    ...text.title3,
+    color: c.fg,
   },
   loadingContainer: {
     height: 240,
@@ -292,18 +287,18 @@ const styles = StyleSheet.create({
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 8,
+    marginBottom: space.sm,
   },
   weekCell: {
     width: CELL_SIZE,
     alignItems: 'center',
   },
+  // Era `textMuted` (= `fgSubtle`): a sobrancelha da semana precisa ser lida
+  // para o calendário funcionar, então é `fgMuted`. `fgSubtle` fica para o que
+  // está desabilitado — aqui, só o chevron do mês futuro.
   weekDayText: {
-    fontSize: 12,
-    fontFamily: FONTS.semiBold,
-    color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...text.overline,
+    color: c.fgMuted,
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -315,7 +310,7 @@ const styles = StyleSheet.create({
     height: CELL_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: space.xs,
   },
   dayCircle: {
     width: CELL_SIZE - 8,
@@ -325,53 +320,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayCircleStudied: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: c.accent,
   },
   dayCircleToday: {
     borderWidth: 2,
-    borderColor: COLORS.text,
+    borderColor: c.fg,
   },
   dayText: {
-    fontSize: 15,
-    fontFamily: FONTS.medium,
-    color: COLORS.textSecondary,
+    ...text.label,
+    color: c.fgMuted,
   },
+  // O dia estudado é um disco de `accent`; o número em cima dele é
+  // `fgOnAccent`. Era `c.fg`, near-black sobre azul — 2,1:1, ilegível.
   dayTextStudied: {
-    color: COLORS.text,
-    fontFamily: FONTS.bold,
+    color: c.fgOnAccent,
+    fontFamily: text.bodyStrong.fontFamily,
   },
   dayTextToday: {
-    color: COLORS.text,
-    fontFamily: FONTS.bold,
+    color: c.fg,
+    fontFamily: text.bodyStrong.fontFamily,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 24,
+    backgroundColor: c.surface,
+    borderRadius: radius.md,
+    padding: space.lg,
+    marginTop: space.xl,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
   footerStat: {
     flex: 1,
     alignItems: 'center',
   },
   footerValue: {
-    fontSize: 20,
-    fontFamily: FONTS.bold,
-    color: COLORS.text,
-    marginBottom: 4,
+    ...text.title3,
+    fontFamily: text.bodyStrong.fontFamily,
+    color: c.fg,
+    marginBottom: space.xs,
   },
   footerLabel: {
-    fontSize: 12,
-    fontFamily: FONTS.medium,
-    color: COLORS.textSecondary,
+    ...text.caption,
+    color: c.fgMuted,
   },
   footerDivider: {
     width: 1,
     height: 32,
-    backgroundColor: COLORS.border,
+    backgroundColor: c.border,
   },
 });

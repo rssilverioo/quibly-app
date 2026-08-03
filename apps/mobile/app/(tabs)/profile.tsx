@@ -1,33 +1,28 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Alert, RefreshControl, Dimensions, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, Image, Alert, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
-import { logout as firebaseLogout, deleteAccount } from '../../services/auth';
-import { uploadAvatar } from '../../services/storage';
-import { updateProfile } from '../../services/auth';
-import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
-import { FONTS, xpForLevel, calculateTitle } from '@quibly/shared/constants';
-import { legacyColors as COLORS } from '../../theme';
 import {
-  Clock, ShieldCheck, Flame, Zap, Target, Star,
-  LogOut, ChevronRight, Camera, Trophy, BookOpen,
-  Crown, Users, Award, GraduationCap, Skull, Shield, Lock, Pencil, Globe, Trash2,
+  Clock, Flame, LogOut, ChevronRight, Camera, Trophy, BookOpen, Crown, Users,
+  Award, GraduationCap, Skull, Shield, ShieldCheck, Target, Zap, Star, Lock,
+  Pencil, Globe, Trash2, Moon,
 } from 'lucide-react-native';
+
+import { useAuth } from '../../contexts/AuthContext';
+import { logout as firebaseLogout, deleteAccount, updateProfile } from '../../services/auth';
+import { uploadAvatar } from '../../services/storage';
+import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
+import { xpForLevel, calculateTitle } from '@quibly/shared/constants';
+import Press from '../../components/ui/Press';
+import { MascotBlock } from '../../components/mascot';
+import { useTheme, type Palette, text, space, radius } from '../../theme';
 import i18n from '../../lib/i18n';
 import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
-import { getMyLeagues } from '../../services/leagues';
-import type { League } from '@quibly/shared';
-import { staticDark as c } from '../../theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const STAT_CARD_WIDTH = (SCREEN_WIDTH - 24 * 2 - 12) / 2;
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -46,12 +41,15 @@ const ACHIEVEMENT_ICONS: Record<string, any> = {
 
 export default function ProfileScreen() {
   const { t } = useTranslation('profile');
+  const { c, mode, setMode } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const tabBarClearance = useTabBarClearance();
   const { user, profile, refreshProfile, setProfile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [achievements, setAchievements] = useState<AchievementWithStatus[]>([]);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
-  const [leagues, setLeagues] = useState<League[]>([]);
+  /** A URL do avatar pode existir e não carregar — ver `avatarBroken` abaixo. */
+  const [avatarBroken, setAvatarBroken] = useState(false);
 
   const achievementsFetched = useRef(false);
 
@@ -80,11 +78,7 @@ export default function ProfileScreen() {
     if (profile && !achievementsFetched.current) fetchAchievements();
   }, [profile, fetchAchievements]);
 
-  useEffect(() => {
-    if (user) {
-      getMyLeagues(user.uid).then(setLeagues).catch(() => {});
-    }
-  }, [user]);
+  useEffect(() => { setAvatarBroken(false); }, [profile?.avatar_url]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -105,6 +99,9 @@ export default function ProfileScreen() {
     }
   };
 
+  // Alerta continua aqui, e só aqui: `§4.4` proíbe alerta para erro de
+  // carregamento, não para ação destrutiva — que é exatamente o que estas duas
+  // são.
   const handleLogout = () => {
     Alert.alert(t('logOutConfirmTitle'), t('logOutConfirmMessage'), [
       { text: t('common:cancel'), style: 'cancel' },
@@ -129,14 +126,25 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // Esqueleto no lugar do spinner: a forma do conteúdo é conhecida (§4.4).
   if (!profile) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginBottom: 12 }} />
-        <Text style={styles.loadingText}>{t('common:loading')}</Text>
-        <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.surface, borderRadius: 10 }} onPress={refreshProfile}>
-          <Text style={{ color: COLORS.primary, fontFamily: FONTS.semiBold, fontSize: 14 }}>{t('common:retry', { defaultValue: 'Retry' })}</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.skeletonWrap}>
+          <Text style={styles.title}>{t('title')}</Text>
+          <View style={styles.header}>
+            <View style={styles.skeletonAvatar} />
+            <View style={{ flex: 1, gap: space.sm }}>
+              <View style={[styles.skeletonBar, { width: '55%' }]} />
+              <View style={[styles.skeletonBar, { width: '35%', height: 12 }]} />
+            </View>
+          </View>
+          <View style={styles.skeletonCard} />
+          <Press haptic="light" onPress={refreshProfile} style={styles.retryRow}>
+            <ActivityIndicator size="small" color={c.accent} />
+            <Text style={styles.retryText}>{t('common:loading')}</Text>
+          </Press>
+        </View>
       </SafeAreaView>
     );
   }
@@ -146,100 +154,116 @@ export default function ProfileScreen() {
   const nextLevelXp = xpForLevel(currentLevel + 1);
   const xpInCurrentLevel = profile.total_xp - currentLevelXp;
   const xpNeeded = nextLevelXp - currentLevelXp;
-  const xpProgress = xpNeeded > 0 ? Math.min(xpInCurrentLevel / xpNeeded, 1) : 0;
-  const totalHours = Math.floor(profile.total_study_minutes / 60);
+  const xpProgress = xpNeeded > 0 ? Math.min(Math.max(xpInCurrentLevel / xpNeeded, 0), 1) : 0;
   const title = calculateTitle(profile);
+  const showAvatarImage = !!profile.avatar_url && !avatarBroken;
+
+  /**
+   * Três números, e só três (`§5.12` bloco 3).
+   *
+   * A grade anterior tinha seis mosaicos com seis ícones em seis cores — relógio
+   * azul, escudo verde, chama vermelha, raio laranja, alvo azul, estrela
+   * amarela. `§2.3` gasta cor em três lugares no app inteiro; um semáforo de
+   * seis não é um deles. Sem ícone, sem cor: valor em cima, rótulo embaixo.
+   */
+  const numbers = [
+    { key: 'streak', value: String(profile.current_streak), label: t('streakShort'), onPress: () => setShowStreakCalendar(true) },
+    { key: 'minutes', value: formatNumber(profile.total_study_minutes), label: t('minutesShort') },
+    { key: 'level', value: String(currentLevel), label: t('levelShort') },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
-        style={styles.scrollView}
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarClearance }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.fgMuted} />}>
 
-        <View style={styles.headerSection}>
-          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.7}>
-            {profile.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+        <Text style={styles.title}>{t('title')}</Text>
+
+        {/* 2 — cabeçalho: avatar 72 + nome + sublinha */}
+        <View style={styles.header}>
+          <Press haptic="light" scale={0.94} onPress={pickAvatar} style={styles.avatarWrap}>
+            {showAvatarImage ? (
+              <Image
+                source={{ uri: profile.avatar_url! }}
+                style={styles.avatar}
+                // Sem isto, uma URL quebrada desenhava um anel vazio que lia
+                // como carregamento travado. Foto que não vem vira inicial.
+                onError={() => setAvatarBroken(true)}
+              />
             ) : (
-              <View style={styles.avatarPlaceholder}>
+              <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitials}>{getInitials(profile.username)}</Text>
               </View>
             )}
-            <View style={styles.avatarEditBadge}><Camera size={13} color={COLORS.text} strokeWidth={2.5} /></View>
-          </TouchableOpacity>
-          <Text style={styles.username}>{profile.username}</Text>
-          <Text style={styles.handle}>@{profile.handle}</Text>
-          <View style={[styles.titleBadge, { borderColor: title.color + '40', backgroundColor: title.color + '15' }]}>
-            <Text style={[styles.titleText, { color: title.color }]}>{t(`titles.${title.id}`)}</Text>
+            <View style={styles.avatarBadge}><Camera size={13} color={c.fgMuted} strokeWidth={2.2} /></View>
+          </Press>
+          <View style={styles.headerText}>
+            <Text style={styles.name} numberOfLines={1}>{profile.username}</Text>
+            <Text style={styles.handle} numberOfLines={1}>
+              @{profile.handle} · {t(`titles.${title.id}`)}
+            </Text>
           </View>
-          {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
         </View>
 
-        <View style={styles.xpCard}>
-          <View style={styles.xpCardHeader}>
-            <View style={styles.levelBadge}><View style={styles.levelBadgeInner}><Text style={styles.levelBadgeNumber}>{currentLevel}</Text></View></View>
-            <View style={styles.xpInfo}>
-              <Text style={styles.levelLabel}>{t('home:level')} {currentLevel}</Text>
-              <Text style={styles.xpText}>{formatNumber(Math.max(0, xpInCurrentLevel))} / {formatNumber(xpNeeded)} {t('common:xp')}</Text>
-            </View>
+        {/* 3 — card de números: valor sobre rótulo, três colunas */}
+        <View style={styles.numbersCard}>
+          <View style={styles.numbersRow}>
+            {numbers.map((n) => {
+              const inner = (
+                <>
+                  <Text style={styles.numberValue}>{n.value}</Text>
+                  <Text style={styles.numberLabel} numberOfLines={1}>{n.label}</Text>
+                </>
+              );
+              return n.onPress ? (
+                <Press key={n.key} haptic={false} scale={0.96} onPress={n.onPress} style={styles.numberCell}>
+                  {inner}
+                </Press>
+              ) : (
+                <View key={n.key} style={styles.numberCell}>{inner}</View>
+              );
+            })}
           </View>
-          <View style={styles.xpBarContainer}><View style={styles.xpBarBackground}><View style={[styles.xpBarFill, { width: `${Math.max(xpProgress * 100, 2)}%` }]} /></View></View>
+          {/* Barra de progresso — um dos três lugares em que o accent pode
+              ocupar área (§2.3). 6pt, como o card do desafio no feed (§3.2.5). */}
+          <View style={styles.xpTrack}>
+            <View style={[styles.xpFill, { width: `${Math.max(xpProgress * 100, 2)}%` }]} />
+          </View>
+          <Text style={styles.xpText}>
+            {formatNumber(Math.max(0, xpInCurrentLevel))} / {formatNumber(xpNeeded)} {t('common:xp')}
+          </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>{t('stats')}</Text>
-        <View style={styles.statsGrid}>
-          {[
-            { Icon: Clock, value: formatNumber(totalHours), label: t('totalHours'), color: COLORS.primary },
-            { Icon: ShieldCheck, value: formatNumber(profile.verified_hours), label: t('verifiedHours'), color: COLORS.success },
-            { Icon: Flame, value: t('streakDays', { count: profile.current_streak }), label: t('currentStreak'), color: COLORS.accent, onPress: () => setShowStreakCalendar(true) },
-            { Icon: Zap, value: t('streakDays', { count: profile.longest_streak }), label: t('longestStreak'), color: COLORS.warning, onPress: () => setShowStreakCalendar(true) },
-            { Icon: Target, value: `${profile.lock_in_score}/100`, label: t('lockInScore'), color: COLORS.primaryLight },
-            { Icon: Star, value: formatNumber(profile.total_xp), label: t('totalXP'), color: COLORS.gold },
-          ].map((stat) => {
-            const content = (
-              <>
-                <stat.Icon size={20} color={stat.color} style={{ marginBottom: 8 }} />
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </>
-            );
-            return stat.onPress ? (
-              <TouchableOpacity key={stat.label} style={styles.statCard} activeOpacity={0.7} onPress={stat.onPress}>
-                {content}
-              </TouchableOpacity>
-            ) : (
-              <View key={stat.label} style={styles.statCard}>
-                {content}
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Achievements — compact horizontal */}
         {achievements.length > 0 && (
           <>
-            <View style={styles.achievementsHeader}>
+            <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>{t('achievements')}</Text>
-              <Text style={styles.achievementsCount}>
+              <Text style={styles.sectionCount}>
                 {achievements.filter((a) => a.unlocked).length}/{achievements.length}
               </Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.achievementsScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipRailOuter}
+              contentContainerStyle={styles.chipRail}
+            >
               {achievements
+                .slice()
                 .sort((a, b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0))
                 .map((a) => {
                   const IconComponent = ACHIEVEMENT_ICONS[a.icon] || Trophy;
                   return (
-                    <View key={a.id} style={[styles.achievementChip, !a.unlocked && styles.achievementChipLocked]}>
-                      <View style={[styles.achievementChipIcon, a.unlocked ? { backgroundColor: c.accentSoft } : { backgroundColor: c.surfaceRaised }]}>
+                    <View key={a.id} style={[styles.chip, !a.unlocked && styles.chipLocked]}>
+                      <View style={styles.chipIcon}>
                         {a.unlocked
-                          ? <IconComponent size={16} color={c.accent} />
-                          : <Lock size={12} color={c.fgSubtle} />
-                        }
+                          ? <IconComponent size={15} color={c.fg} strokeWidth={2.2} />
+                          : <Lock size={12} color={c.fgSubtle} />}
                       </View>
-                      <Text style={[styles.achievementChipName, !a.unlocked && { color: c.fgSubtle }]} numberOfLines={1}>{a.name}</Text>
+                      <Text style={styles.chipName} numberOfLines={1}>{a.name}</Text>
                     </View>
                   );
                 })}
@@ -249,79 +273,49 @@ export default function ProfileScreen() {
 
         <Text style={styles.sectionTitle}>{t('settings')}</Text>
 
-        {/* Account */}
-        <View style={styles.settingsContainer}>
-          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/league' as any)} activeOpacity={0.7}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: c.surfaceRaised }]}>
-              <Trophy size={17} color={c.warning} />
-            </View>
-            <Text style={styles.settingsLabel}>{t('leagues:title', { defaultValue: 'My Leagues' })}</Text>
-            {leagues.length > 0 && <Text style={styles.settingsBadge}>{leagues.length}</Text>}
-            <ChevronRight size={17} color={c.fgSubtle} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={() => router.push('/pricing')} activeOpacity={0.7}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: c.surfaceRaised }]}>
-              <Crown size={17} color={c.warning} />
-            </View>
-            <Text style={styles.settingsLabel}>{t('pricing:myPlan')}</Text>
-            <ChevronRight size={17} color={c.fgSubtle} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsRow} onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.primaryLight + '18' }]}>
-              <Pencil size={17} color={COLORS.primaryLight} />
-            </View>
-            <Text style={styles.settingsLabel}>{t('editProfile')}</Text>
-            <ChevronRight size={17} color={COLORS.textMuted} />
-          </TouchableOpacity>
+        {/* Conta. "Minhas Ligas" saiu daqui: era a única porta para
+            `app/league/index.tsx`, que `FLUXO §10` já matou (§3.4). */}
+        <View style={styles.group}>
+          <SettingsRow styles={styles} c={c} Icon={Crown} label={t('pricing:myPlan')} onPress={() => router.push('/pricing')} divider />
+          <SettingsRow styles={styles} c={c} Icon={Pencil} label={t('editProfile')} onPress={() => router.push('/profile/edit')} divider />
+          {/* O escuro não sumiu — está a um toque (`theme/index.ts`). */}
+          <SettingsRow
+            styles={styles}
+            c={c}
+            Icon={Moon}
+            label={t('appearance')}
+            value={mode === 'dark' ? t('themeDark') : t('themeLight')}
+            onPress={() => setMode(mode === 'dark' ? 'light' : 'dark')}
+          />
         </View>
 
-        {/* Language */}
-        <View style={[styles.settingsContainer, { marginTop: 12 }]}>
+        <View style={styles.group}>
           <View style={styles.settingsRow}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.primaryLight + '18' }]}>
-              <Globe size={17} color={COLORS.primaryLight} />
-            </View>
+            <View style={styles.settingsIcon}><Globe size={17} color={c.fgMuted} strokeWidth={2.2} /></View>
             <Text style={styles.settingsLabel}>{t('language')}</Text>
           </View>
-          <View style={styles.langToggleContainer}>
-            <TouchableOpacity
-              style={[styles.langOption, i18n.language === 'en' && styles.langOptionActive]}
-              onPress={() => i18n.changeLanguage('en')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.langOptionText, i18n.language === 'en' && styles.langOptionTextActive]}>
-                English
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.langOption, i18n.language === 'pt-BR' && styles.langOptionActive]}
-              onPress={() => i18n.changeLanguage('pt-BR')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.langOptionText, i18n.language === 'pt-BR' && styles.langOptionTextActive]}>
-                Português (BR)
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.segmented}>
+            {([['en', 'English'], ['pt-BR', 'Português (BR)']] as const).map(([code, label]) => {
+              const active = i18n.language === code;
+              return (
+                <Press
+                  key={code}
+                  haptic={false}
+                  scale={0.97}
+                  onPress={() => i18n.changeLanguage(code)}
+                  style={[styles.segment, active && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+                </Press>
+              );
+            })}
           </View>
         </View>
 
-        {/* Log Out & Delete Account */}
-        <View style={[styles.settingsContainer, { marginTop: 12 }]}>
-          <TouchableOpacity style={[styles.settingsRow, styles.settingsRowBorder]} onPress={handleLogout} activeOpacity={0.7}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.error + '15' }]}>
-              <LogOut size={17} color={COLORS.error} />
-            </View>
-            <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('logOut')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsRow} onPress={handleDeleteAccount} activeOpacity={0.7}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: COLORS.error + '15' }]}>
-              <Trash2 size={17} color={COLORS.error} />
-            </View>
-            <Text style={[styles.settingsLabel, { color: COLORS.error }]}>{t('deleteAccount')}</Text>
-          </TouchableOpacity>
+        <View style={styles.group}>
+          <SettingsRow styles={styles} c={c} Icon={LogOut} label={t('logOut')} onPress={handleLogout} destructive divider />
+          <SettingsRow styles={styles} c={c} Icon={Trash2} label={t('deleteAccount')} onPress={handleDeleteAccount} destructive />
         </View>
-
-        <View style={{ height: 40 }} />
       </ScrollView>
 
       <StreakCalendarModal
@@ -334,71 +328,127 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+/** Linha de ajuste: 56 de altura, ícone neutro, chevron 18 em `c.fgSubtle`. */
+function SettingsRow({
+  styles, c, Icon, label, value, onPress, destructive, divider,
+}: {
+  styles: ReturnType<typeof makeStyles>;
+  c: Palette;
+  Icon: typeof Crown;
+  label: string;
+  value?: string;
+  onPress: () => void;
+  destructive?: boolean;
+  divider?: boolean;
+}) {
+  return (
+    <Press
+      haptic="light"
+      scale={0.99}
+      onPress={onPress}
+      style={[styles.settingsRow, divider && styles.settingsRowDivider]}
+    >
+      <View style={styles.settingsIcon}>
+        <Icon size={17} color={destructive ? c.danger : c.fgMuted} strokeWidth={2.2} />
+      </View>
+      <Text style={[styles.settingsLabel, destructive && { color: c.danger }]}>{label}</Text>
+      {value ? <Text style={styles.settingsValue}>{value}</Text> : null}
+      {!destructive && <ChevronRight size={18} color={c.fgSubtle} />}
+    </Press>
+  );
+}
+
+const makeStyles = (c: Palette) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: c.bg },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 8 },
-  loadingContainer: { flex: 1, backgroundColor: c.bg, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { color: c.fgSubtle, fontSize: 16 },
-  headerSection: { alignItems: 'center', paddingTop: 16, paddingBottom: 24 },
-  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: c.accent },
-  avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: c.accent },
-  avatarInitials: { color: c.fgOnAccent, fontSize: 28, fontWeight: '700' },
-  avatarEditBadge: { position: 'absolute', bottom: 0, right: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: c.bg },
-  avatarEditIcon: { color: c.fgOnAccent, fontSize: 16, fontWeight: '700', lineHeight: 18 },
-  username: { color: c.fg, fontSize: 24, fontWeight: '700', marginTop: 14 },
-  handle: { color: c.fgSubtle, fontSize: 15, marginTop: 4 },
-  titleBadge: { marginTop: 10, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  titleText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
-  bio: { color: c.fgMuted, fontSize: 14, textAlign: 'center', marginTop: 10, paddingHorizontal: 20, lineHeight: 20 },
-  xpCard: { backgroundColor: c.surface, borderRadius: 18, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: c.border },
-  xpCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  levelBadge: { width: 56, height: 56, borderRadius: 28, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: c.accent },
-  levelBadgeInner: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
-  levelBadgeNumber: { color: c.fgOnAccent, fontSize: 20, fontWeight: '800' },
-  xpInfo: { marginLeft: 16, flex: 1 },
-  levelLabel: { color: c.fg, fontSize: 18, fontWeight: '700' },
-  xpText: { color: c.fgSubtle, fontSize: 14, marginTop: 2 },
-  xpBarContainer: { marginBottom: 8 },
-  xpBarBackground: { height: 10, backgroundColor: c.border, borderRadius: 5, overflow: 'hidden' },
-  xpBarFill: { height: '100%', backgroundColor: c.accent, borderRadius: 5 },
-  sectionTitle: { color: c.fg, fontSize: 18, fontWeight: '700', marginBottom: 14 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
-  statCard: { width: STAT_CARD_WIDTH, backgroundColor: c.surface, borderRadius: 16, padding: 16, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: c.border },
-  statIcon: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
-  statValue: { color: c.fg, fontSize: 20, fontWeight: '700' },
-  statLabel: { color: c.fgSubtle, fontSize: 12, marginTop: 4, fontWeight: '500' },
-  // Achievements — horizontal chips
-  achievementsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 },
-  achievementsCount: { color: c.fgSubtle, fontSize: 14, fontWeight: '600' },
-  achievementsScroll: { paddingRight: 24, marginBottom: 24 },
-  achievementChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: 24, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: c.border },
-  achievementChipLocked: { opacity: 0.45 },
-  achievementChipIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  achievementChipName: { color: c.fg, fontSize: 12, fontWeight: '600' },
-  settingsBadge: { backgroundColor: c.accentSoft, color: c.accent, fontSize: 12, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginRight: 6, overflow: 'hidden' },
-  // Settings
-  settingsContainer: { backgroundColor: c.surface, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: c.border },
-  settingsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  settingsRowBorder: { borderBottomWidth: 1, borderBottomColor: c.surfaceRaised },
-  settingsIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  settingsLabel: { flex: 1, fontSize: 15, fontFamily: FONTS.medium, color: c.fg },
-  logoutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  langToggleContainer: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 14, backgroundColor: c.surfaceRaised, borderRadius: 12, padding: 4 },
-  langOption: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  langOptionActive: { backgroundColor: c.accent },
-  langOptionText: { fontSize: 14, fontFamily: FONTS.semiBold, color: c.fgSubtle },
-  langOptionTextActive: { color: c.fgOnAccent },
-  // Leagues
-  leagueActions: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  leagueCreateBtn: { flex: 1, height: 40, backgroundColor: c.accent, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  leagueCreateText: { color: c.fgOnAccent, fontSize: 14, fontFamily: FONTS.bold },
-  leagueJoinBtn: { flex: 1, height: 40, backgroundColor: c.surface, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: c.accent },
-  leagueJoinText: { color: c.accent, fontSize: 14, fontFamily: FONTS.bold },
-  leagueCard: { width: 140, backgroundColor: c.surface, borderRadius: 16, padding: 14, marginRight: 10, borderWidth: 1, borderColor: c.border },
-  leagueTrophy: { width: 36, height: 36, borderRadius: 10, backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  leagueName: { fontSize: 14, fontFamily: FONTS.semiBold, color: c.fg, marginBottom: 4 },
-  leagueMeta: { fontSize: 11, fontFamily: FONTS.medium, color: c.fgSubtle },
-  leagueEmpty: { alignItems: 'center', paddingVertical: 24, marginBottom: 16 },
-  leagueEmptyText: { fontSize: 14, fontFamily: FONTS.medium, color: c.fgSubtle, marginTop: 8 },
+  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.md },
+  skeletonWrap: { paddingHorizontal: space.lg, paddingTop: space.md },
+
+  title: { ...text.title2, color: c.fg, marginBottom: space.lg },
+
+  header: { height: 72, flexDirection: 'row', alignItems: 'center', gap: space.lg, marginBottom: space.xl },
+  avatarWrap: { width: 72, height: 72 },
+  avatar: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: c.surfaceRaised },
+  // Sem foto: iniciais em `c.fgMuted` sobre `c.surfaceRaised` (§5.12).
+  // O anel de accent saiu — o accent não decora identidade (§2.3).
+  avatarFallback: {
+    width: 72, height: 72, borderRadius: radius.full,
+    backgroundColor: c.surfaceRaised, borderWidth: 1, borderColor: c.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarInitials: { ...text.title3, color: c.fgMuted },
+  avatarBadge: {
+    position: 'absolute', right: -2, bottom: -2, width: 26, height: 26,
+    borderRadius: radius.full, backgroundColor: c.surface,
+    borderWidth: 1, borderColor: c.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerText: { flex: 1, gap: 2 },
+  name: { ...text.title3, color: c.fg },
+  handle: { ...text.caption, color: c.fgMuted },
+
+  numbersCard: {
+    backgroundColor: c.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingVertical: space.lg,
+    paddingHorizontal: space.lg,
+    marginBottom: space.xl,
+  },
+  numbersRow: { flexDirection: 'row', justifyContent: 'space-evenly' },
+  numberCell: { flex: 1, alignItems: 'center', gap: 2 },
+  numberValue: { ...text.bodyStrong, color: c.fg },
+  numberLabel: { ...text.caption, color: c.fgMuted },
+  xpTrack: { height: 6, borderRadius: radius.full, backgroundColor: c.surfacePressed, overflow: 'hidden', marginTop: space.lg },
+  xpFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.accent },
+  xpText: { ...text.caption, color: c.fgMuted, marginTop: space.sm },
+
+  sectionTitle: { ...text.bodyStrong, color: c.fg, marginBottom: space.md },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionCount: { ...text.caption, color: c.fgMuted, marginBottom: space.md },
+
+  // 24 abaixo do trilho, como entre qualquer par de blocos (§5.12). Vai no
+  // `style` e não no `contentContainerStyle` porque margem em container de
+  // conteúdo de ScrollView horizontal não empurra o que vem depois.
+  chipRailOuter: { marginBottom: space.xl },
+  chipRail: { gap: space.sm, paddingRight: space.lg },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: c.surface, borderRadius: radius.full,
+    paddingHorizontal: space.md, paddingVertical: space.sm,
+    borderWidth: 1, borderColor: c.border,
+  },
+  chipLocked: { opacity: 0.45 },
+  chipIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  chipName: { ...text.caption, color: c.fg },
+
+  group: {
+    backgroundColor: c.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: c.border,
+    overflow: 'hidden',
+    marginBottom: space.xl,
+  },
+  settingsRow: { height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, gap: space.md },
+  settingsRowDivider: { borderBottomWidth: 1, borderBottomColor: c.border },
+  settingsIcon: { width: 24, alignItems: 'center', justifyContent: 'center' },
+  settingsLabel: { ...text.body, color: c.fg, flex: 1 },
+  settingsValue: { ...text.label, color: c.fgMuted },
+
+  segmented: {
+    flexDirection: 'row', gap: space.xs,
+    marginHorizontal: space.lg, marginBottom: space.lg,
+    backgroundColor: c.surfaceRaised, borderRadius: radius.sm, padding: space.xs,
+  },
+  segment: { flex: 1, height: 40, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+  segmentActive: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  segmentText: { ...text.label, color: c.fgMuted },
+  segmentTextActive: { color: c.fg },
+
+  skeletonAvatar: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: c.skeleton },
+  skeletonBar: { height: 16, borderRadius: radius.sm, backgroundColor: c.skeleton },
+  skeletonCard: { height: 96, borderRadius: radius.sm, backgroundColor: c.skeleton },
+  retryRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xl, alignSelf: 'flex-start' },
+  retryText: { ...text.label, color: c.fgMuted },
 });

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, Dimensions, AppState } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, AppState } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue, useAnimatedProps, withTiming, runOnJS, Easing,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Pause, Play, Square } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useSessionStore } from '../../stores/session.store';
-import { useAuth } from '../../contexts/AuthContext';
-import LevelUpAnimation from '../../components/LevelUpAnimation';
 import Press from '../../components/ui/Press';
 import { Mascot } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
@@ -25,16 +25,28 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const TOTAL_CYCLES = 4;
 
+/**
+ * Quanto tempo "Encerrar" precisa ficar apertado (`FLUXO §7.1`, `§5.13`).
+ *
+ * Substitui um `Alert.alert` de confirmação. O diálogo tinha um "Cancelar", e
+ * um botão de fuga no único instante do app em que não pode haver um: quem
+ * abriu o alerta por engano já tinha parado de estudar para lidar com ele.
+ * Segurar resolve os dois lados — não dispara sozinho e não interrompe.
+ */
+const HOLD_TO_END_MS = 400;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 export default function ActiveSessionScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('session');
   const { c } = useTheme();
-  const { refreshProfile } = useAuth();
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [showLevelUp, setShowLevelUp] = useState(false);
-  const [levelUpTo, setLevelUpTo] = useState<number | null>(null);
   const [isEnding, setIsEnding] = useState(false);
+  /** O `end` falhou. O timer NÃO some — perder a sessão aqui é perder o produto. */
+  const [endFailed, setEndFailed] = useState(false);
+  const holdProgress = useSharedValue(0);
   /**
    * Bumped once a second purely to re-render. The number on screen is derived
    * from `displayedElapsedSeconds()`, which reads the server's last count plus
@@ -47,7 +59,7 @@ export default function ActiveSessionScreen() {
     isRunning, isPaused, isDisconnected, phase, phaseElapsedSeconds, pomodorosCompleted,
     timerMode, workDuration, breakDuration, subjectName, subjectColor,
     tick, pause, resume, startBreak, startWork,
-    endSession, reset, syncNow, displayedElapsedSeconds,
+    endSession, syncNow, displayedElapsedSeconds,
   } = useSessionStore();
 
   const isStopwatch = timerMode === 'stopwatch';
@@ -76,8 +88,14 @@ export default function ActiveSessionScreen() {
       : 0;
 
   // Work is the accent; break drops to muted so the two phases are legible
-  // at a glance from across a desk.
-  const activeColor = phase === 'work' ? c.accent : c.fgMuted;
+  // at a glance from across a desk. Pausado apaga o anel inteiro (`§5.13`): o
+  // estado tem que ser visível do outro lado da mesa, não só no ícone do botão.
+  const activeColor = isPaused
+    ? c.fgSubtle
+    : phase === 'work'
+      ? c.accent
+      : c.fgMuted;
+  const timerColor = isPaused ? c.fgMuted : c.fg;
 
   // The mascot climbs a ladder as the session runs — see
   // packages/shared/src/session-milestones.ts. Driven by *credited* minutes
@@ -123,47 +141,80 @@ export default function ActiveSessionScreen() {
     }
   }, [isStopwatch, remainingSeconds, isRunning, phase, phaseElapsedSeconds, startBreak, startWork]);
 
-  const goHome = useCallback(async () => {
-    reset();
-    await refreshProfile();
-    router.replace('/');
-  }, [reset, refreshProfile, router]);
-
-  const handleEndSession = useCallback(() => {
+  /**
+   * Encerrar termina em `/session/published`, nunca na home (`§5.13`).
+   *
+   * Antes daqui saía `goHome()`: `reset()` + `refreshProfile()` + `router
+   * .replace('/')`, e a comemoração de nível chamava a mesma função ao acabar —
+   * ou seja, **a comemoração enterrava o post**. As duas coisas mudaram de
+   * lugar: a limpeza do store e o `refreshProfile()` são a primeira coisa que
+   * `published.tsx` faz, e o `LevelUpAnimation` toca lá, por cima do card, e
+   * termina nele.
+   *
+   * Não há nada a "publicar" nesta transição: o `end` do servidor já criou o
+   * post em cada sala (`sessions.service.ts:649`). Esta tela só leva a pessoa
+   * até ele.
+   */
+  const handleEndSession = useCallback(async () => {
     if (isEnding) return;
-    Alert.alert(tr('active.endConfirmTitle'), tr('active.endConfirmMessage'), [
-      { text: tr('common:cancel'), style: 'cancel' },
-      {
-        text: tr('active.endSession'),
-        style: 'destructive',
-        onPress: async () => {
-          setIsEnding(true);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-          // No local pause first — `end` is itself terminal on the server, and
-          // pausing would only add a stray interval to the session's record.
-          try {
-            const result = await endSession();
-            // session_completed is server-sourced (ARCHITECTURE.md §3: the
-            // server, not the client, owns duration/points). This one is a
-            // pure activation milestone the server has no reason to know
-            // about — it's about *this device's* funnel, not money.
-            if (result.isFirstSession) {
-              track('first_session_completed', { minutes: result.durationMinutes });
-            }
-            if (result.previousLevel && result.newLevel && result.newLevel > result.previousLevel) {
-              setLevelUpTo(result.newLevel);
-              setShowLevelUp(true);
-              return;
-            }
-          } catch (err) {
-            console.error('[EndSession]', err);
-            setIsEnding(false);
-          }
-          goHome();
+    setIsEnding(true);
+    setEndFailed(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    // Lido antes do `end`, que zera `currentSession` no store. É o único fio
+    // que liga a sessão encerrada aos posts que ela acabou de criar — a
+    // resposta do `end` não devolve id de post (ver `lib/published-post.ts`).
+    const sessionId = useSessionStore.getState().currentSession?.id ?? '';
+    // No local pause first — `end` is itself terminal on the server, and
+    // pausing would only add a stray interval to the session's record.
+    try {
+      const result = await endSession();
+      // session_completed is server-sourced (ARCHITECTURE.md §3: the
+      // server, not the client, owns duration/points). This one is a
+      // pure activation milestone the server has no reason to know
+      // about — it's about *this device's* funnel, not money.
+      if (result.isFirstSession) {
+        track('first_session_completed', { minutes: result.durationMinutes });
+      }
+      const leveledUp = Boolean(
+        result.previousLevel && result.newLevel && result.newLevel > result.previousLevel,
+      );
+      router.replace({
+        pathname: '/session/published',
+        params: {
+          sessionId,
+          minutes: String(result.durationMinutes),
+          xp: String(result.xpEarned),
+          ...(subjectName ? { subjectName } : {}),
+          ...(subjectColor ? { subjectColor } : {}),
+          ...(leveledUp ? { newLevel: String(result.newLevel) } : {}),
         },
-      },
-    ]);
-  }, [endSession, goHome, isEnding, tr]);
+      });
+    } catch (err) {
+      console.error('[EndSession]', err);
+      setIsEnding(false);
+      setEndFailed(true);
+    }
+  }, [endSession, isEnding, router, subjectColor, subjectName]);
+
+  // Segurar. Solta antes dos 400ms, o anel vermelho recolhe e nada acontece.
+  const startHold = useCallback(() => {
+    if (isEnding) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    holdProgress.value = withTiming(
+      1,
+      { duration: HOLD_TO_END_MS, easing: Easing.linear },
+      (finished) => { if (finished) runOnJS(handleEndSession)(); },
+    );
+  }, [handleEndSession, holdProgress, isEnding]);
+
+  const cancelHold = useCallback(() => {
+    holdProgress.value = withTiming(0, { duration: 140 });
+  }, [holdProgress]);
+
+  const holdRingProps = useAnimatedProps(() => ({
+    strokeDashoffset: CIRCUMFERENCE * (1 - holdProgress.value),
+    opacity: holdProgress.value > 0 ? 1 : 0,
+  }));
 
   // Pause / resume / end tapped on the Android notification or the iOS Live
   // Activity run the same store methods as the in-app controls, so the two
@@ -202,9 +253,11 @@ export default function ActiveSessionScreen() {
           already closed this session and credited it up to the last beat.
           Saying so is better than animating a timer that runs nowhere. */}
       {isDisconnected && (
-        <Text style={{ ...t.label, color: c.danger, marginTop: space.sm, textAlign: 'center' }}>
-          {tr('active.disconnected')}
-        </Text>
+        <View style={[styles.banner, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <Text style={{ ...t.caption, color: c.warning, textAlign: 'center' }}>
+            {tr('active.disconnected')}
+          </Text>
+        </View>
       )}
 
       <View style={styles.timerWrap}>
@@ -213,7 +266,9 @@ export default function ActiveSessionScreen() {
             cx={TIMER_SIZE / 2}
             cy={TIMER_SIZE / 2}
             r={RADIUS}
-            stroke={c.surface}
+            // Trilho em `surfacePressed`: no claro `c.surface` é branco puro e
+            // o anel vazio simplesmente não existia sobre o fundo (`§5.13`).
+            stroke={c.surfacePressed}
             strokeWidth={STROKE_WIDTH}
             fill="none"
           />
@@ -228,6 +283,18 @@ export default function ActiveSessionScreen() {
             strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
             strokeLinecap="round"
           />
+          {/* O anel do "segurar para encerrar". Some quando o dedo sai. */}
+          <AnimatedCircle
+            cx={TIMER_SIZE / 2}
+            cy={TIMER_SIZE / 2}
+            r={RADIUS}
+            stroke={c.danger}
+            strokeWidth={STROKE_WIDTH}
+            fill="none"
+            strokeDasharray={`${CIRCUMFERENCE}`}
+            strokeLinecap="round"
+            animatedProps={holdRingProps}
+          />
         </Svg>
 
         {/* Inside the ring: the mascot works while you work and dozes on the
@@ -238,10 +305,13 @@ export default function ActiveSessionScreen() {
             size={92}
             animate={isRunning}
           />
+          {/* `title1` (40), não `display` (64): 64 estoura o anel numa tela de
+              375pt e quebra "1:59:59" em duas linhas (`§5.13`). Continua sendo
+              o maior número do app — e o único acima de 28. */}
           <Text
             style={{
-              ...t.display,
-              color: c.fg,
+              ...t.title1,
+              color: timerColor,
               fontVariant: ['tabular-nums'],
               marginTop: -space.sm,
             }}
@@ -305,23 +375,31 @@ export default function ActiveSessionScreen() {
         )}
       </Press>
 
-      <Press
-        haptic="light"
-        scale={0.95}
-        onPress={handleEndSession}
+      {/* Segurar, não tocar. Ver `HOLD_TO_END_MS`. */}
+      <Pressable
+        onPressIn={startHold}
+        onPressOut={cancelHold}
         disabled={isEnding}
         style={[styles.endBtn, { opacity: isEnding ? 0.4 : 1 }]}
       >
-        <Square size={14} color={c.danger} />
-        <Text style={{ ...t.label, color: c.danger }}>
-          {isEnding ? tr('active.ending') : tr('active.endSession')}
-        </Text>
-      </Press>
+        {isEnding ? (
+          <Text style={{ ...t.label, color: c.fgMuted }}>{tr('active.ending')}</Text>
+        ) : (
+          <>
+            <Square size={14} color={c.danger} />
+            <Text style={{ ...t.label, color: c.danger }}>{tr('active.holdToEnd')}</Text>
+          </>
+        )}
+      </Pressable>
 
-      {showLevelUp && levelUpTo && (
-        <Animated.View entering={FadeIn} style={StyleSheet.absoluteFill}>
-          <LevelUpAnimation newLevel={levelUpTo} onComplete={goHome} />
-        </Animated.View>
+      {/* O timer não some quando o `end` falha. */}
+      {endFailed && (
+        <Press haptic="light" scale={0.96} onPress={handleEndSession} style={styles.endFailedRow}>
+          <Text style={{ ...t.caption, color: c.danger, textAlign: 'center' }}>
+            {tr('active.endFailed')}
+          </Text>
+          <Text style={{ ...t.caption, color: c.accent }}>{tr('common:retry')}</Text>
+        </Press>
       )}
     </View>
   );
@@ -361,9 +439,19 @@ const styles = StyleSheet.create({
   endBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 44,
     gap: space.sm,
     paddingHorizontal: space.xl,
-    paddingVertical: space.md,
     marginTop: space.lg,
+  },
+  endFailedRow: { alignItems: 'center', gap: 2, marginTop: space.sm },
+
+  banner: {
+    marginTop: space.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
   },
 });

@@ -189,3 +189,71 @@ describe('LeaguesService.create — invite code generation', () => {
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('LeaguesService.findLiveMembers', () => {
+  function makeLivePrismaMock() {
+    return {
+      leagueMember: { findMany: jest.fn() },
+      studySession: { findMany: jest.fn() },
+    };
+  }
+
+  /**
+   * O consumidor é a faixa "estudando agora" da sala, que pede a lista
+   * inteira e filtra por `league_id`. Se a pessoa vier etiquetada com uma
+   * sala só, ela some das outras — estudando lá dentro o tempo todo.
+   */
+  it('mostra quem estuda em TODAS as salas que divide com quem chamou', async () => {
+    const prisma = makeLivePrismaMock();
+    prisma.leagueMember.findMany
+      // 1ª chamada: as salas de quem chamou.
+      .mockResolvedValueOnce([{ leagueId: 'sala-a' }, { leagueId: 'sala-b' }])
+      // 2ª: Ana está nas duas, com nome de exibição próprio em cada uma.
+      .mockResolvedValueOnce([
+        {
+          userId: 'ana',
+          displayName: 'Ana da A',
+          league: { id: 'sala-a', name: 'Sala A' },
+        },
+        {
+          userId: 'ana',
+          displayName: 'Ana da B',
+          league: { id: 'sala-b', name: 'Sala B' },
+        },
+      ]);
+    prisma.studySession.findMany.mockResolvedValue([
+      {
+        id: 'sessao-1',
+        userId: 'ana',
+        startedAt: new Date(Date.now() - 25 * 60_000),
+        proofMode: false,
+        subject: { name: 'Cálculo', color: '#123456' },
+        user: { username: 'ana', handle: 'ana', avatarUrl: null },
+      },
+    ]);
+
+    const live = await new LeaguesService(prisma as any, {} as any).findLiveMembers('eu');
+
+    // Uma sessão, duas salas: duas linhas. Antes saía uma só, na sala que o
+    // banco devolvesse primeiro.
+    expect(live).toHaveLength(2);
+    expect(live.map((m) => m.league_id).sort()).toEqual(['sala-a', 'sala-b']);
+    // A tela filtra por sala, então cada sala vê a Ana exatamente uma vez.
+    expect(live.filter((m) => m.league_id === 'sala-b')).toHaveLength(1);
+    // E com o nome daquela sala, que é por participação e não por pessoa.
+    expect(live.find((m) => m.league_id === 'sala-b')?.display_name).toBe('Ana da B');
+    // A sessão é a mesma dos dois lados.
+    expect(new Set(live.map((m) => m.session_id))).toEqual(new Set(['sessao-1']));
+    expect(live[0].elapsed_minutes).toBe(25);
+  });
+
+  it('devolve vazio quem não tem sala, sem consultar sessões', async () => {
+    const prisma = makeLivePrismaMock();
+    prisma.leagueMember.findMany.mockResolvedValueOnce([]);
+
+    const live = await new LeaguesService(prisma as any, {} as any).findLiveMembers('eu');
+
+    expect(live).toEqual([]);
+    expect(prisma.studySession.findMany).not.toHaveBeenCalled();
+  });
+});

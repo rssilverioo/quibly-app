@@ -436,9 +436,25 @@ export function calculateTitle(profile: TitleInput): TitleDefinition {
 
 // ─── Typography ───
 
+/**
+ * Nunito desde 02/08/2026, no lugar da Inter.
+ *
+ * A referência do produto (`docs/referencia/gymrats/`) usa uma geométrica
+ * arredondada e o briefing da noite manda copiar isso. Os nomes aqui são os
+ * mesmos que `@expo-google-fonts/nunito` registra, e é `app/_layout.tsx` quem
+ * carrega os quatro arquivos — se um nome mudar aqui sem mudar lá, o texto
+ * some no Android e cai para a fonte do sistema no iOS.
+ *
+ * A Inter continua no `package.json` do mobile de propósito: se a Nunito falhar
+ * em runtime, o retorno é reverter estas quatro linhas mais o `useFonts` do
+ * `_layout`, sem reinstalar nada.
+ *
+ * Quatro pesos carregados, dois pesos de uso (bold e regular) — a disciplina de
+ * uso está escrita em `apps/mobile/theme/tokens.ts`, junto da escala.
+ */
 export const FONTS = {
-  bold: "Inter_700Bold",
-  semiBold: "Inter_600SemiBold",
-  medium: "Inter_500Medium",
-  regular: "Inter_400Regular",
+  bold: "Nunito_700Bold",
+  semiBold: "Nunito_600SemiBold",
+  medium: "Nunito_500Medium",
+  regular: "Nunito_400Regular",
 } as const;

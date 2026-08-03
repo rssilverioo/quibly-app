@@ -1,7 +1,11 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'maven-publish'
 
+// Template de módulo Expo **local**, não de módulo publicado. A primeira versão
+// deste arquivo trazia `maven-publish`, `useExpoPublishing()` e um bloco
+// `publishing { singleVariant(...) }` — coisas que só fazem sentido para um
+// módulo que vai para o npm. Um módulo local não tem package.json nem versão a
+// publicar, e o Gradle falha configurando uma publicação que não existe.
 group = 'com.quibly.studytimer'
 version = '0.1.0'
 
@@ -12,23 +16,17 @@ def expoModulesCorePlugin = new File(
 apply from: expoModulesCorePlugin
 applyKotlinExpoModulesCorePlugin()
 useCoreDependencies()
-useExpoPublishing()
 
 android {
   namespace "com.quibly.studytimer"
-  defaultConfig {
-    minSdkVersion safeExtGet("minSdkVersion", 24)
-    // Foreground service types became mandatory in Android 14 (API 34); the
-    // manifest declares `dataSync`, which is what a study timer syncing
-    // heartbeats to a server actually is.
-    targetSdkVersion safeExtGet("targetSdkVersion", 34)
-  }
   compileSdk safeExtGet("compileSdkVersion", 35)
 
-  publishing {
-    singleVariant("release") {
-      withSourcesJar()
-    }
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    // Tipos de foreground service passaram a ser obrigatórios no Android 14
+    // (API 34); o manifest declara `dataSync`, que é o que um cronômetro
+    // sincronizando heartbeats com o servidor de fato é.
+    targetSdkVersion safeExtGet("targetSdkVersion", 34)
   }
 }
 

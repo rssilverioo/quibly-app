@@ -242,10 +242,25 @@ export class LeaguesService {
     });
     if (peers.length === 0) return [];
 
-    // A peer can share more than one league with the caller — keep the first.
-    const peerByUserId = new Map<string, (typeof peers)[number]>();
+    /**
+     * Uma pessoa pode dividir mais de uma sala com quem chamou, e então ela
+     * aparece **em todas** — não numa escolhida a esmo.
+     *
+     * Antes daqui saía um registro só por pessoa, "keep the first", e a sala
+     * que sobrava era a que o banco devolvesse primeiro. O consumidor é a
+     * faixa "estudando agora", que filtra por `league_id`: quem dividia duas
+     * salas com você era etiquetado com uma e **sumia da outra**, estudando
+     * ali dentro o tempo todo. Silencioso — a faixa some inteira quando fica
+     * vazia, e faixa vazia é indistinguível de ninguém estudando.
+     *
+     * O `displayName` também é por participação, não por pessoa: cada sala
+     * pode ter o seu. Guardar a participação inteira preserva isso.
+     */
+    const participacoesPorUsuario = new Map<string, typeof peers>();
     for (const peer of peers) {
-      if (!peerByUserId.has(peer.userId)) peerByUserId.set(peer.userId, peer);
+      const lista = participacoesPorUsuario.get(peer.userId) ?? [];
+      lista.push(peer);
+      participacoesPorUsuario.set(peer.userId, lista);
     }
 
     // No zombie filter here any more. This used to drop anything `active` for
@@ -256,7 +271,7 @@ export class LeaguesService {
     // studying right now.
     const sessions = await this.prisma.studySession.findMany({
       where: {
-        userId: { in: [...peerByUserId.keys()] },
+        userId: { in: [...participacoesPorUsuario.keys()] },
         status: 'active',
       },
       select: {
@@ -272,9 +287,17 @@ export class LeaguesService {
 
     const now = Date.now();
 
-    return sessions.map((session) => {
-      const peer = peerByUserId.get(session.userId)!;
-      return {
+    // Uma sessão vira uma linha por sala compartilhada. O único consumidor é a
+    // faixa da sala, que filtra por `league_id` — então dentro de uma sala cada
+    // sessão continua aparecendo exatamente uma vez, e o `session_id` segue
+    // servindo de chave de lista.
+    return sessions.flatMap((session) => {
+      const participacoes = participacoesPorUsuario.get(session.userId) ?? [];
+      const elapsed = Math.max(
+        0,
+        Math.floor((now - session.startedAt.getTime()) / 60_000),
+      );
+      return participacoes.map((peer) => ({
         session_id: session.id,
         user_id: session.userId,
         display_name: peer.displayName || session.user.username,
@@ -286,11 +309,8 @@ export class LeaguesService {
         league_name: peer.league.name,
         proof_mode: session.proofMode,
         started_at: session.startedAt.toISOString(),
-        elapsed_minutes: Math.max(
-          0,
-          Math.floor((now - session.startedAt.getTime()) / 60_000),
-        ),
-      };
+        elapsed_minutes: elapsed,
+      }));
     });
   }
 

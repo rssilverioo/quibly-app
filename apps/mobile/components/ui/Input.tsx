@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { legacyColors as COLORS } from '../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   /** Label displayed above the input */
@@ -49,13 +49,18 @@ export default function Input({
   containerStyle,
   ...rest
 }: InputProps) {
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const [isFocused, setIsFocused] = useState(false);
 
+  // Quando a borda é a única coisa que marca o estado do controle, ela precisa
+  // de 3:1 (WCAG 1.4.11) — daí `borderStrong` no repouso, e não `border`, que é
+  // hairline decorativa.
   const borderColor = error
-    ? COLORS.error
+    ? c.danger
     : isFocused
-      ? COLORS.primary
-      : COLORS.border;
+      ? c.accent
+      : c.borderStrong;
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -67,14 +72,16 @@ export default function Input({
         <TextInput
           style={[styles.input, prefix ? styles.inputWithPrefix : null]}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.textMuted}
+          // Placeholder é texto que precisa ser lido antes de digitar: `fgMuted`,
+          // não `fgSubtle`.
+          placeholderTextColor={c.fgMuted}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
-          selectionColor={COLORS.primaryLight}
+          selectionColor={c.accent}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...rest}
@@ -87,49 +94,51 @@ export default function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: space.lg,
   },
   label: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
+    ...text.label,
+    color: c.fgMuted,
+    marginBottom: space.sm,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
     minHeight: 52,
   },
   prefix: {
-    color: COLORS.textMuted,
-    fontSize: 16,
+    ...text.body,
+    color: c.fgMuted,
     marginRight: 2,
   },
+  // Sem `lineHeight` de propósito: em `TextInput` no Android ele briga com o
+  // padding vertical e corta a linha. Só tamanho e família vêm do degrau.
   input: {
     flex: 1,
-    color: COLORS.text,
-    fontSize: 16,
+    fontSize: text.body.fontSize,
+    fontFamily: text.body.fontFamily,
+    color: c.fg,
     paddingVertical: 14,
   },
   inputWithPrefix: {
     paddingLeft: 0,
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: 12,
+    ...text.caption,
+    color: c.danger,
     marginTop: 6,
-    marginLeft: 4,
+    marginLeft: space.xs,
   },
   hintText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    ...text.caption,
+    color: c.fgMuted,
     marginTop: 6,
-    marginLeft: 4,
+    marginLeft: space.xs,
   },
 });
