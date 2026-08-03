@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,24 +10,30 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { staticDark as c } from '../theme';
+import { useTheme, type Palette, BRAND_BLUE, NIGHT_GRADIENT, text } from '../theme';
 import { Mascot } from './mascot';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const COLORS = {
-  primary: c.accent,
-  primaryLight: c.accent,
-  secondary: c.accent,
-  text: c.fg,
-  gold: c.gold,
-};
-
-const FONTS = {
-  bold: 'Inter_700Bold',
-  semiBold: 'Inter_600SemiBold',
-  medium: 'Inter_500Medium',
-};
+/**
+ * Este overlay é **palco de marca, não superfície de tema** — mesma categoria do
+ * gradiente do login, que `colors.ts` mantém escuro de propósito mesmo com o app
+ * claro. O fundo é sempre o azul-noite, nos dois modos.
+ *
+ * Ler `c.fg` aqui estava errado de um jeito concreto: com o app claro, `c.fg`
+ * virou `#17171B` e o número do nível **desaparecia** em cima do overlay quase
+ * preto. Era o mesmo defeito de `fg`-sobre-`accent` que este passe corrigiu no
+ * botão, só que num palco fixo.
+ *
+ * O primeiro plano agora sai de `fgOnScrim`/`fgOnScrimMuted`, que o Tech Lead
+ * criou para exatamente este caso e que são idênticos nos dois modos — é por
+ * isso que o palco pode ler o tema sem voltar a quebrar. Os três literais que
+ * ficaram aqui na passada anterior morreram junto.
+ *
+ * `STAGE` continua constante de módulo porque `NIGHT_GRADIENT` é token e não
+ * depende do modo.
+ */
+const STAGE = NIGHT_GRADIENT[0];
 
 const NUM_PARTICLES = 24;
 const NUM_RINGS = 3;
@@ -50,6 +56,8 @@ interface Particle {
 
 export default function LevelUpAnimation({ newLevel, onComplete }: LevelUpAnimationProps) {
   const { t } = useTranslation('feed');
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const flashOpacity = useRef(new Animated.Value(0)).current;
   const labelScale = useRef(new Animated.Value(0)).current;
@@ -62,7 +70,12 @@ export default function LevelUpAnimation({ newLevel, onComplete }: LevelUpAnimat
   const ringOpacities = useRef(Array.from({ length: NUM_RINGS }, () => new Animated.Value(0.6))).current;
   const dismissOpacity = useRef(new Animated.Value(0)).current;
 
-  const particleColors = [COLORS.primary, COLORS.primaryLight, COLORS.gold, COLORS.secondary, c.danger, c.warning];
+  // Partículas são ilustração em cima do palco escuro: azure de marca e o branco
+  // do palco. `gold` saiu junto com o pódio, e `c.danger`/`c.warning` saíram
+  // porque, lidos da paleta clara, viravam pontos escuros invisíveis no overlay.
+  const particleColors = [
+    BRAND_BLUE, c.fgOnScrim, BRAND_BLUE, c.fgOnScrimMuted, BRAND_BLUE, c.fgOnScrim,
+  ];
 
   const particles = useRef<Particle[]>(
     Array.from({ length: NUM_PARTICLES }, (_, i) => {
@@ -274,30 +287,30 @@ export default function LevelUpAnimation({ newLevel, onComplete }: LevelUpAnimat
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 5, 12, 0.95)',
+    backgroundColor: STAGE,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 9999,
   },
   flash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
+    backgroundColor: BRAND_BLUE,
   },
   ring: {
     position: 'absolute',
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: BRAND_BLUE,
   },
   glow: {
     position: 'absolute',
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: COLORS.primary,
-    shadowColor: COLORS.primary,
+    backgroundColor: BRAND_BLUE,
+    shadowColor: BRAND_BLUE,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 60,
@@ -311,11 +324,11 @@ const styles = StyleSheet.create({
     top: SCREEN_HEIGHT * 0.35,
   },
   labelText: {
-    color: COLORS.gold,
+    color: c.fgOnScrim,
     fontSize: 22,
-    fontFamily: FONTS.bold,
+    fontFamily: text.bodyStrong.fontFamily,
     letterSpacing: 8,
-    textShadowColor: COLORS.gold,
+    textShadowColor: BRAND_BLUE,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
   },
@@ -323,10 +336,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   numberText: {
-    color: COLORS.text,
+    color: c.fgOnScrim,
     fontSize: 120,
-    fontFamily: FONTS.bold,
-    textShadowColor: COLORS.primary,
+    fontFamily: text.display.fontFamily,
+    textShadowColor: BRAND_BLUE,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 40,
   },
@@ -335,9 +348,8 @@ const styles = StyleSheet.create({
     bottom: 80,
   },
   dismissText: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 14,
-    fontFamily: FONTS.medium,
+    ...text.label,
+    color: c.fgOnScrimMuted,
     letterSpacing: 1,
   },
 });

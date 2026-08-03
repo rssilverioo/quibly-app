@@ -1,9 +1,9 @@
-import React, { useRef, useEffect } from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import React, { useRef, useEffect, useMemo } from 'react';
+import { Dimensions } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { staticDark as c } from '../../theme';
+import { useTheme, BRAND_BLUE } from '../../theme';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface ConfettiOverlayProps {
   trigger: boolean;
@@ -11,7 +11,18 @@ interface ConfettiOverlayProps {
 }
 
 export default function ConfettiOverlay({ trigger, count = 150 }: ConfettiOverlayProps) {
+  const { c } = useTheme();
   const confettiRef = useRef<ConfettiCannon>(null);
+
+  // Papel picado é ilustração, mas cai por cima da tela — então a lista vem da
+  // paleta ativa para não sumir no fundo claro. `gold` saiu: é token deprecado
+  // com o pódio. A azure de marca entra no lugar dele porque aqui nenhum texto
+  // se apoia na cor, que é exatamente a condição de uso de `BRAND_BLUE`.
+  // O accent aparece três vezes de propósito: é ele que dá a cor da celebração.
+  const colors = useMemo(
+    () => [BRAND_BLUE, c.accent, c.accent, c.danger, c.warning, c.accent],
+    [c],
+  );
 
   useEffect(() => {
     if (trigger) {
@@ -30,7 +41,7 @@ export default function ConfettiOverlay({ trigger, count = 150 }: ConfettiOverla
       fadeOut
       explosionSpeed={350}
       fallSpeed={3000}
-      colors={[c.gold, c.accent, c.accent, c.danger, c.warning, c.accent]}
+      colors={colors}
     />
   );
 }

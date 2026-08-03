@@ -1,387 +1,245 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ActivityIndicator,
-  Alert,
-  ScrollView,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Users, Calendar, Shield } from 'lucide-react-native';
+import { ArrowLeft, CalendarDays, Users } from 'lucide-react-native';
+
+import { Mascot } from '../../../components/mascot';
+import Press from '../../../components/ui/Press';
+import { roomCoverForId, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLeaguePreview, joinLeague, type LeaguePreview } from '../../../services/leagues';
-import { useTheme, type Palette } from '../../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import { track } from '../../../lib/analytics';
 
-const getColors = (c: Palette) => ({
-  background: c.bg,
-  surface: c.surface,
-  surfaceLight: c.surfaceRaised,
-  border: c.border,
-  primary: c.accent,
-  primaryLight: c.accent,
-  secondary: c.accent,
-  accent: c.danger,
-  warning: c.warning,
-  success: c.success,
-  error: c.danger,
-  text: c.fg,
-  textSecondary: c.fgMuted,
-  textMuted: c.fgSubtle,
-});
+/** Distinguir "convite não existe" de "a rede caiu" muda o coelho e a saída. */
+type Failure = 'invalid' | 'offline';
 
-function useLeagueStyles() {
+function daysLeft(endDate: string): number {
+  const remaining = new Date(endDate).getTime() - Date.now();
+  return Math.max(0, Math.ceil(remaining / 86_400_000));
+}
+
+export default function JoinRoomScreen() {
+  const { t } = useTranslation('common');
   const { c } = useTheme();
-  return useMemo(() => {
-    const COLORS = getColors(c);
-    return { c, COLORS, styles: makeStyles(c) };
-  }, [c]);
-}
-
-function formatDateRange(start: string, end: string): string {
-  const s = new Date(start);
-  const e = new Date(end);
-  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-  return `${s.toLocaleDateString('en-US', opts)} - ${e.toLocaleDateString('en-US', opts)}`;
-}
-
-export default function JoinLeagueScreen() {
-  const { t } = useTranslation('leagues');
-  const { c, COLORS, styles } = useLeagueStyles();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const { code } = useLocalSearchParams<{ code: string }>();
   const { user } = useAuth();
 
-  const modeStyles = useMemo(() => ({
-    easy: { bg: COLORS.success + '22', text: COLORS.success, label: t('modes.easy') },
-    competitive: { bg: COLORS.primary + '22', text: COLORS.primaryLight, label: t('modes.competitive') },
-    hardcore: { bg: COLORS.accent + '22', text: COLORS.accent, label: t('modes.hardcore') },
-  }), [t]);
-
   const [preview, setPreview] = useState<LeaguePreview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   const fetchPreview = useCallback(async () => {
     if (!code) return;
     setLoading(true);
-    setError(null);
+    setFailure(null);
     try {
       const data = await getLeaguePreview(code);
       setPreview(data);
       track('invite_opened', { is_member: data.is_member });
-    } catch (err: any) {
-      setError(err?.message ?? t('join.invalidOrExpired'));
+    } catch (err) {
+      // 404 é convite morto; qualquer outra falha é a rede.
+      const message = (err as Error)?.message ?? '';
+      setFailure(/404|not found|não encontrad/i.test(message) ? 'invalid' : 'offline');
     } finally {
       setLoading(false);
     }
   }, [code]);
 
   useEffect(() => {
-    if (user && code) fetchPreview();
+    if (user && code) void fetchPreview();
   }, [user, code, fetchPreview]);
 
-  const handleJoin = async () => {
-    if (!code || !user || !displayName.trim()) return;
+  // Já é membro: o convite não tem nada a perguntar, então ele abre a sala.
+  useEffect(() => {
+    if (preview?.is_member) router.replace(`/league/room/${preview.id}`);
+  }, [preview]);
+
+  const onJoin = async () => {
+    if (!code || !user || !displayName.trim() || joining) return;
     setJoining(true);
+    setJoinError(null);
     try {
       const league = await joinLeague(user.uid, code, displayName.trim());
       track('room_joined', { mode: preview?.mode ?? 'unknown' });
-      Alert.alert(t('join.joinedTitle'), t('join.joinedMessage', { name: league.name }), [
-        { text: t('common:ok'), onPress: () => router.replace(`/league/room/${league.id}`) },
-      ]);
-    } catch (err: any) {
-      Alert.alert(t('common:error'), err?.message ?? t('join.joinError'));
+      // Sem alerta de parabéns: quem acabou de aceitar um convite entra na
+      // sala, não numa caixa de diálogo (`FLUXO §2`).
+      router.replace(`/league/room/${league.id}`);
+    } catch (err) {
+      setJoinError((err as Error)?.message ?? t('rooms.joinError'));
     } finally {
       setJoining(false);
     }
   };
 
-  // Loading
+  const nav = (
+    <View style={styles.nav}>
+      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+    </View>
+  );
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {nav}
+        <View style={styles.content}>
+          {/* A forma do card é conhecida: capa 144 + faixa 56. Esperar com a
+              forma certa é melhor que um spinner (§4.4). */}
+          <View style={styles.card}>
+            <View style={styles.coverSkeleton} />
+            <View style={styles.strip} />
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Error
-  if (error || !preview) {
+  if (failure || !preview) {
+    const invalid = failure !== 'offline';
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-              <ArrowLeft size={18} color={COLORS.primaryLight} style={{ marginRight: 4 }} />
-              <Text style={styles.backText}>{t('common:back')}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.center}>
-            <Text style={styles.errorIcon}>!</Text>
-            <Text style={styles.errorTitle}>{t('join.invalidInvite')}</Text>
-            <Text style={styles.errorMessage}>{error ?? t('join.leagueNotFound')}</Text>
-            <TouchableOpacity style={styles.errorButton} onPress={() => router.back()} activeOpacity={0.7}>
-              <Text style={styles.errorButtonText}>{t('common:goBack')}</Text>
-            </TouchableOpacity>
-          </View>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {nav}
+        <View style={styles.center}>
+          <Mascot state={invalid ? 'worried' : 'offline'} size={96} animate={false} />
+          <Text style={styles.stateBody}>{invalid ? t('rooms.inviteInvalid') : t('rooms.loadFailed')}</Text>
+          <Press onPress={invalid ? () => router.replace('/(tabs)') : fetchPreview} style={styles.stateAction}>
+            <Text style={styles.link}>{invalid ? t('rooms.inviteAnotherCode') : t('rooms.tryAgain')}</Text>
+          </Press>
         </View>
       </SafeAreaView>
     );
   }
 
-  const modeStyle = modeStyles[preview.mode as keyof typeof modeStyles] ?? modeStyles.easy;
-
-  // Already a member
   if (preview.is_member) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-              <ArrowLeft size={18} color={COLORS.primaryLight} style={{ marginRight: 4 }} />
-              <Text style={styles.backText}>{t('common:back')}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.center}>
-            <Text style={styles.successTitle}>{t('join.alreadyMember')}</Text>
-            <Text style={styles.successMessage}>{t('join.alreadyInLeague', { name: preview.name })}</Text>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => router.replace(`/league/room/${preview.id}`)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.primaryButtonText}>{t('join.goToLeague')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.center}><ActivityIndicator color={c.accent} /></View>
       </SafeAreaView>
     );
   }
 
-  // Full or completed
-  const isBlocked = preview.is_full || preview.status === 'completed';
+  const ended = preview.status === 'completed';
+  const blocked = preview.is_full || ended;
+  const canSubmit = displayName.trim().length > 0 && !joining && !blocked;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backRow}>
-            <ArrowLeft size={18} color={COLORS.primaryLight} style={{ marginRight: 4 }} />
-            <Text style={styles.backText}>{t('common:back')}</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>{t('join.title')}</Text>
-        </View>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {nav}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.title}>{t('rooms.invited')}</Text>
 
-        {/* Preview Card */}
-        <View style={styles.previewCard}>
-          <View style={styles.previewHeader}>
-            <Text style={styles.previewName} numberOfLines={2}>{preview.name}</Text>
-            <View style={[styles.modeBadge, { backgroundColor: modeStyle.bg }]}>
-              <Text style={[styles.modeBadgeText, { color: modeStyle.text }]}>{modeStyle.label}</Text>
+          {/* É o mesmo bloco da §5.1 de propósito: quem chega por convite vê
+              exatamente a sala que vai encontrar. */}
+          <View style={styles.card}>
+            <Image source={roomCoverForId(preview.id)} style={styles.cover} resizeMode="cover" />
+            <View style={styles.strip}>
+              <View style={styles.statColumn}>
+                <Users size={22} color={c.fgMuted} />
+                <View>
+                  <Text style={styles.statValue}>{preview.member_count}</Text>
+                  <Text style={styles.statLabel}>{t('members')}</Text>
+                </View>
+              </View>
+              <View style={styles.statColumn}>
+                <CalendarDays size={22} color={c.fgMuted} />
+                <View>
+                  <Text style={styles.statValue}>{daysLeft(preview.end_date)}</Text>
+                  <Text style={styles.statLabel}>{t('rooms.daysLeftLabel')}</Text>
+                </View>
+              </View>
             </View>
           </View>
 
-          {preview.description ? (
-            <Text style={styles.previewDescription}>{preview.description}</Text>
+          <Text style={styles.roomName} numberOfLines={2}>{preview.name}</Text>
+
+          {!blocked ? (
+            <TextInput
+              style={styles.field}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder={t('rooms.displayNamePlaceholder')}
+              placeholderTextColor={c.fgSubtle}
+              autoCorrect={false}
+              maxLength={40}
+              returnKeyType="done"
+              onSubmitEditing={onJoin}
+            />
           ) : null}
 
-          <View style={styles.previewMeta}>
-            <View style={styles.metaItem}>
-              <Calendar size={14} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>{formatDateRange(preview.start_date, preview.end_date)}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Users size={14} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>{t('join.membersCount', { current: preview.member_count, max: preview.max_members })}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Shield size={14} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>{preview.privacy === 'public' ? t('common:public') : t('common:private')}</Text>
-            </View>
-          </View>
+          {joinError ? <Text style={styles.error}>{joinError}</Text> : null}
+        </ScrollView>
 
-          {preview.status === 'completed' && (
-            <View style={styles.warningBanner}>
-              <Text style={styles.warningText}>{t('join.leagueEnded')}</Text>
-            </View>
-          )}
-
-          {preview.is_full && preview.status !== 'completed' && (
-            <View style={styles.warningBanner}>
-              <Text style={styles.warningText}>{t('join.leagueFull')}</Text>
-            </View>
-          )}
+        <View style={styles.footer}>
+          {blocked ? (
+            <Text style={styles.warning}>{ended ? t('rooms.roomEnded') : t('rooms.roomFull')}</Text>
+          ) : null}
+          <Press onPress={onJoin} disabled={!canSubmit} style={[styles.button, !canSubmit && styles.buttonDisabled]}>
+            {joining
+              ? <ActivityIndicator color={c.fgOnAccent} />
+              : <Text style={styles.buttonText}>{t('rooms.join')}</Text>}
+          </Press>
         </View>
-
-        {/* Join Form */}
-        {!isBlocked && (
-          <>
-            <View style={styles.field}>
-              <Text style={styles.label}>{t('join.displayName')}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={t('join.displayNamePlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
-                value={displayName}
-                onChangeText={setDisplayName}
-                autoCorrect={false}
-                maxLength={30}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.primaryButton, (!displayName.trim() || joining) && styles.buttonDisabled]}
-              onPress={handleJoin}
-              disabled={!displayName.trim() || joining}
-              activeOpacity={0.7}
-            >
-              {joining ? (
-                <ActivityIndicator size="small" color={c.fgOnAccent} />
-              ) : (
-                <Text style={styles.primaryButtonText}>{t('join.joinButton')}</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-
-        {isBlocked && (
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => router.back()} activeOpacity={0.7}>
-            <Text style={styles.secondaryButtonText}>{t('common:goBack')}</Text>
-          </TouchableOpacity>
-        )}
-      </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const makeStyles = (c: Palette) => {
-  const COLORS = getColors(c);
-  return StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-
-  // Header
-  header: { paddingTop: 12, paddingBottom: 8 },
-  backRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  backText: { color: COLORS.primaryLight, fontSize: 16, fontWeight: '600' },
-  title: { color: COLORS.text, fontSize: 28, fontWeight: '700', marginBottom: 20 },
-
-  // Preview Card
-  previewCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 20,
+const makeStyles = (c: Palette) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
+  nav: { height: 44, paddingHorizontal: space.md },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  content: { paddingHorizontal: space.lg, paddingBottom: space.xl },
+  title: { ...text.title2, color: c.fg, marginBottom: space.lg },
+  card: {
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 24,
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  previewName: { color: COLORS.text, fontSize: 22, fontWeight: '700', flex: 1, marginRight: 10 },
-  modeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  modeBadgeText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  previewDescription: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 },
-  previewMeta: { gap: 10 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metaText: { color: COLORS.textSecondary, fontSize: 13 },
-  warningBanner: {
-    backgroundColor: COLORS.warning + '18',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  warningText: { color: COLORS.warning, fontSize: 13, fontWeight: '600' },
-
-  // Form
-  field: { marginBottom: 20 },
-  label: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '500', marginBottom: 8 },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: COLORS.text,
-    fontSize: 16,
-  },
-
-  // Buttons
-  primaryButton: {
-    height: 52,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: { color: c.fgOnAccent, fontSize: 16, fontWeight: '700' },
-  buttonDisabled: { opacity: 0.5 },
-  secondaryButton: {
-    height: 48,
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  secondaryButtonText: { color: COLORS.textSecondary, fontSize: 15, fontWeight: '600' },
-
-  // Error state
-  errorIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.error + '22',
-    color: COLORS.error,
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 56,
-    marginBottom: 16,
+    borderColor: c.border,
+    backgroundColor: c.surface,
     overflow: 'hidden',
   },
-  errorTitle: { color: COLORS.text, fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  errorMessage: { color: COLORS.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  errorButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: COLORS.surface,
-    borderRadius: 10,
+  cover: { width: '100%', aspectRatio: ROOM_COVER_ASPECT_RATIO, maxHeight: 150, backgroundColor: c.skeleton },
+  coverSkeleton: { width: '100%', aspectRatio: ROOM_COVER_ASPECT_RATIO, maxHeight: 150, backgroundColor: c.skeleton },
+  strip: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' },
+  statColumn: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  statValue: { ...text.bodyStrong, color: c.fg },
+  statLabel: { ...text.caption, color: c.fgMuted },
+  roomName: { ...text.title3, color: c.fg, marginTop: space.xl },
+  field: {
+    height: 54,
+    marginTop: space.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    paddingHorizontal: space.lg,
+    ...text.body,
+    color: c.fg,
   },
-  errorButtonText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600' },
-
-  // Already member
-  successTitle: { color: COLORS.text, fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  successMessage: { color: COLORS.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 24 },
-  });
-};
+  error: { ...text.caption, color: c.danger, marginTop: space.sm },
+  warning: { ...text.caption, color: c.warning, marginBottom: space.md },
+  stateBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.md },
+  stateAction: { minHeight: 44, justifyContent: 'center' },
+  link: { ...text.bodyStrong, color: c.accent },
+  footer: { padding: space.lg },
+  button: { height: 54, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  buttonDisabled: { opacity: 0.4 },
+  buttonText: { ...text.bodyStrong, color: c.fgOnAccent },
+});

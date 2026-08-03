@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, Dimensions, Image, View, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, interpolate,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { FONTS } from '@quibly/shared/constants';
 import { Lightbulb, Brain } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
-import { staticDark as c } from '../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40;
@@ -26,6 +25,8 @@ interface FlashcardCardProps {
 
 export default function FlashcardCard({ front, back, explain, imageUrl, onFlip }: FlashcardCardProps) {
   const { t } = useTranslation('flashcards');
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const [isFlipped, setIsFlipped] = useState(false);
   const [aiExplain, setAiExplain] = useState<{ simple: string; mnemonic: string } | null>(null);
   const [loadingExplain, setLoadingExplain] = useState(false);
@@ -122,7 +123,9 @@ export default function FlashcardCard({ front, back, explain, imageUrl, onFlip }
           hitSlop={8}
         >
           <Lightbulb size={14} color={showExplain ? c.fgOnAccent : c.warning} />
-          <Text style={[styles.explainBtnText, showExplain && { color: c.fg }]}>
+          {/* Ativo, o botão fica com fundo `warning`; o rótulo em cima dele é
+              `fgOnAccent`. Era `c.fg` — near-black sobre laranja no claro. */}
+          <Text style={[styles.explainBtnText, showExplain && { color: c.fgOnAccent }]}>
             {showExplain ? t('showAnswer') : t('explain')}
           </Text>
         </TouchableOpacity>
@@ -131,47 +134,50 @@ export default function FlashcardCard({ front, back, explain, imageUrl, onFlip }
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   container: { width: CARD_WIDTH, height: CARD_HEIGHT, alignSelf: 'center' },
   card: {
     position: 'absolute', width: '100%', height: '100%',
-    borderRadius: 20, padding: 24, alignItems: 'center', justifyContent: 'center',
+    borderRadius: radius.lg, padding: space.xl, alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
-  frontCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.accentSoft, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  // `shadowColor: '#000'` é preto de sombra, não cor de interface: não sai da
+  // paleta e não deve. A sombra em si é candidata a cair no passe visual.
+  frontCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   backCard: { backgroundColor: c.surfaceRaised, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  label: { position: 'absolute', top: 16, left: 20, fontSize: 11, fontFamily: FONTS.semiBold, color: c.fgSubtle, letterSpacing: 1, zIndex: 1 },
-  text: { fontSize: 18, fontFamily: FONTS.medium, color: c.fg, textAlign: 'center', lineHeight: 26 },
-  textWithImage: { fontSize: 16, marginTop: 8 },
+  label: { position: 'absolute', top: space.lg, left: 20, ...text.overline, color: c.fgSubtle, zIndex: 1 },
+  text: { ...text.title3, fontFamily: text.body.fontFamily, fontSize: 18, lineHeight: 26, color: c.fg, textAlign: 'center' },
+  textWithImage: { fontSize: 16, marginTop: space.sm },
   cardImage: {
     width: CARD_WIDTH - 80,
     height: 120,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: radius.md,
+    marginBottom: space.sm,
   },
   explainContainer: {
     position: 'absolute',
-    bottom: 16,
+    bottom: space.lg,
     left: 20,
     right: 20,
     backgroundColor: c.accentSoft,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     padding: 10,
   },
-  explainText: { fontSize: 12, fontFamily: FONTS.regular, color: c.fgMuted, textAlign: 'center', lineHeight: 16 },
+  // Dica de estudo é texto para ler: `fgMuted`, não `fgSubtle`.
+  explainText: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
 
   // AI Explain
-  aiExplainWrap: { width: '100%', alignItems: 'flex-start', paddingTop: 8 },
+  aiExplainWrap: { width: '100%', alignItems: 'flex-start', paddingTop: space.sm },
   aiSection: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  aiSectionTitle: { fontSize: 13, fontFamily: FONTS.bold, color: c.fg },
-  aiText: { fontSize: 14, fontFamily: FONTS.regular, color: c.fgMuted, lineHeight: 20 },
+  aiSectionTitle: { ...text.label, fontFamily: text.bodyStrong.fontFamily, fontSize: 13, color: c.fg },
+  aiText: { ...text.label, color: c.fgMuted },
 
   // Explain button
   explainBtn: {
-    position: 'absolute', top: 12, right: 16,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: c.surfaceRaised, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    position: 'absolute', top: space.md, right: space.lg,
+    flexDirection: 'row', alignItems: 'center', gap: space.xs,
+    backgroundColor: c.surfaceRaised, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.md,
   },
   explainBtnActive: { backgroundColor: c.warning },
-  explainBtnText: { fontSize: 12, fontFamily: FONTS.semiBold, color: c.warning },
+  explainBtnText: { ...text.caption, fontFamily: text.bodyStrong.fontFamily, color: c.warning },
 });

@@ -6,11 +6,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+} from '@expo-google-fonts/nunito';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { firebaseConfigError } from '../lib/firebase';
 import { useSessionStore } from '../stores/session.store';
@@ -33,6 +33,17 @@ import { initSentry, captureException } from '../lib/sentry';
 // permanent warning trains you to ignore the ones that matter.
 // Scoped to this single message on purpose: never ignoreAllLogs.
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
+
+// A única exceção à regra acima, e ela não vale no desenvolvimento normal.
+// Durante a captura de telas (`npm run print:ios`) o overlay do LogBox se
+// empilha exatamente sobre a barra de abas — que é justamente um elemento que
+// precisamos julgar contra a referência. Print com aviso por cima esconde a
+// interface que ele deveria provar.
+//
+// Atrás de variável de ambiente porque cegar o LogBox por padrão é como a
+// regra acima nasceu: aviso permanente treina você a ignorar os que importam.
+// Quem roda o app na mão continua vendo tudo.
+if (process.env.EXPO_PUBLIC_SEM_LOGBOX === '1') LogBox.ignoreAllLogs();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -236,11 +247,18 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const { mode } = useTheme();
+  // Os quatro pesos que `FONTS` nomeia em @quibly/shared. Carregar de menos
+  // aqui não dá erro: o texto simplesmente cai para a fonte do sistema, que é
+  // o tipo de bug que ninguém vê no simulador e todo mundo vê na loja.
+  //
+  // A Inter continua instalada (`@expo-google-fonts/inter` no package.json) de
+  // propósito, como plano B: se a Nunito falhar em runtime, voltar é trocar
+  // estas quatro linhas e o bloco FONTS do shared, sem npm install no meio.
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
   });
 
   // Restore the saved theme before the first paint of any screen.

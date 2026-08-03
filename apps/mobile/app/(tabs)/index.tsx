@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { roomCoverThumbForId, ROOM_ROW_THUMB } from '../../assets/room-covers';
 import { MascotBlock } from '../../components/mascot';
 import Press from '../../components/ui/Press';
+import { challengeTimeLeft } from '../../lib/rooms-home';
 import { getMyRooms, type RoomSummary } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { useTabBarClearance } from './_layout';
@@ -21,18 +22,26 @@ export default function RoomsScreen() {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => setRooms(await getMyRooms()), []);
+  const load = useCallback(async () => {
+    setRooms(await getMyRooms());
+    setFailed(false);
+  }, []);
   useFocusEffect(useCallback(() => {
     let alive = true;
-    void load().catch(() => {}).finally(() => alive && setLoading(false));
+    void load().catch(() => alive && setFailed(true)).finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [load]));
 
+  const retry = () => {
+    setLoading(true);
+    void load().catch(() => setFailed(true)).finally(() => setLoading(false));
+  };
   const refresh = async () => {
     setRefreshing(true);
-    await load().catch(() => {});
+    await load().catch(() => setFailed(true));
     setRefreshing(false);
   };
   const join = () => {
@@ -41,6 +50,22 @@ export default function RoomsScreen() {
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={c.accent} /></View>;
+
+  // Um erro de carregamento deixava a lista vazia sem dizer nada — o vazio
+  // ("crie a sua primeira sala") mentia sobre o que aconteceu. §4.4.
+  if (failed && rooms.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.empty}>
+          <MascotBlock state="worried" size={96} />
+          <Text style={[styles.emptySubtitle, { marginTop: space.lg }]}>{t('rooms.loadFailed')}</Text>
+          <Press haptic="light" onPress={retry} style={styles.retryButton}>
+            <Text style={styles.retryText}>{t('rooms.tryAgain')}</Text>
+          </Press>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (rooms.length === 0) {
     return (
@@ -78,6 +103,7 @@ export default function RoomsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={[styles.list, { paddingBottom: tabClearance }]}
         ListHeaderComponent={<Text style={styles.title}>{t('rooms.listTitle')}</Text>}
+        ItemSeparatorComponent={() => <View style={styles.gap} />}
         renderItem={({ item }) => (
           <Press onPress={() => router.push(`/league/room/${item.id}`)} style={styles.roomRow}>
             <Image
@@ -85,7 +111,10 @@ export default function RoomsScreen() {
               style={styles.cover}
               resizeMode="cover"
             />
-            <Text style={styles.roomName} numberOfLines={1}>{item.name}</Text>
+            <View style={styles.roomText}>
+              <Text style={styles.roomName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.roomMeta} numberOfLines={1}>{subtitleFor(item, t)}</Text>
+            </View>
             <ChevronRight size={18} color={c.fgSubtle} />
           </Press>
         )}
@@ -94,20 +123,65 @@ export default function RoomsScreen() {
   );
 }
 
+/**
+ * A sublinha da linha de sala: quantas pessoas e quanto falta.
+ *
+ * As duas perguntas que fazem alguém entrar numa sala (`DESIGN-GYMRATS §5.11`).
+ * A referência nunca tem linha de uma informação só — a nossa tinha, e o vazio
+ * embaixo dela era a tela inteira. Sem desafio ativo, sobra só a contagem de
+ * gente: é honesto, e é melhor que inventar prazo.
+ */
+function subtitleFor(room: RoomSummary, t: (key: string, opts: { count: number }) => string): string {
+  const people = t('members', { count: room.member_count });
+  const challenge = room.active_challenge;
+  if (!challenge) return people;
+  const left = challengeTimeLeft(challenge.ends_at, challenge.server_time);
+  return `${people} · ${t('rooms.daysLeft', { count: left.days })}`;
+}
+
 const makeStyles = (c: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
-  list: { paddingHorizontal: space.xl, paddingTop: space.md },
-  title: { ...text.title1, color: c.fg, marginBottom: space.xl },
-  roomRow: { height: 72, flexDirection: 'row', alignItems: 'center', gap: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  list: { paddingHorizontal: space.lg, paddingTop: space.md },
+  // 28, não 40: na captura de hoje o título ocupava mais altura que a única
+  // linha de conteúdo da tela. A referência abre em ~23pt (§3.2.1).
+  title: { ...text.title2, color: c.fg, marginBottom: space.lg },
+  // Card, não faixa nua sobre o fundo. A borda de 1px é a mesma linha nos dois
+  // modos: no claro ela desenha a aresta, no escuro ela some (§3.2.4).
+  roomRow: {
+    height: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingLeft: space.sm,
+    paddingRight: space.md,
+    backgroundColor: c.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  gap: { height: space.md },
   // A banner, not an avatar: 16:9 like the room hero it previews. Square-cropping
   // the cover turned the artwork into a sticker and cut the rabbit off-centre.
-  cover: { ...ROOM_ROW_THUMB, borderRadius: radius.sm, backgroundColor: c.surfaceRaised, overflow: 'hidden' },
-  roomName: { ...text.bodyStrong, color: c.fg, flex: 1 },
+  // A borda existe porque a arte é quase branca e sem ela a onda flutua sem
+  // aresta sobre o card branco (§3.2.6).
+  cover: {
+    ...ROOM_ROW_THUMB,
+    borderRadius: radius.sm,
+    backgroundColor: c.surfaceRaised,
+    borderWidth: 1,
+    borderColor: c.border,
+    overflow: 'hidden',
+  },
+  roomText: { flex: 1, gap: 2 },
+  roomName: { ...text.bodyStrong, color: c.fg },
+  roomMeta: { ...text.caption, color: c.fgMuted },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: space.xl, paddingBottom: 80 },
   emptyTitle: { ...text.title2, color: c.fg, marginBottom: space.sm },
   emptySubtitle: { ...text.body, color: c.fgMuted, textAlign: 'center', lineHeight: 22 },
-  createButton: { marginTop: space.xl, height: 52, width: '100%', borderRadius: radius.lg, backgroundColor: c.accent, flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'center' },
+  createButton: { marginTop: space.xl, height: 54, width: '100%', borderRadius: radius.lg, backgroundColor: c.accent, flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'center' },
+  retryButton: { marginTop: space.xl, height: 54, paddingHorizontal: space.xxl, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
+  retryText: { ...text.bodyStrong, color: c.accent },
   createText: { ...text.bodyStrong, color: c.fgOnAccent },
   joinRow: { flexDirection: 'row', gap: space.sm, width: '100%', marginTop: space.md },
   input: { flex: 1, height: 50, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, paddingHorizontal: space.lg, color: c.fg, backgroundColor: c.surface, ...text.body },

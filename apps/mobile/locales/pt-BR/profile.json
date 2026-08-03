@@ -1,5 +1,12 @@
 {
+  "title": "Perfil",
   "stats": "Estatísticas",
+  "streakShort": "Sequência",
+  "minutesShort": "Minutos",
+  "levelShort": "Nível",
+  "appearance": "Aparência",
+  "themeLight": "Claro",
+  "themeDark": "Escuro",
   "totalHours": "Horas Totais",
   "verifiedHours": "Horas Verificadas",
   "currentStreak": "Sequência Atual",

@@ -50,6 +50,13 @@ const TIME_OPTIONS = [
  *  folded into the first one — a screen with nothing to answer is pure drop-off. */
 const TOTAL_STEPS = 5;
 
+/**
+ * Um coelho por passo, um estado por passo — é onde ele mais trabalha
+ * (`MARCA §5`, `DESIGN-GYMRATS §3.3`). Tamanho 132 em todos; não varia por
+ * passo, porque variar tamanho é a diferença entre mascote e enfeite.
+ */
+const STEP_MASCOTS = ['wave', 'thinking', 'reading', 'focused', 'happy'] as const;
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('onboarding');
@@ -63,6 +70,8 @@ export default function OnboardingScreen() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [dailyMinutes, setDailyMinutes] = useState(15);
   const [submitting, setSubmitting] = useState(false);
+  /** Nunca alerta: o onboarding não pode ter uma porta de saída modal (§5.14). */
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     track('onboarding_started');
@@ -84,6 +93,7 @@ export default function OnboardingScreen() {
 
   const handleComplete = async () => {
     setSubmitting(true);
+    setFailed(false);
     try {
       await api.post('/onboarding', {
         username: name.trim(),
@@ -102,6 +112,7 @@ export default function OnboardingScreen() {
       router.replace('/(tabs)');
     } catch (err) {
       console.error('[Onboarding]', err);
+      setFailed(true);
       setSubmitting(false);
     }
   };
@@ -133,7 +144,7 @@ export default function OnboardingScreen() {
             style={[
               styles.optionCard,
               {
-                backgroundColor: c.surface,
+                backgroundColor: selected ? c.accentSoft : c.surface,
                 borderColor: selected ? c.accent : c.border,
               },
             ]}
@@ -159,7 +170,7 @@ export default function OnboardingScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.progressWrap}>
-          <View style={[styles.progressTrack, { backgroundColor: c.surface }]}>
+          <View style={[styles.progressTrack, { backgroundColor: c.surfacePressed }]}>
             <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: c.accent }]} />
           </View>
         </View>
@@ -172,7 +183,7 @@ export default function OnboardingScreen() {
           {/* 0 — name */}
           {step === 0 && (
             <Animated.View entering={FadeInDown.duration(320)} style={styles.step}>
-              <MascotBlock state="wave" size={132} />
+              <View style={styles.mascot}><MascotBlock state={STEP_MASCOTS[0]} size={132} /></View>
               <Text style={{ ...t.title2, color: c.fg }}>{tr('welcomeTitle')}</Text>
               <Text style={{ ...t.body, color: c.fgMuted, marginTop: space.sm }}>
                 {tr('nameSub')}
@@ -195,6 +206,7 @@ export default function OnboardingScreen() {
           {/* 1 — level */}
           {step === 1 && (
             <Animated.View entering={FadeInDown.duration(320)} style={styles.step}>
+              <View style={styles.mascot}><MascotBlock state={STEP_MASCOTS[1]} size={132} /></View>
               <Text style={{ ...t.title2, color: c.fg }}>{tr('levelTitle')}</Text>
               <Text style={{ ...t.body, color: c.fgMuted, marginTop: space.sm, marginBottom: space.xl }}>
                 {tr('levelSub')}
@@ -206,6 +218,7 @@ export default function OnboardingScreen() {
           {/* 2 — goal */}
           {step === 2 && (
             <Animated.View entering={FadeInDown.duration(320)} style={styles.step}>
+              <View style={styles.mascot}><MascotBlock state={STEP_MASCOTS[2]} size={132} /></View>
               <Text style={{ ...t.title2, color: c.fg }}>{tr('goalTitle')}</Text>
               <Text style={{ ...t.body, color: c.fgMuted, marginTop: space.sm, marginBottom: space.xl }}>
                 {tr('goalSub')}
@@ -217,6 +230,7 @@ export default function OnboardingScreen() {
           {/* 3 — subjects */}
           {step === 3 && (
             <Animated.View entering={FadeInDown.duration(320)} style={styles.step}>
+              <View style={styles.mascot}><MascotBlock state={STEP_MASCOTS[3]} size={132} /></View>
               <Text style={{ ...t.title2, color: c.fg }}>{tr('subjectsTitle')}</Text>
               <Text style={{ ...t.body, color: c.fgMuted, marginTop: space.sm, marginBottom: space.xl }}>
                 {tr('subjectsSub')}
@@ -256,6 +270,7 @@ export default function OnboardingScreen() {
           {/* 4 — daily goal */}
           {step === 4 && (
             <Animated.View entering={FadeInDown.duration(320)} style={styles.step}>
+              <View style={styles.mascot}><MascotBlock state={STEP_MASCOTS[4]} size={132} /></View>
               <Text style={{ ...t.title2, color: c.fg }}>{tr('dailyGoalTitle')}</Text>
               <Text style={{ ...t.body, color: c.fgMuted, marginTop: space.sm, marginBottom: space.xl }}>
                 {tr('dailyGoalSub')}
@@ -289,7 +304,8 @@ export default function OnboardingScreen() {
                       <Text
                         style={{
                           ...t.caption,
-                          color: selected ? 'rgba(10,10,12,0.6)' : c.fgSubtle,
+                          color: selected ? c.fgOnAccent : c.fgSubtle,
+                          opacity: selected ? 0.75 : 1,
                         }}
                       >
                         {tr(`time.${opt.minutes}`)}
@@ -303,6 +319,11 @@ export default function OnboardingScreen() {
         </ScrollView>
 
         <View style={[styles.bottom, { backgroundColor: c.bg }]}>
+          {failed && (
+            <Text style={{ ...t.caption, color: c.danger, marginBottom: space.sm, textAlign: 'center' }}>
+              {tr('saveFailed')}
+            </Text>
+          )}
           <Press
             haptic="medium"
             scale={0.985}
@@ -331,12 +352,14 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  progressWrap: { paddingHorizontal: space.xl, paddingTop: space.sm },
-  progressTrack: { height: 3, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 2 },
+  progressWrap: { paddingHorizontal: space.lg, paddingTop: space.sm },
+  progressTrack: { height: 3, borderRadius: radius.full, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: radius.full },
 
-  scroll: { flexGrow: 1, paddingHorizontal: space.xl, paddingBottom: 120 },
-  step: { paddingTop: space.xxxl },
+  scroll: { flexGrow: 1, paddingHorizontal: space.lg, paddingBottom: 120 },
+  step: { paddingTop: space.xxl },
+  /** Um coelho por passo, sempre 132, com 24 de respiro abaixo (§3.3). */
+  mascot: { marginBottom: space.xl },
 
 
   nameInput: {
@@ -351,8 +374,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.lg,
+    height: 64,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   optionIcon: {
@@ -384,9 +408,9 @@ const styles = StyleSheet.create({
 
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
   timeCard: {
-    width: (W - space.xl * 2 - space.md) / 2,
+    width: (W - space.lg * 2 - space.md) / 2,
     paddingVertical: space.xl,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
   },
@@ -396,7 +420,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: space.xl,
+    paddingHorizontal: space.lg,
     paddingBottom: 36,
     paddingTop: space.lg,
   },
@@ -405,7 +429,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
-    paddingVertical: 18,
+    height: 54,
     borderRadius: radius.lg,
   },
 });

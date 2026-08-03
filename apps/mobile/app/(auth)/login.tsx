@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -22,11 +22,27 @@ import Animated, {
 } from 'react-native-reanimated';
 import AppleSignInButton from '../../components/auth/AppleSignInButton';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
-import { staticDark as c, NIGHT_GRADIENT } from '../../theme';
+import { useTheme, type Palette, NIGHT_GRADIENT, text as ty, space, radius } from '../../theme';
 import { trackScreen } from '../../lib/analytics';
 
+/**
+ * O login é a única tela do app que não é `c.bg`, e isso é deliberado
+ * (`DESIGN-GYMRATS §5.15`): é a moldura da marca, não uma superfície de
+ * produto. Ela fica escura mesmo com o app claro.
+ *
+ * Consequência que quebrou a tela até hoje: `c.fg` é a cor de texto da
+ * *superfície do tema*, e aqui não há superfície de tema nenhuma. Com o app
+ * virando claro, `c.fg` (#17171B) passou a ser pintado sobre o céu noturno — o
+ * wordmark, a tagline e as fórmulas fantasma sumiram. Quem trabalha em cima de
+ * palco escuro fixo é `c.fgOnScrim` / `c.fgOnScrimMuted`, e é por isso que
+ * esses dois tokens existem (ver `colors.ts`).
+ *
+ * Os alfas de branco abaixo continuam literais de propósito: a paleta
+ * semântica descreve superfícies do produto, e não vale inventar um
+ * `fgOnGradient70` para uma tela só.
+ */
 const { width: W, height: H } = Dimensions.get('window');
-const LOGO_SIZE = 88;
+const LOGO_SIZE = 96;
 const LOGO_CENTER_Y = H * 0.42 - LOGO_SIZE / 2;
 const LOGO_FINAL_Y = H * 0.12;
 const SPLASH_HOLD = 1800;
@@ -34,9 +50,9 @@ const TRANSITION_DUR = 700;
 
 /* ── ghost formula — fades in/out in place ── */
 function GhostSymbol({
-  text, x, y, size, rotate, delay, duration = 5000,
+  text, x, y, size, rotate, delay, duration = 5000, color,
 }: {
-  text: string; x: number; y: number; size: number; rotate: number; delay: number; duration?: number;
+  text: string; x: number; y: number; size: number; rotate: number; delay: number; duration?: number; color: string;
 }) {
   const opacity = useSharedValue(0);
   useEffect(() => {
@@ -53,14 +69,14 @@ function GhostSymbol({
     <Animated.Text
       style={[{
         position: 'absolute', left: x, top: y, fontSize: size, fontWeight: '300',
-        color: c.fg, transform: [{ rotate: `${rotate}deg` }], letterSpacing: 1,
+        color, transform: [{ rotate: `${rotate}deg` }], letterSpacing: 1,
       }, style]}
     >{text}</Animated.Text>
   );
 }
 
 /* ── soft particle ── */
-function Particle({ x, y, size, delay }: { x: number; y: number; size: number; delay: number }) {
+function Particle({ x, y, size, delay, color }: { x: number; y: number; size: number; delay: number; color: string }) {
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.value = withDelay(delay, withRepeat(
@@ -74,14 +90,14 @@ function Particle({ x, y, size, delay }: { x: number; y: number; size: number; d
   return (
     <Animated.View style={[{
       position: 'absolute', left: x, top: y, width: size, height: size,
-      borderRadius: size / 2, backgroundColor: c.fg,
+      borderRadius: size / 2, backgroundColor: color,
     }, style]} />
   );
 }
 
 /* ── drifting cloud ── */
-function DriftingCloud({ y, delay, speed, opacity: maxOp, scale = 1 }: {
-  y: number; delay: number; speed: number; opacity: number; scale?: number;
+function DriftingCloud({ y, delay, speed, opacity: maxOp, scale = 1, color }: {
+  y: number; delay: number; speed: number; opacity: number; scale?: number; color: string;
 }) {
   const tx = useSharedValue(-W * 0.6);
   useEffect(() => {
@@ -98,16 +114,16 @@ function DriftingCloud({ y, delay, speed, opacity: maxOp, scale = 1 }: {
   const bw = W * 0.35;
   return (
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: y, width: W * 0.7, height: bw * 0.35, opacity: maxOp }, style]}>
-      <View style={{ position: 'absolute', bottom: 0, left: 0, width: bw, height: bw * 0.28, borderRadius: bw, backgroundColor: c.fg }} />
-      <View style={{ position: 'absolute', bottom: bw * 0.1, left: bw * 0.15, width: bw * 0.5, height: bw * 0.4, borderRadius: bw, backgroundColor: c.fg }} />
-      <View style={{ position: 'absolute', bottom: bw * 0.08, left: bw * 0.4, width: bw * 0.55, height: bw * 0.35, borderRadius: bw, backgroundColor: c.fg }} />
-      <View style={{ position: 'absolute', bottom: bw * 0.12, left: bw * 0.25, width: bw * 0.4, height: bw * 0.45, borderRadius: bw, backgroundColor: c.fg }} />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, width: bw, height: bw * 0.28, borderRadius: bw, backgroundColor: color }} />
+      <View style={{ position: 'absolute', bottom: bw * 0.1, left: bw * 0.15, width: bw * 0.5, height: bw * 0.4, borderRadius: bw, backgroundColor: color }} />
+      <View style={{ position: 'absolute', bottom: bw * 0.08, left: bw * 0.4, width: bw * 0.55, height: bw * 0.35, borderRadius: bw, backgroundColor: color }} />
+      <View style={{ position: 'absolute', bottom: bw * 0.12, left: bw * 0.25, width: bw * 0.4, height: bw * 0.45, borderRadius: bw, backgroundColor: color }} />
     </Animated.View>
   );
 }
 
 /* ── Apple-style dual shine sweep over logo ── */
-function ShineOverlay() {
+function ShineOverlay({ color }: { color: string }) {
   const sweep1 = useSharedValue(-1);
   const sweep2 = useSharedValue(-1);
 
@@ -146,11 +162,11 @@ function ShineOverlay() {
     <>
       <Animated.View pointerEvents="none" style={[{
         position: 'absolute', top: 0, left: -30, right: -30, height: 24,
-        borderRadius: 12, backgroundColor: c.fg,
+        borderRadius: 12, backgroundColor: color,
       }, style1]} />
       <Animated.View pointerEvents="none" style={[{
         position: 'absolute', top: 0, left: -30, right: -30, height: 10,
-        borderRadius: 5, backgroundColor: c.fg,
+        borderRadius: 5, backgroundColor: color,
       }, style2]} />
     </>
   );
@@ -158,6 +174,8 @@ function ShineOverlay() {
 
 export default function LoginScreen() {
   const { t } = useTranslation('auth');
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const { message } = useLocalSearchParams<{ message?: string }>();
   const [error, setError] = useState('');
 
@@ -198,47 +216,49 @@ export default function LoginScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient
-        // Night sky rather than day: the login screen is the first impression
-        // and has to agree with the dark app behind it.
-        colors={[c.bg, ...NIGHT_GRADIENT, c.surfaceRaised]}
-        locations={[0, 0.2, 0.45, 0.72, 1]}
+        // Só as paradas do céu noturno. As pontas vinham de `c.bg` e
+        // `c.surfaceRaised`, o que no app claro punha #F7F7F9 no topo e
+        // #F1F1F5 no pé: o gradiente ia de branco a quase preto e de volta a
+        // branco. O palco é a marca, e a marca não muda com o tema (§5.15).
+        colors={NIGHT_GRADIENT}
+        locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
 
       {/* clouds */}
-      <DriftingCloud y={H * 0.22} delay={0} speed={25000} opacity={0.12} />
-      <DriftingCloud y={H * 0.42} delay={8000} speed={30000} opacity={0.08} scale={0.85} />
+      <DriftingCloud y={H * 0.22} delay={0} speed={25000} opacity={0.12} color={c.fgOnScrim} />
+      <DriftingCloud y={H * 0.42} delay={8000} speed={30000} opacity={0.08} scale={0.85} color={c.fgOnScrim} />
 
       {/* ghost formulas */}
-      <GhostSymbol text="E = mc²" x={W * 0.06} y={H * 0.05} size={14} rotate={-12} delay={500} />
-      <GhostSymbol text="π" x={W * 0.8} y={H * 0.04} size={28} rotate={8} delay={2000} duration={6000} />
-      <GhostSymbol text="∫" x={W * 0.65} y={H * 0.12} size={32} rotate={-5} delay={3500} />
-      <GhostSymbol text="H₂O" x={W * 0.15} y={H * 0.15} size={13} rotate={15} delay={1000} />
-      <GhostSymbol text="Δ" x={W * 0.85} y={H * 0.2} size={24} rotate={-8} delay={4000} />
-      <GhostSymbol text="a² + b² = c²" x={W * 0.02} y={H * 0.28} size={11} rotate={6} delay={1500} duration={6000} />
-      <GhostSymbol text="∞" x={W * 0.75} y={H * 0.32} size={26} rotate={-3} delay={2500} />
-      <GhostSymbol text="Fe" x={W * 0.1} y={H * 0.4} size={16} rotate={10} delay={3000} />
-      <GhostSymbol text="Σ" x={W * 0.82} y={H * 0.42} size={22} rotate={-14} delay={800} />
-      <GhostSymbol text="λ" x={W * 0.7} y={H * 0.08} size={20} rotate={-7} delay={6000} />
-      <GhostSymbol text="CO₂" x={W * 0.4} y={H * 0.02} size={12} rotate={9} delay={4500} />
-      <GhostSymbol text="√" x={W * 0.55} y={H * 0.38} size={30} rotate={-6} delay={1800} />
-      <GhostSymbol text="θ" x={W * 0.6} y={H * 0.25} size={22} rotate={7} delay={1200} />
+      <GhostSymbol text="E = mc²" x={W * 0.06} y={H * 0.05} size={14} rotate={-12} delay={500} color={c.fgOnScrim} />
+      <GhostSymbol text="π" x={W * 0.8} y={H * 0.04} size={28} rotate={8} delay={2000} duration={6000} color={c.fgOnScrim} />
+      <GhostSymbol text="∫" x={W * 0.65} y={H * 0.12} size={32} rotate={-5} delay={3500} color={c.fgOnScrim} />
+      <GhostSymbol text="H₂O" x={W * 0.15} y={H * 0.15} size={13} rotate={15} delay={1000} color={c.fgOnScrim} />
+      <GhostSymbol text="Δ" x={W * 0.85} y={H * 0.2} size={24} rotate={-8} delay={4000} color={c.fgOnScrim} />
+      <GhostSymbol text="a² + b² = c²" x={W * 0.02} y={H * 0.28} size={11} rotate={6} delay={1500} duration={6000} color={c.fgOnScrim} />
+      <GhostSymbol text="∞" x={W * 0.75} y={H * 0.32} size={26} rotate={-3} delay={2500} color={c.fgOnScrim} />
+      <GhostSymbol text="Fe" x={W * 0.1} y={H * 0.4} size={16} rotate={10} delay={3000} color={c.fgOnScrim} />
+      <GhostSymbol text="Σ" x={W * 0.82} y={H * 0.42} size={22} rotate={-14} delay={800} color={c.fgOnScrim} />
+      <GhostSymbol text="λ" x={W * 0.7} y={H * 0.08} size={20} rotate={-7} delay={6000} color={c.fgOnScrim} />
+      <GhostSymbol text="CO₂" x={W * 0.4} y={H * 0.02} size={12} rotate={9} delay={4500} color={c.fgOnScrim} />
+      <GhostSymbol text="√" x={W * 0.55} y={H * 0.38} size={30} rotate={-6} delay={1800} color={c.fgOnScrim} />
+      <GhostSymbol text="θ" x={W * 0.6} y={H * 0.25} size={22} rotate={7} delay={1200} color={c.fgOnScrim} />
 
       {/* particles */}
-      <Particle x={W * 0.2} y={H * 0.08} size={4} delay={300} />
-      <Particle x={W * 0.7} y={H * 0.15} size={3} delay={1500} />
-      <Particle x={W * 0.45} y={H * 0.06} size={5} delay={2800} />
-      <Particle x={W * 0.85} y={H * 0.28} size={3} delay={800} />
-      <Particle x={W * 0.1} y={H * 0.33} size={4} delay={3500} />
-      <Particle x={W * 0.55} y={H * 0.18} size={3} delay={4200} />
-      <Particle x={W * 0.3} y={H * 0.42} size={4} delay={1200} />
-      <Particle x={W * 0.78} y={H * 0.38} size={3} delay={2000} />
+      <Particle x={W * 0.2} y={H * 0.08} size={4} delay={300} color={c.fgOnScrim} />
+      <Particle x={W * 0.7} y={H * 0.15} size={3} delay={1500} color={c.fgOnScrim} />
+      <Particle x={W * 0.45} y={H * 0.06} size={5} delay={2800} color={c.fgOnScrim} />
+      <Particle x={W * 0.85} y={H * 0.28} size={3} delay={800} color={c.fgOnScrim} />
+      <Particle x={W * 0.1} y={H * 0.33} size={4} delay={3500} color={c.fgOnScrim} />
+      <Particle x={W * 0.55} y={H * 0.18} size={3} delay={4200} color={c.fgOnScrim} />
+      <Particle x={W * 0.3} y={H * 0.42} size={4} delay={1200} color={c.fgOnScrim} />
+      <Particle x={W * 0.78} y={H * 0.38} size={3} delay={2000} color={c.fgOnScrim} />
 
       {/* ── LOGO — starts centered (splash), rises to top (login) ── */}
       <Animated.View style={[styles.logoAbsolute, logoContainerStyle]}>
         <Animated.View style={[styles.logoWrap, logoScaleStyle]}>
           <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-          <ShineOverlay />
+          <ShineOverlay color={c.fgOnScrim} />
         </Animated.View>
       </Animated.View>
 
@@ -263,6 +283,8 @@ export default function LoginScreen() {
           {/* push buttons to bottom */}
           <View style={{ flex: 1 }} />
 
+          {/* Sem painel de vidro e sem o divisor "login": os blocos da §5.15
+              são rótulo, botões e linha legal. O resto era ornamento. */}
           <View style={styles.actionArea}>
             {message ? (
               <View style={styles.successBanner}><Text style={styles.bannerText}>{message}</Text></View>
@@ -272,12 +294,6 @@ export default function LoginScreen() {
             ) : null}
 
             <Text style={styles.ctaLabel}>{t('login.socialSubtitle')}</Text>
-
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>login</Text>
-              <View style={styles.dividerLine} />
-            </View>
 
             <View style={styles.buttons}>
               <AppleSignInButton onError={setError} />
@@ -292,7 +308,11 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Alfas de branco, não tokens: ver a nota no topo do arquivo. Cada número é o
+ * peso do bloco na §5.15 — 70% tagline, 60% rótulo, 45% legal.
+ */
+const makeStyles = (c: Palette) => StyleSheet.create({
   root: { flex: 1 },
 
   /* logo — absolute so it can animate freely */
@@ -322,96 +342,62 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingBottom: 40,
+    paddingHorizontal: space.xl,
+    paddingBottom: space.xxl,
   },
   brandGroup: {
     alignItems: 'center',
-    marginBottom: 0,
   },
   brandImage: {
     width: 160,
     height: 44,
-    tintColor: c.fg,
-    marginBottom: 14,
+    tintColor: c.fgOnScrim,
+    marginBottom: space.md,
   },
   taglinePill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    height: 34,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: radius.full,
+    paddingHorizontal: space.lg,
   },
   tagline: {
-    fontSize: 13,
-    color: c.fg,
-    fontWeight: '600',
+    ...ty.caption,
+    color: 'rgba(255,255,255,0.70)',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   actionArea: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 20,
   },
   ctaLabel: {
-    fontSize: 15,
-    color: c.fg,
+    ...ty.caption,
+    color: 'rgba(255,255,255,0.60)',
     textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: space.md,
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
-  dividerText: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '600',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginHorizontal: 14,
-  },
-  buttons: { gap: 12 },
+  buttons: { gap: space.md },
   successBanner: {
-    backgroundColor: 'rgba(16,185,129,0.2)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 14,
+    backgroundColor: c.success,
+    borderRadius: radius.md,
+    padding: space.md,
+    marginBottom: space.md,
   },
   errorBanner: {
-    backgroundColor: 'rgba(239,68,68,0.2)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 14,
+    backgroundColor: c.danger,
+    borderRadius: radius.md,
+    padding: space.md,
+    marginBottom: space.md,
   },
   bannerText: {
-    color: c.fg,
-    fontSize: 14,
+    ...ty.caption,
+    color: c.fgOnScrim,
     textAlign: 'center',
-    fontWeight: '600',
   },
   legal: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
+    ...ty.caption,
+    color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
-    marginTop: 18,
-    lineHeight: 17,
-    paddingHorizontal: 8,
+    marginTop: space.lg,
   },
 });

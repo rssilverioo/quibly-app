@@ -57,14 +57,10 @@ export default function StudyScreen() {
             <Text style={{ ...t.title2, color: c.fg }}>{tr('startStudying')}</Text>
           </Animated.View>
 
-          {/* Total time is the hero — it's the number people come back for. */}
-          <Animated.View entering={FadeInDown.duration(300).delay(50)} style={styles.hero}>
-            <Text style={{ ...t.overline, color: c.fgSubtle }}>{tr('totalHours')}</Text>
-            <View style={styles.heroRow}>
-              <Text style={{ ...t.display, color: c.fg }}>{totalHours}</Text>
-              <Text style={{ ...t.title3, color: c.fgMuted, marginBottom: 10 }}>h</Text>
-            </View>
-          </Animated.View>
+          {/* O herói de 64pt saiu. Ele repetia, em `text.display`, exatamente o
+              primeiro mosaico da faixa de números logo abaixo — e a referência
+              não tem número grande em lugar nenhum (§2.2, §7). Hierarquia aqui
+              vem de posição: a ação primária vem antes do dado. */}
 
           {/* Resume takes priority over starting fresh */}
           {isPaused && (
@@ -180,17 +176,14 @@ export default function StudyScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: space.xl, paddingTop: space.md },
-
-  hero: { marginTop: space.xl, marginBottom: space.xl },
-  heroRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, marginTop: space.sm },
+  scroll: { paddingHorizontal: space.lg, paddingTop: space.md },
 
   resumeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     padding: space.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
     marginBottom: space.md,
   },
@@ -201,8 +194,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
-    paddingVertical: 18,
+    height: 54,
     borderRadius: radius.lg,
+    marginTop: space.lg,
   },
 
   statsRow: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
@@ -210,7 +204,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     padding: space.lg,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
   },
@@ -228,7 +222,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.md,
     padding: space.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   deckIcon: {

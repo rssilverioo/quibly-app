@@ -83,8 +83,38 @@
     ,"nightOwl": "Most night owl check-ins"
     ,"detailsUnavailable": "Group details are unavailable right now."
     ,"tryAgain": "Try again"
+    ,"loadFailed": "We couldn't load your rooms right now."
     ,"post": "Post"
     ,"postUnavailable": "Post unavailable"
+    ,"photoFeedEmptyTitle": "Nobody has posted yet today"
+    ,"leader": "Leader"
+    ,"roomUnavailable": "We couldn't open this room"
+    ,"rankingsTitle": "Rankings"
+    ,"rankingsUnavailable": "We couldn't load the rankings"
+    ,"leaderboardEmpty": "Nobody has scored yet"
+    ,"challengeWinner": "{{name}} won"
+    ,"challengeEnded": "The challenge is over"
+    ,"backToFeed": "Back to the feed"
+    ,"newRoom": "New room"
+    ,"roomNamePlaceholder": "Room name"
+    ,"displayNamePlaceholder": "How you show up"
+    ,"shareInvite": "Share invite"
+    ,"openRoom": "Open the room"
+    ,"createRoomError": "We couldn't create the room"
+    ,"loginRequired": "Sign in to create a room"
+    ,"invited": "You've been invited"
+    ,"inviteInvalid": "This invite no longer exists"
+    ,"inviteAnotherCode": "Enter another code"
+    ,"joinError": "We couldn't join this room"
+    ,"roomFull": "This room is full"
+    ,"roomEnded": "This challenge has already ended"
+    ,"chatEmpty": "Nobody has spoken yet"
+    ,"chatEmptySubtitle": "Send the first message to the group."
+    ,"chatPlaceholder": "Message"
+    ,"chatUnavailable": "We couldn't open the chat"
+    ,"createChallengeError": "We couldn't create the challenge"
+    ,"postError": "We couldn't post the photo"
+    ,"feedUnavailable": "We couldn't load this room's feed."
   },
   "members": "Members",
   "members_one": "{{count}} member",
@@ -92,6 +122,7 @@
   "sp": "SP",
   "xp": "XP",
   "unknown": "Unknown",
+  "retry": "Try again",
   "optional": "(optional)",
   "verified": "Verified",
   "notNow": "Not now"

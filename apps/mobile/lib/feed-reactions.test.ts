@@ -4,11 +4,12 @@ import type { RoomFeedPost } from '../services/rooms';
 
 const base = {
   id: 'p1',
-  created_at: '2026-07-30T12:00:00Z',
-  author: { user_id: 'u9', display_name: 'Ana', avatar_url: null },
-  show_proof_photo: true,
-  photo_url: 'https://example.test/a.jpg',
-  comment_count: 0,
+  createdAt: '2026-07-30T12:00:00Z',
+  userId: 'u9',
+  user: { username: 'Ana', handle: 'ana', avatarUrl: null },
+  showProofPhoto: true,
+  photoUrl: 'https://example.test/a.jpg',
+  latest_comments: [],
   caption: 'Climb',
 } as unknown as RoomFeedPost;
 

@@ -1,5 +1,19 @@
 # Marca — a identidade visual do Quibly
 
+> ⚠️ **Parcialmente revogado em 2026-08-02 por `BRIEFING-NOITE-02-08.md`.** Leia
+> aquele primeiro. Em resumo: o dono do produto escolheu o **clone visual claro**
+> do GymRats, então **light-first substitui dark-first**. Cai a §6 na linha "o
+> claro-único", e cai a premissa de fundo escuro onde ela aparece no corpo do
+> texto. O accent também já não é o lime desta página — virou o azul `#4C9AFF`
+> do coelho em 2026-07-31 (ver `theme/colors.ts`), e o vermelho do GymRats
+> continua proibido.
+>
+> **O que continua de pé, e é a maior parte:** a anatomia do card do post (§3.2),
+> os estados (§3.3), a tela pós-timer (§3.4), o card do desafio (§3.5), a linha
+> do placar (§3.6) e a disciplina de tokens (§4). Essa parte foi especificada
+> contra a referência real e não se reabre — só passa a ser desenhada sobre fundo
+> claro. A anatomia por tela vive agora em `DESIGN-GYMRATS.md`.
+
 > Escrito em 2026-07-31. Deriva de `DIRECAO-PRODUTO.md` e existe para servir o
 > loop descrito lá. Onde este documento discorda de uma escolha visual anterior,
 > este vale — mas ele **não** revoga a arquitetura de `theme/`, que fica.

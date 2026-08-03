@@ -83,8 +83,38 @@
     ,"nightOwl": "Mais check-ins de madrugada"
     ,"detailsUnavailable": "Os detalhes do grupo estão indisponíveis agora."
     ,"tryAgain": "Tentar novamente"
+    ,"loadFailed": "Não deu para carregar as suas salas agora."
     ,"post": "Post"
     ,"postUnavailable": "Post indisponível"
+    ,"photoFeedEmptyTitle": "Ninguém postou ainda hoje"
+    ,"leader": "Líder"
+    ,"roomUnavailable": "Não deu para abrir a sala"
+    ,"rankingsTitle": "Classificação"
+    ,"rankingsUnavailable": "Não deu para abrir a classificação"
+    ,"leaderboardEmpty": "Ninguém pontuou ainda"
+    ,"challengeWinner": "{{name}} venceu"
+    ,"challengeEnded": "O desafio terminou"
+    ,"backToFeed": "Voltar para o feed"
+    ,"newRoom": "Nova sala"
+    ,"roomNamePlaceholder": "Nome da sala"
+    ,"displayNamePlaceholder": "Como você aparece"
+    ,"shareInvite": "Compartilhar convite"
+    ,"openRoom": "Abrir a sala"
+    ,"createRoomError": "Não deu para criar a sala"
+    ,"loginRequired": "Entre na sua conta para criar uma sala"
+    ,"invited": "Você foi convidado"
+    ,"inviteInvalid": "Esse convite não existe mais"
+    ,"inviteAnotherCode": "Digitar outro código"
+    ,"joinError": "Não deu para entrar na sala"
+    ,"roomFull": "Esta sala está cheia"
+    ,"roomEnded": "Este desafio já terminou"
+    ,"chatEmpty": "Ninguém falou ainda"
+    ,"chatEmptySubtitle": "Mande a primeira mensagem para o grupo."
+    ,"chatPlaceholder": "Mensagem"
+    ,"chatUnavailable": "Não deu para abrir a conversa"
+    ,"createChallengeError": "Não deu para criar o desafio"
+    ,"postError": "Não deu para publicar a foto"
+    ,"feedUnavailable": "Não deu para carregar o feed da sala."
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
@@ -92,6 +122,7 @@
   "sp": "SP",
   "xp": "XP",
   "unknown": "Desconhecido",
+  "retry": "Tentar de novo",
   "optional": "(opcional)",
   "verified": "Verificado",
   "notNow": "Agora não"

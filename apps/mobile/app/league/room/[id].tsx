@@ -7,17 +7,21 @@ import { useTranslation } from 'react-i18next';
 
 import FeedRow from '../../../components/feed/FeedRow';
 import type { FirebaseFeedPost } from '../../../components/feed/PostCard';
+import { Mascot } from '../../../components/mascot';
 import { roomCoverForId, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { useAuth } from '../../../contexts/AuthContext';
 import { cacheFeedPost } from '../../../lib/feed-detail-cache';
-import { feedDayLabel, roomFeedPostToCardPost, startsNewFeedDay } from '../../../lib/feed-post';
+import { feedDayLabel, feedPagePosts, roomFeedPostToCardPost, startsNewFeedDay } from '../../../lib/feed-post';
 import { challengeTimeLeft, isStudyChallenge } from '../../../lib/rooms-home';
 import { getLiveMembers, type LiveMember } from '../../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+
+/** Altura da barra da sala (`RoomTabBar`), para o FAB pousar 16pt acima dela. */
+const ROOM_TAB_BAR_HEIGHT = 66;
 
 export default function RoomFeedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,39 +35,118 @@ export default function RoomFeedScreen() {
   const [live, setLive] = useState<LiveMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Falha de carregamento. Só vira tela de erro quando ainda não há sala em
+  // mão: uma atualização de fundo que falha não pode apagar o feed que já está
+  // desenhado.
+  const [failed, setFailed] = useState(false);
+  /**
+   * A sala carregou, mas o **feed** não. Estado separado de propósito
+   * (`DESIGN-GYMRATS §4.4`): antes, sala e feed dividiam um `catch` sem corpo,
+   * então feed vazio e feed quebrado desenhavam exatamente a mesma tela — o
+   * coelho lendo e "ninguém postou ainda". Foi assim que um `TypeError` de
+   * contrato (`page.items` era `undefined`, porque o servidor manda `posts`)
+   * passou semanas invisível: o app *dizia* que não havia nada.
+   */
+  const [feedFailed, setFeedFailed] = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return;
-    const rooms = await getMyRooms();
-    const current = rooms.find((candidate) => candidate.id === id) ?? null;
-    setRoom(current);
-    if (!current) return;
-    const [page, liveMembers] = await Promise.all([getRoomFeed(id), getLiveMembers()]);
-    setPosts(page.items.map((post) => roomFeedPostToCardPost(post, id, user?.uid ?? '')));
-    setLive(liveMembers.filter((member) => member.league_id === id));
+    if (!id) {
+      setFailed(true);
+      return;
+    }
+
+    // Duas etapas com dois `catch`, e não um só: o feed pode falhar sem que a
+    // sala tenha falhado, e cada falha tem a sua tela.
+    try {
+      const rooms = await getMyRooms();
+      const current = rooms.find((candidate) => candidate.id === id) ?? null;
+      setRoom(current);
+      if (!current) {
+        setFailed(true);
+        return;
+      }
+      setFailed(false);
+    } catch (error) {
+      // Nunca mais em silêncio. Um `catch` mudo aqui é o que escondeu a quebra
+      // de contrato do feed; o log é o mínimo que separa "não tem nada" de
+      // "quebrou".
+      console.warn('[sala] não deu para carregar a sala', id, error);
+      setFailed(true);
+      return;
+    }
+
+    try {
+      const [page, liveMembers] = await Promise.all([getRoomFeed(id), getLiveMembers()]);
+      // `feedPagePosts` e não `page.items`: o envelope real é `posts`, e as duas
+      // rotas de feed do servidor divergem entre si. Ver `services/rooms.ts`.
+      setPosts(feedPagePosts(page).map((post) => roomFeedPostToCardPost(post, id, user?.uid ?? '')));
+      setLive(liveMembers.filter((member) => member.league_id === id));
+      setFeedFailed(false);
+    } catch (error) {
+      console.warn('[sala] não deu para carregar o feed', id, error);
+      // Os posts já desenhados ficam. Uma atualização de fundo que falha não
+      // apaga o feed — só acende o aviso quando não há o que mostrar.
+      setFeedFailed(true);
+    }
   }, [id, user?.uid]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
-    void load().catch(() => {}).finally(() => active && setLoading(false));
-    const interval = setInterval(() => void load().catch(() => {}), 30_000);
+    void load().finally(() => active && setLoading(false));
+    const interval = setInterval(() => void load(), 30_000);
     return () => { active = false; clearInterval(interval); };
   }, [load]));
 
   const refresh = async () => {
     setRefreshing(true);
-    await load().catch(() => {});
+    await load();
     setRefreshing(false);
   };
 
-  if (loading || !room) return <View style={styles.center}><ActivityIndicator color={c.accent} /></View>;
+  const retry = () => {
+    setLoading(true);
+    setFailed(false);
+    setFeedFailed(false);
+    void load().finally(() => setLoading(false));
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={c.accent} />
+      </View>
+    );
+  }
+
+  // §4.4: a sala que não carrega mostra o coelho e um caminho de volta. Antes
+  // esta linha era `return null` — tela em branco sem explicação nem saída.
+  if (!room) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.backRow}>
+          <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+        </View>
+        <View style={styles.center}>
+          <Mascot state="worried" size={96} animate={false} />
+          <Text style={styles.stateBody}>{t('rooms.roomUnavailable')}</Text>
+          <Press onPress={retry} style={styles.stateAction}>
+            <Text style={styles.link}>{t('rooms.tryAgain')}</Text>
+          </Press>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const challenge = room.active_challenge;
   const studyMode = isStudyChallenge(challenge);
   const timeLeft = challenge ? challengeTimeLeft(challenge.ends_at, challenge.server_time) : null;
 
+  // Capa e faixa de três colunas são UM card só — na referência não há costura
+  // entre os dois. Daí a borda e o raio viverem no contêiner, e não em cada
+  // peça: `overflow: 'hidden'` recorta a foto nos cantos de cima e a faixa
+  // fecha os de baixo.
   const hero = challenge ? (
-    <Press onPress={() => router.push(`/league/challenge/${challenge.id}`)}>
+    <Press onPress={() => router.push({ pathname: '/league/challenge/[id]', params: { id: challenge.id, roomId: room.id } })} style={styles.hero}>
       <Image
         source={room.cover_url ? { uri: room.cover_url } : roomCoverForId(room.id)}
         style={styles.cover}
@@ -73,14 +156,14 @@ export default function RoomFeedScreen() {
       <View style={styles.statsStrip}>
         <View style={styles.statColumn}>
           <Avatar uri={challenge.leader?.avatar_url ?? null} name={challenge.leader?.display_name ?? ''} size={28} />
-          <View><Text style={styles.statValue}>{challenge.leader?.metric_value ?? 0}</Text><Text style={styles.statLabel}>Leader</Text></View>
+          <View><Text style={styles.statValue}>{challenge.leader?.metric_value ?? 0}</Text><Text style={styles.statLabel}>{t('rooms.leader')}</Text></View>
         </View>
         <View style={styles.statColumn}>
           <Avatar uri={null} name={t('rooms.you')} size={28} />
           <View><Text style={styles.statValue}>{challenge.me.metric_value}</Text><Text style={styles.statLabel}>{t('rooms.you')}</Text></View>
         </View>
         <View style={styles.statColumn}>
-          <CalendarDays size={25} color={c.fgMuted} />
+          <CalendarDays size={22} color={c.fgMuted} />
           <View><Text style={styles.statValue}>{timeLeft?.days ?? 0}</Text><Text style={styles.statLabel}>{t('rooms.daysLeftLabel')}</Text></View>
         </View>
       </View>
@@ -88,7 +171,7 @@ export default function RoomFeedScreen() {
   ) : (
     <Press onPress={() => router.push(`/league/challenge/new?roomId=${room.id}`)} style={styles.noChallenge}>
       <Text style={styles.overline}>{t('rooms.noChallenge')}</Text>
-      <Text style={styles.action}>{t('rooms.createChallenge')}</Text>
+      <Text style={styles.link}>{t('rooms.createChallenge')}</Text>
     </Press>
   );
 
@@ -112,14 +195,38 @@ export default function RoomFeedScreen() {
         keyExtractor={(post) => post.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}{studyMode ? <Press onPress={() => router.push('/session/setup')} style={styles.timer}><Timer size={18} color={c.fg} /><Text style={styles.action}>{t('rooms.startTimer')}</Text></Press> : null}</>}
+        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}{studyMode ? <Press onPress={() => router.push('/session/setup')} style={styles.timer}><Timer size={18} color={c.fg} /><Text style={styles.timerLabel}>{t('rooms.startTimer')}</Text></Press> : null}</>}
         renderItem={({ item, index }) => (
           <View>
             {startsNewFeedDay(posts, index) ? <Text style={styles.day}>{feedDayLabel(item.created_at, i18n.language)}</Text> : null}
-            <FeedRow post={item} locale={i18n.language} onPress={() => { cacheFeedPost(item); router.push(`/league/feed/post/${item.id}`); }} />
+            {/* A moldura da linha mora aqui, não no `FeedRow`: a linha é o
+                conteúdo (72pt travados por teste) e o card é o recipiente. */}
+            <View style={styles.postCard}>
+              <FeedRow post={item} locale={i18n.language} onPress={() => { cacheFeedPost(item); router.push(`/league/feed/post/${item.id}`); }} />
+            </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{t(studyMode ? 'rooms.feedEmptySubtitle' : 'rooms.photoFeedEmptySubtitle')}</Text>}
+        // Feed vazio e feed quebrado NÃO podem parecer a mesma coisa
+        // (`DESIGN-GYMRATS §4.4`). Vazio é o coelho lendo e um texto que diz o
+        // que produz conteúdo; erro é o coelho `worried`, o que falhou, e
+        // "Tentar novamente". Quando a lista não está vazia nada disto aparece:
+        // uma atualização que falhou sobre um feed já desenhado é silenciosa de
+        // propósito — o `console.warn` do `load` é quem registra.
+        ListEmptyComponent={feedFailed ? (
+          <View style={styles.emptyBlock}>
+            <Mascot state="worried" size={96} animate={false} />
+            <Text style={styles.stateBody}>{t('rooms.feedUnavailable')}</Text>
+            <Press onPress={retry} style={styles.stateAction}>
+              <Text style={styles.link}>{t('rooms.tryAgain')}</Text>
+            </Press>
+          </View>
+        ) : (
+          <View style={styles.emptyBlock}>
+            <Mascot state="reading" size={120} animate={false} />
+            <Text style={styles.emptyTitle}>{t(studyMode ? 'rooms.feedEmptyTitle' : 'rooms.photoFeedEmptyTitle')}</Text>
+            <Text style={styles.stateBody}>{t(studyMode ? 'rooms.feedEmptySubtitle' : 'rooms.photoFeedEmptySubtitle')}</Text>
+          </View>
+        )}
       />
       <Press haptic="medium" onPress={() => router.push(`/league/post/${room.id}`)} style={styles.fab}><Plus size={26} color={c.fgOnAccent} /></Press>
       <RoomTabBar roomId={room.id} challengeId={challenge?.id} />
@@ -129,35 +236,68 @@ export default function RoomFeedScreen() {
 
 const makeStyles = (c: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg, paddingHorizontal: space.lg },
   backRow: { height: 44, paddingHorizontal: space.md },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  list: { paddingHorizontal: space.xl, paddingBottom: 110, flexGrow: 1 },
-  title: { ...text.title1, color: c.fg, marginBottom: space.xl },
-  // A capa é uma FAIXA, não um plano de fundo. O `maxHeight` existe porque só a
-  // proporção não basta: em tela larga o 16:9 vira um bloco que domina a tela e
-  // empurra a faixa de estatísticas e o feed para fora do primeiro olhar.
+  // Margem lateral de 16 (`space.lg`) em toda a tela, como a referência. Era
+  // 24, e era ela que obrigava a capa a se desfazer do recuo com margem
+  // negativa. Com 16 a capa é só um bloco de largura cheia.
+  list: { paddingHorizontal: space.lg, paddingBottom: 110, flexGrow: 1 },
+  title: { ...text.title2, color: c.fg, marginBottom: space.md },
+  hero: {
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  // A capa é uma FAIXA, não um plano de fundo. O `maxHeight` protege telas
+  // largas: em 393pt a proporção 2,5 dá 144pt, então o teto de 150 só age de um
+  // iPad em diante — a 170 ele nunca agia.
   cover: {
     width: '100%',
     aspectRatio: ROOM_COVER_ASPECT_RATIO,
-    maxHeight: 170,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    backgroundColor: c.surface,
+    maxHeight: 150,
+    backgroundColor: c.skeleton,
   },
-  statsStrip: { minHeight: 72, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm },
-  statColumn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  // 56 = 14 de respiro + 28 de conteúdo + 14. `space-evenly` é o que reproduz a
+  // posição dos três grupos na referência; `center` por terço e `space-between`
+  // erram por mais de 20pt.
+  statsStrip: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+  },
+  statColumn: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   statValue: { ...text.bodyStrong, color: c.fg },
   statLabel: { ...text.caption, color: c.fgMuted },
-  noChallenge: { padding: space.lg, backgroundColor: c.surface, borderRadius: radius.lg, marginBottom: space.md },
+  noChallenge: { padding: space.lg, backgroundColor: c.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: c.border, marginBottom: 20 },
   overline: { ...text.overline, color: c.fgMuted },
-  action: { ...text.label, color: c.fg, marginTop: 3 },
-  liveStrip: { padding: space.lg, backgroundColor: c.surface, borderRadius: radius.lg, gap: space.md, marginBottom: space.md },
+  /** Link de ação — um dos três lugares onde o accent tem permissão de aparecer. */
+  link: { ...text.bodyStrong, color: c.accent, marginTop: 3 },
+  liveStrip: { padding: space.lg, backgroundColor: c.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: c.border, gap: space.md, marginBottom: space.md },
   livePerson: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   liveName: { ...text.bodyStrong, color: c.fg },
   liveMeta: { ...text.caption, color: c.fgMuted },
-  timer: { height: 52, borderWidth: 1, borderColor: c.border, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
-  day: { ...text.label, color: c.fgMuted, textAlign: 'center', paddingVertical: space.md },
-  empty: { ...text.body, color: c.fgMuted, textAlign: 'center', paddingTop: space.xxl },
-  fab: { position: 'absolute', right: space.xl, bottom: 82, width: 58, height: 58, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  timer: { height: 52, borderWidth: 1, borderColor: c.border, borderRadius: radius.sm, backgroundColor: c.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
+  timerLabel: { ...text.label, color: c.fg },
+  // 12 + 17 de linha + 12 = 41pt (REF 37,7). Minúsculas, não caixa alta: a
+  // referência repete este separador 3–5 vezes por tela e escolheu não pesar.
+  day: { ...text.caption, color: c.fgMuted, textAlign: 'center', paddingVertical: space.md },
+  postCard: {
+    backgroundColor: c.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingLeft: space.sm,
+    paddingRight: space.lg,
+    marginBottom: space.md,
+  },
+  emptyBlock: { alignItems: 'center', paddingTop: space.xxl },
+  emptyTitle: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
+  stateBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.sm },
+  stateAction: { minHeight: 44, justifyContent: 'center' },
+  fab: { position: 'absolute', right: space.lg, bottom: ROOM_TAB_BAR_HEIGHT + space.lg, width: 56, height: 56, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
 });

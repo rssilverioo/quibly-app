@@ -23,6 +23,7 @@
   "dependencies": {
     "@callstack/liquid-glass": "^0.8.0",
     "@expo-google-fonts/inter": "^0.2.3",
+    "@expo-google-fonts/nunito": "^0.2.3",
     "@quibly/shared": "file:../../packages/shared",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
@@ -37,6 +38,7 @@
     "expo": "~54.0.36",
     "expo-apple-authentication": "~8.0.8",
     "expo-application": "~7.0.8",
+    "expo-asset": "~12.0.13",
     "expo-audio": "~1.1.1",
     "expo-blur": "~15.0.8",
     "expo-camera": "~17.0.10",

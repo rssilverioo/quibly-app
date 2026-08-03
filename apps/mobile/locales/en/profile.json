@@ -1,5 +1,12 @@
 {
+  "title": "Profile",
   "stats": "Stats",
+  "streakShort": "Streak",
+  "minutesShort": "Minutes",
+  "levelShort": "Level",
+  "appearance": "Appearance",
+  "themeLight": "Light",
+  "themeDark": "Dark",
   "totalHours": "Total Hours",
   "verifiedHours": "Verified Hours",
   "currentStreak": "Current Streak",

@@ -1,31 +1,33 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+/**
+ * As telas de sala que já viviam em `const COLORS` / `getColors(c)` e migraram.
+ *
+ * `app/league/[id].tsx` e `app/league/feed/[id].tsx` saíram da lista porque
+ * saíram do repositório (`DESIGN-GYMRATS §3.4`): eram declaradas em `_layout`
+ * mas nenhuma rota apontava para elas.
+ */
 const roomScreens = [
-  '../app/league/[id].tsx',
   '../app/league/create.tsx',
-  '../app/league/feed/[id].tsx',
   '../app/league/join/[code].tsx',
+  '../app/league/chat/[id].tsx',
+  '../app/league/room/[id].tsx',
+  '../app/league/details/[id].tsx',
+  '../app/league/challenge/[id].tsx',
 ];
 
 describe('room screen themes', () => {
-  it.each(roomScreens)('%s follows the active semantic palette', (screen) => {
+  it.each(roomScreens)('%s reads the palette straight from useTheme()', (screen) => {
     const source = readFileSync(new URL(screen, import.meta.url).pathname, 'utf8');
 
     expect(source).toContain('useTheme');
+    // O intermediário morreu junto com as telas legadas: `getColors(c)` estava
+    // triplicado e trazia dois erros semânticos (`secondary: c.accent` e
+    // `accent: c.danger`). Quem quiser uma cor lê o token pelo nome dele.
     expect(source).not.toContain('staticDark');
-    if (screen === '../app/league/feed/[id].tsx') {
-      expect(source).toContain('backgroundColor: c.surface');
-      expect(source).toContain('borderBottomColor: c.border');
-      expect(source).toContain('color: c.fgMuted');
-      return;
-    }
-    expect(source).toContain('surface: c.surface');
-    expect(source).toContain('border: c.border');
-    expect(source).toContain('success: c.success');
-    expect(source).toContain('textSecondary: c.fgMuted');
-    expect(source).toContain('textMuted: c.fgSubtle');
-    expect(source).toContain('c.fgOnAccent');
+    expect(source).not.toContain('legacyColors');
+    expect(source).not.toContain('const getColors');
   });
 
   it('keeps subject colors on the indicator instead of readable text', () => {

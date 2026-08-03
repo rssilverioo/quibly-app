@@ -50,4 +50,13 @@ export function roomCoverThumbForId(roomId: string) {
 /** Row thumbnail geometry. 16:9, matching the hero — a banner stays a banner. */
 export const ROOM_ROW_THUMB = { width: 72, height: 40 } as const;
 
-export const ROOM_COVER_ASPECT_RATIO = 16 / 9;
+/**
+ * A proporção nativa da arte de capa (1983×793 = 2.5:1), não um 16:9 genérico.
+ *
+ * Declarar 16:9 aqui criava três proporções brigando: a arte em 2.5, o
+ * container em 1.78 e o resultado real em 2.03 depois do `maxHeight`. Com o
+ * `resizeMode="cover"` isso cortava ~19% das laterais da ilustração — a ilha e
+ * as palmeiras da direita simplesmente sumiam. Casar este valor com a arte faz
+ * a capa mostrar a composição inteira.
+ */
+export const ROOM_COVER_ASPECT_RATIO = 2.5;

@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { FONTS } from '@quibly/shared/constants';
-import { legacyColors as COLORS } from '../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -12,6 +11,9 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon, title, message, ctaLabel, onCta }: EmptyStateProps) {
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={styles.container}>
       <View style={styles.iconWrapper}>{icon}</View>
@@ -26,11 +28,15 @@ export default function EmptyState({ icon, title, message, ctaLabel, onCta }: Em
   );
 }
 
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 32 },
-  iconWrapper: { marginBottom: 16 },
-  title: { fontSize: 18, fontFamily: FONTS.semiBold, color: COLORS.text, textAlign: 'center', marginBottom: 8 },
-  message: { fontSize: 14, fontFamily: FONTS.regular, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
-  cta: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  ctaText: { fontSize: 14, fontFamily: FONTS.bold, color: COLORS.onPrimary },
+const makeStyles = (c: Palette) => StyleSheet.create({
+  container: { alignItems: 'center', paddingVertical: space.xxxl, paddingHorizontal: space.xxl },
+  iconWrapper: { marginBottom: space.lg },
+  // 18px não existe na escala; `title3` (20) é o degrau de título de seção.
+  title: { ...text.title3, color: c.fg, textAlign: 'center', marginBottom: space.sm },
+  // Mensagem de estado vazio é texto para ler, não detalhe desabilitado:
+  // `fgMuted`. O mapa antigo já apontava certo aqui; o que muda é passar a
+  // reagir à troca de tema em vez de ler uma cópia congelada da paleta.
+  message: { ...text.label, color: c.fgMuted, textAlign: 'center', marginBottom: 20 },
+  cta: { backgroundColor: c.accent, paddingHorizontal: space.xl, paddingVertical: space.md, borderRadius: radius.md },
+  ctaText: { ...text.label, fontFamily: text.bodyStrong.fontFamily, color: c.fgOnAccent },
 });

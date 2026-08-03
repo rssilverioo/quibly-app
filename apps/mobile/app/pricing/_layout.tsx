@@ -1,9 +1,11 @@
 import { Stack } from 'expo-router';
-import { legacyColors as COLORS } from '../../theme';
+import { useTheme } from '../../theme';
 
 export default function PricingLayout() {
+  const { c } = useTheme();
+
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background }, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" />
     </Stack>
   );

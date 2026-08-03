@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
-import { FONTS } from '@quibly/shared/constants';
-import { legacyColors as COLORS } from '../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 interface XPToastProps {
   xp: number;
@@ -11,6 +10,9 @@ interface XPToastProps {
 }
 
 export default function XPToast({ xp, visible, onDone }: XPToastProps) {
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   useEffect(() => {
     if (visible && onDone) {
       const timer = setTimeout(onDone, 1500);
@@ -33,20 +35,23 @@ export default function XPToast({ xp, visible, onDone }: XPToastProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   container: {
     position: 'absolute',
     top: 60,
     alignSelf: 'center',
-    backgroundColor: COLORS.gold + 'DD',
+    // Era `gold + 'DD'`: token deprecado (o pódio saiu) e, pior, concatenação de
+    // alpha em cima do hex — quebra silenciosamente no dia em que o token virar
+    // `rgba()`. Ganho de XP é confirmação positiva; quem carrega isso é o accent,
+    // com o único par de cores que a paleta garante legível nos dois modos.
+    backgroundColor: c.accent,
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: space.md,
+    borderRadius: radius.lg,
     zIndex: 999,
   },
   text: {
-    fontSize: 16,
-    fontFamily: FONTS.bold,
-    color: COLORS.background,
+    ...text.bodyStrong,
+    color: c.fgOnAccent,
   },
 });

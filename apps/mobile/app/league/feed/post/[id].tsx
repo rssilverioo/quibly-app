@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { ReactionEmoji } from '@quibly/shared';
 
 import PostCard from '../../../../components/feed/PostCard';
+import { Mascot } from '../../../../components/mascot';
 import PostSocialFooter from '../../../../components/feed/PostSocialFooter';
 import Press from '../../../../components/ui/Press';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -86,7 +87,15 @@ export default function FeedPostDetailScreen() {
               ) : null}
             </>
           ) : (
-            <Text style={styles.missing}>{t('rooms.postUnavailable')}</Text>
+            // §4.4: erro nunca é uma linha de texto solta no meio da tela — tem
+            // cara (o coelho) e uma saída (voltar para o feed).
+            <View style={styles.missingBlock}>
+              <Mascot state="worried" size={96} animate={false} />
+              <Text style={styles.missing}>{t('rooms.postUnavailable')}</Text>
+              <Press onPress={() => router.back()} style={styles.missingAction}>
+                <Text style={styles.link}>{t('rooms.backToFeed')}</Text>
+              </Press>
+            </View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -99,6 +108,11 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...text.bodyStrong, color: c.fg },
-  body: { padding: space.xl },
-  missing: { ...text.body, color: c.fgMuted, textAlign: 'center' },
+  // 16, não 24: a foto da prova ganha os 16pt de largura que a referência dá a
+  // ela. É o bloco mais importante da tela.
+  body: { padding: space.lg, flexGrow: 1 },
+  missingBlock: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  missing: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.md },
+  missingAction: { minHeight: 44, justifyContent: 'center' },
+  link: { ...text.bodyStrong, color: c.accent },
 });

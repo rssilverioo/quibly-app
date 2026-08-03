@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera, ImageIcon, X } from 'lucide-react-native';
@@ -10,6 +10,9 @@ import Press from '../../../components/ui/Press';
 import { createRoomPost, type PostPhotoFile } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
+/** Retrato máximo: 3/4. Acima disso a foto some com o resto da tela. */
+const PORTRAIT_LIMIT = 3 / 4;
+
 export default function RoomPhotoPostScreen() {
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -17,14 +20,24 @@ export default function RoomPhotoPostScreen() {
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [photo, setPhoto] = useState<PostPhotoFile | null>(null);
+  // A proporção real da foto escolhida. Teto de 3/4 (retrato máximo) para uma
+  // foto muito alta não empurrar a legenda e o botão para fora da tela.
+  const [ratio, setRatio] = useState(PORTRAIT_LIMIT);
   const [caption, setCaption] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const adopt = (asset: ImagePicker.ImagePickerAsset) => setPhoto({
-    uri: asset.uri,
-    name: asset.fileName || 'estudo.jpg',
-    type: asset.mimeType || 'image/jpeg',
-  });
+  const adopt = (asset: ImagePicker.ImagePickerAsset) => {
+    setPhoto({
+      uri: asset.uri,
+      name: asset.fileName || 'estudo.jpg',
+      type: asset.mimeType || 'image/jpeg',
+    });
+    // A prova não pode ser recortada: mostra-se a foto inteira, na proporção
+    // que ela tem. Antes era `4/3` fixo com `cover`, que cortava.
+    const natural = asset.width && asset.height ? asset.width / asset.height : PORTRAIT_LIMIT;
+    setRatio(Math.max(PORTRAIT_LIMIT, natural));
+  };
 
   const takePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -43,11 +56,14 @@ export default function RoomPhotoPostScreen() {
   const publish = async () => {
     if (!photo || !roomId || submitting) return;
     setSubmitting(true);
+    setError(null);
     try {
       await createRoomPost(roomId, photo, caption);
       router.back();
-    } catch (error: any) {
-      Alert.alert(t('error'), error?.message ?? t('error'));
+    } catch (err) {
+      // A foto NÃO se perde: ela continua no estado e o botão vira "Tentar de
+      // novo". Um `Alert.alert` aqui já custou o post de alguém.
+      setError((err as Error)?.message ?? t('rooms.postError'));
       setSubmitting(false);
     }
   };
@@ -62,9 +78,14 @@ export default function RoomPhotoPostScreen() {
 
       <View style={styles.body}>
         {photo ? (
-          <Press onPress={choosePhoto} style={styles.previewWrap}>
-            <Image source={{ uri: photo.uri }} style={styles.preview} />
-          </Press>
+          <View style={styles.previewWrap}>
+            <Press onPress={choosePhoto}>
+              <Image source={{ uri: photo.uri }} style={[styles.preview, { aspectRatio: ratio }]} />
+            </Press>
+            <Press onPress={() => setPhoto(null)} style={styles.removePhoto}>
+              <X size={18} color={c.fg} />
+            </Press>
+          </View>
         ) : (
           <View style={styles.photoActions}>
             <Press onPress={takePhoto} style={styles.photoChoice}>
@@ -89,8 +110,11 @@ export default function RoomPhotoPostScreen() {
         />
       </View>
 
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       <Press onPress={publish} disabled={!photo || submitting} style={[styles.publish, (!photo || submitting) && styles.disabled]}>
-        {submitting ? <ActivityIndicator color={c.fgOnAccent} /> : <Text style={styles.publishText}>{t('rooms.publishPhoto')}</Text>}
+        {submitting
+          ? <ActivityIndicator color={c.fgOnAccent} />
+          : <Text style={styles.publishText}>{t(error ? 'rooms.tryAgain' : 'rooms.publishPhoto')}</Text>}
       </Press>
     </SafeAreaView>
   );
@@ -101,14 +125,16 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   header: { height: 56, paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...text.bodyStrong, color: c.fg },
-  body: { flex: 1, padding: space.xl, gap: space.lg },
+  body: { flex: 1, padding: space.lg, gap: space.lg },
   photoActions: { flexDirection: 'row', gap: space.md },
   photoChoice: { flex: 1, aspectRatio: 1, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', gap: space.md },
   choiceText: { ...text.label, color: c.fg },
-  previewWrap: { overflow: 'hidden', borderRadius: radius.lg },
-  preview: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.lg },
+  previewWrap: { borderRadius: radius.lg, overflow: 'hidden' },
+  removePhoto: { position: 'absolute', top: space.sm, right: space.sm, width: 28, height: 28, borderRadius: radius.full, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
+  preview: { width: '100%', borderRadius: radius.lg, backgroundColor: c.skeleton },
   caption: { minHeight: 84, borderBottomWidth: 1, borderBottomColor: c.border, color: c.fg, ...text.body, textAlignVertical: 'top', paddingVertical: space.md },
-  publish: { height: 54, margin: space.xl, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  publish: { height: 54, margin: space.lg, borderRadius: radius.lg, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.4 },
   publishText: { ...text.bodyStrong, color: c.fgOnAccent },
+  error: { ...text.caption, color: c.danger, marginHorizontal: space.lg },
 });

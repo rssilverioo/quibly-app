@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
-import CastleMark from '../../../components/brand/CastleMark';
+import { Mascot } from '../../../components/mascot';
+import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { ordinal } from '../../../lib/ordinal';
 import { challengeTimeLeft } from '../../../lib/rooms-home';
-import { rankingThumbnailUrl } from '../../../lib/ranking-thumbnail';
-import { getChallengeLeaderboard, type ChallengeLeaderboard } from '../../../services/rooms';
+import {
+  getChallengeLeaderboard,
+  getRoomDetails,
+  type ChallengeDetails,
+  type ChallengeLeaderboard,
+} from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+
+/** Cinco linhas de esqueleto: a forma do placar é conhecida, então esperar com
+ *  a forma certa é melhor que esperar com um spinner (§4.4). */
+const SKELETON_ROWS = [0, 1, 2, 3, 4];
 
 export default function ChallengeLeaderboardScreen() {
   const { id, roomId } = useLocalSearchParams<{ id: string; roomId?: string }>();
@@ -21,46 +30,140 @@ export default function ChallengeLeaderboardScreen() {
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [data, setData] = useState<ChallengeLeaderboard | null>(null);
+  // O payload do placar não traz `starts_at` nem `elapsed_fraction` — quem tem
+  // isso é `/rooms/:id/details`. A barra de progresso só aparece quando a sala
+  // é conhecida; sem ela, some (nunca uma barra vazia inventada).
+  const [details, setDetails] = useState<ChallengeDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return;
-    setData(await getChallengeLeaderboard(id));
-  }, [id]);
+    if (!id) {
+      setFailed(true);
+      return;
+    }
+    try {
+      const [board, roomDetails] = await Promise.all([
+        getChallengeLeaderboard(id),
+        roomId ? getRoomDetails(roomId).catch(() => null) : Promise.resolve(null),
+      ]);
+      setData(board);
+      setDetails(roomDetails);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  }, [id, roomId]);
 
   useEffect(() => { void load().finally(() => setLoading(false)); }, [load]);
+
   const refresh = async () => {
     setRefreshing(true);
-    await load().catch(() => {});
+    await load();
     setRefreshing(false);
   };
 
-  if (loading || !data) {
-    return <View style={styles.center}><ActivityIndicator color={c.accent} /></View>;
+  const retry = () => {
+    setLoading(true);
+    setFailed(false);
+    void load().finally(() => setLoading(false));
+  };
+
+  const nav = (
+    <View style={styles.nav}>
+      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        {nav}
+        <View style={styles.content}>
+          <View style={styles.card}>
+            {SKELETON_ROWS.map((row) => (
+              <View key={row} style={styles.row}>
+                <View style={styles.skeletonAvatar} />
+                <View style={{ flex: 1 }}>
+                  <View style={[styles.skeletonBar, { width: '55%' }]} />
+                  <View style={[styles.skeletonBar, { width: '30%', marginTop: 6, height: 10 }]} />
+                </View>
+                {row < SKELETON_ROWS.length - 1 ? <View style={styles.divider} /> : null}
+              </View>
+            ))}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (failed || !data) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        {nav}
+        <View style={styles.center}>
+          <Mascot state="worried" size={96} animate={false} />
+          <Text style={styles.stateBody}>{t('rooms.rankingsUnavailable')}</Text>
+          <Press onPress={retry} style={styles.stateAction}><Text style={styles.link}>{t('rooms.tryAgain')}</Text></Press>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const timeLeft = challengeTimeLeft(data.challenge.ends_at, data.challenge.server_time);
+  const ended = new Date(data.challenge.ends_at).getTime() <= new Date(data.challenge.server_time).getTime();
+  const winner = ended ? data.entries[0] ?? null : null;
+  const elapsed = details ? Math.max(0, Math.min(1, details.challenge.elapsed_fraction)) : null;
+  const dateLabel = (iso: string) => new Date(iso).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
+  const invite = details?.room.invite_code;
+
+  const header = (
+    <View>
+      {/* O payoff do prazo: quando o desafio acaba, a tela declara o vencedor
+          antes de mostrar a tabela. */}
+      {winner ? (
+        <View style={styles.winnerBlock}>
+          <Mascot state="trophy" size={132} animate={false} />
+          <Text style={styles.winnerName}>{t('rooms.challengeWinner', { name: winner.display_name })}</Text>
+          <Text style={styles.stateBody}>{t('rooms.challengeEnded')}</Text>
+        </View>
+      ) : null}
+
+      <Text style={styles.title} numberOfLines={2}>{data.challenge.title}</Text>
+
+      {elapsed !== null ? (
+        <>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${elapsed * 100}%` }, timeLeft.urgent && !ended && styles.progressUrgent]} />
+          </View>
+          <View style={styles.dateRow}>
+            <Text style={styles.dateText}>{t('rooms.started', { date: dateLabel(details!.challenge.starts_at) })}</Text>
+            <Text style={styles.dateText}>{t('rooms.finishes', { date: dateLabel(details!.challenge.ends_at) })}</Text>
+          </View>
+        </>
+      ) : (
+        <Text style={styles.dateText}>{t('rooms.daysLeft', { count: timeLeft.days })}</Text>
+      )}
+
+      <Text style={styles.section}>{t('rooms.rankingsTitle')}</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title} numberOfLines={1}>{data.challenge.title}</Text>
-          <Text style={styles.subtitle}>{t('rooms.daysLeft', { count: timeLeft.days })}</Text>
-        </View>
-      </View>
-
+      {nav}
       <FlatList
         data={data.entries}
         keyExtractor={(entry) => entry.user_id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
-        ListHeaderComponent={<Text style={styles.section}>{t('rooms.leaderboard')}</Text>}
-        renderItem={({ item }) => {
+        ListHeaderComponent={header}
+        renderItem={({ item, index }) => {
           const isMe = item.rank === data.me.rank && item.metric_value === data.me.metric_value;
-          const thumbnailUrl = rankingThumbnailUrl(item);
+          const last = index === data.entries.length - 1;
+          const digits = String(item.rank);
+          const suffix = ordinal(item.rank, i18n.language).slice(digits.length);
           return (
             <Press
               onPress={() => router.push({
@@ -75,25 +178,33 @@ export default function ChallengeLeaderboardScreen() {
                   unit: data.challenge.metric_unit,
                 },
               })}
-              style={[styles.row, isMe && styles.meRow]}
+              style={[styles.rowWrap, index === 0 && styles.rowFirst, last && styles.rowLast, isMe && styles.meRow]}
             >
               {isMe ? <View style={styles.meBar} /> : null}
-              <View style={styles.thumbnail}>
-                {thumbnailUrl
-                  ? <Image source={{ uri: thumbnailUrl }} style={styles.thumbnailImage} resizeMode="cover" />
-                  : <CastleMark size={26} />}
+              <View style={styles.row}>
+                <Avatar uri={item.avatar_url} name={item.display_name} size={40} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name} numberOfLines={1}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>
+                  <Text style={styles.metric}>{item.metric_value} {data.challenge.metric_unit}</Text>
+                </View>
+                <Text style={styles.rank}>{digits}<Text style={styles.rankSuffix}>{suffix}</Text></Text>
+                <ChevronRight size={17} color={c.fgSubtle} />
+                {!last && !isMe ? <View style={styles.divider} /> : null}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>
-                <Text style={styles.metric}>{item.metric_value} {data.challenge.metric_unit}</Text>
-              </View>
-              <View style={styles.rankWrap}>
-                <Text style={styles.rank}>{ordinal(item.rank, i18n.language)}</Text>
-              </View>
-              <ChevronRight size={17} color={c.fgSubtle} />
             </Press>
           );
         }}
+        ListEmptyComponent={(
+          <View style={styles.emptyBlock}>
+            <Mascot state="reading" size={120} animate={false} />
+            <Text style={styles.emptyTitle}>{t('rooms.leaderboardEmpty')}</Text>
+            {invite ? (
+              <Press onPress={() => Share.share({ message: `https://tryquibly.com/join/${invite}` })} style={styles.stateAction}>
+                <Text style={styles.link}>{t('rooms.invite')}</Text>
+              </Press>
+            ) : null}
+          </View>
+        )}
       />
       <RoomTabBar roomId={roomId ?? id} challengeId={id} active="rankings" />
     </SafeAreaView>
@@ -102,21 +213,43 @@ export default function ChallengeLeaderboardScreen() {
 
 const makeStyles = (c: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
-  header: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg, paddingHorizontal: space.lg },
+  nav: { height: 44, paddingHorizontal: space.md },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { ...text.title3, color: c.fg },
-  subtitle: { ...text.caption, color: c.fgMuted, marginTop: 2 },
-  list: { padding: space.xl },
-  section: { ...text.overline, color: c.fgMuted, marginBottom: space.md },
-  row: { height: 72, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
-  thumbnail: { width: 48, height: 48, borderRadius: radius.md, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: c.surfaceRaised },
-  thumbnailImage: { width: '100%', height: '100%' },
-  meRow: { backgroundColor: c.accentSoft, borderBottomColor: 'transparent', borderRadius: radius.md, overflow: 'hidden' },
-  meBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: c.accent },
+  content: { paddingHorizontal: space.lg, paddingBottom: space.xxl },
+  title: { ...text.title2, color: c.fg, marginBottom: space.md },
+  // 18pt, largura total: o único lugar do app onde o accent ocupa área além do
+  // FAB. REF 18,2 na tela de estatísticas do GymRats.
+  progressTrack: { height: 18, borderRadius: radius.full, backgroundColor: c.surfacePressed, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.accent },
+  progressUrgent: { backgroundColor: c.deadline },
+  dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.sm },
+  dateText: { ...text.caption, color: c.fgMuted },
+  section: { ...text.bodyStrong, color: c.fg, marginTop: space.xl, marginBottom: space.md },
+  card: { backgroundColor: c.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
+  // O card único é montado a partir das linhas: a primeira arredonda em cima, a
+  // última embaixo, e a borda vive em cada linha para o `FlatList` não precisar
+  // de um contêiner que quebraria a virtualização.
+  rowWrap: { backgroundColor: c.surface, borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border, overflow: 'hidden' },
+  rowFirst: { borderTopWidth: 1, borderTopLeftRadius: radius.sm, borderTopRightRadius: radius.sm },
+  rowLast: { borderBottomWidth: 1, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
+  row: { height: 58, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: space.sm, paddingRight: space.lg },
+  // Recuada até a coluna do nome (8 de inset + 40 de avatar + 12 de gap = 60),
+  // como a referência. Absoluta para não deslocar o conteúdo da linha.
+  divider: { position: 'absolute', left: 60, right: 0, bottom: 0, height: StyleSheet.hairlineWidth, backgroundColor: c.border },
+  meRow: { backgroundColor: c.accentSoft },
+  meBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: c.accent, zIndex: 1 },
   name: { ...text.bodyStrong, color: c.fg },
-  metric: { ...text.label, color: c.fgMuted, marginTop: 2 },
-  rankWrap: { flexDirection: 'row', alignItems: 'flex-start', minWidth: 38, justifyContent: 'flex-end' },
+  metric: { ...text.caption, color: c.fgMuted, marginTop: 2 },
   rank: { ...text.title3, color: c.fg },
-  ordinal: { ...text.caption, color: c.fg, marginTop: 2 },
+  rankSuffix: { ...text.label, color: c.fg },
+  winnerBlock: { alignItems: 'center', paddingBottom: space.xl },
+  winnerName: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
+  emptyBlock: { alignItems: 'center', paddingTop: space.xxl },
+  emptyTitle: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
+  stateBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.sm },
+  stateAction: { minHeight: 44, justifyContent: 'center' },
+  link: { ...text.bodyStrong, color: c.accent },
+  skeletonAvatar: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: c.skeleton },
+  skeletonBar: { height: 12, borderRadius: radius.full, backgroundColor: c.skeleton },
 });

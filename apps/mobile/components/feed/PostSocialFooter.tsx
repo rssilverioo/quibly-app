@@ -107,9 +107,11 @@ export default function PostSocialFooter({
             ? t('addComment')
             : t('comment', { count: post.comment_count })}
         </Text>
+        {/* O chevron faz par com o rótulo ao lado, que é `fgMuted`; em
+            `fgSubtle` ele lia como desabilitado. */}
         {showComments
-          ? <ChevronUp size={14} color={c.fgSubtle} />
-          : <ChevronDown size={14} color={c.fgSubtle} />}
+          ? <ChevronUp size={14} color={c.fgMuted} />
+          : <ChevronDown size={14} color={c.fgMuted} />}
       </TouchableOpacity>
 
       {showComments ? (
@@ -123,7 +125,9 @@ export default function PostSocialFooter({
               ref={commentInputRef}
               style={styles.commentInput}
               placeholder={t('commentPlaceholder')}
-              placeholderTextColor={c.fgSubtle}
+              // Placeholder é texto que se lê antes de digitar — `fgMuted`.
+              // `fgSubtle` (3,5:1) fica para detalhe desabilitado.
+              placeholderTextColor={c.fgMuted}
               value={commentText}
               onChangeText={setCommentText}
               onSubmitEditing={handleSubmitComment}

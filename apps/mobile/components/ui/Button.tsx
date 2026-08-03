@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -8,8 +8,7 @@ import {
   type TextStyle,
 } from 'react-native';
 
-import { legacyColors as COLORS } from '../../theme';
-import { staticDark as c } from '../../theme';
+import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -36,18 +35,20 @@ export default function Button({
   variant = 'primary',
   style,
 }: ButtonProps) {
+  const { c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const isDisabled = disabled || loading;
 
   const buttonStyles: ViewStyle[] = [
     styles.base,
-    variantStyles[variant].container,
+    styles[`${variant}Container`],
     isDisabled && styles.disabled,
     style as ViewStyle,
   ].filter(Boolean) as ViewStyle[];
 
   const textStyle: TextStyle[] = [
     styles.text,
-    variantStyles[variant].text,
+    styles[`${variant}Text`],
     isDisabled && styles.disabledText,
   ].filter(Boolean) as TextStyle[];
 
@@ -61,7 +62,9 @@ export default function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? c.fgOnAccent : COLORS.primary}
+          // O spinner segue a cor do rótulo daquela variante: em cima do accent
+          // ele é `fgOnAccent`; nas outras duas o fundo é claro e ele é o accent.
+          color={variant === 'primary' ? c.fgOnAccent : c.accent}
         />
       ) : (
         <Text style={textStyle}>{title}</Text>
@@ -70,54 +73,32 @@ export default function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   base: {
     height: 52,
-    borderRadius: 12,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: space.xl,
   },
-  text: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    opacity: 0.7,
-  },
-});
+  // `fontWeight: '600'` não existia de fato: com fonte customizada o RN ignora o
+  // peso numérico e cai no regular. O degrau `bodyStrong` traz a família certa.
+  text: { ...text.bodyStrong },
+  disabled: { opacity: 0.5 },
+  disabledText: { opacity: 0.7 },
 
-const variantStyles: Record<
-  ButtonVariant,
-  { container: ViewStyle; text: TextStyle }
-> = {
-  primary: {
-    container: {
-      backgroundColor: COLORS.primary,
-    },
-    text: {
-      color: c.fg,
-    },
+  primaryContainer: { backgroundColor: c.accent },
+  // Era `c.fg` — near-black em cima do accent, 2,1:1. O token de texto sobre
+  // accent é `fgOnAccent`, e é ele que a paleta garante legível nos dois modos.
+  primaryText: { color: c.fgOnAccent },
+
+  secondaryContainer: {
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
   },
-  secondary: {
-    container: {
-      backgroundColor: COLORS.surface,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-    },
-    text: {
-      color: COLORS.text,
-    },
-  },
-  ghost: {
-    container: {
-      backgroundColor: 'transparent',
-    },
-    text: {
-      color: COLORS.primary,
-    },
-  },
-};
+  secondaryText: { color: c.fg },
+
+  ghostContainer: { backgroundColor: 'transparent' },
+  ghostText: { color: c.accent },
+});

@@ -138,7 +138,15 @@ export interface AnalyticsEventProps {
    */
   room_viewed: NoExtraProps;
   room_joined: { mode: string };
-  room_created: { mode: string; privacy: string };
+  /**
+   * Sem propriedades desde 2026-08-02, e de propósito. `mode` e `privacy`
+   * descreviam o desafio, não a sala — e desde que criar sala virou dois campos
+   * (`DESIGN-GYMRATS §5.6`) quem os define é o `POST /rooms` no servidor. O
+   * cliente teria que **inventar** os dois valores para continuar mandando, que
+   * é exatamente o defeito que a mudança removeu. Um dia isto vira
+   * `challenge_created`, com o modo de participação; não invente antes da tela.
+   */
+  room_created: NoExtraProps;
   invite_shared: { room_id: string };
   /** The invite/join preview loaded — denominator for room_joined via invite. */
   invite_opened: { is_member: boolean };
