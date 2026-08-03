@@ -19,6 +19,14 @@ interface Props {
   haptic?: false | 'light' | 'medium';
   /** How far it compresses. Big surfaces should move less. */
   scale?: number;
+  /**
+   * Nome do botão para quem não vê o ícone.
+   *
+   * Obrigatório na prática em botão só de ícone: sem isto o VoiceOver anuncia
+   * um alvo mudo, e a árvore de acessibilidade — que é como a captura de tela
+   * dirige o app — não tem por onde encontrá-lo.
+   */
+  accessibilityLabel?: string;
 }
 
 /**
@@ -34,6 +42,7 @@ export default function Press({
   disabled,
   haptic = 'light',
   scale = PRESS_SCALE,
+  accessibilityLabel,
 }: Props) {
   const pressed = useSharedValue(0);
 
@@ -47,6 +56,8 @@ export default function Press({
     <AnimatedPressable
       style={[style, animatedStyle]}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       onPressIn={() => {
         pressed.value = 1;
         if (haptic) {

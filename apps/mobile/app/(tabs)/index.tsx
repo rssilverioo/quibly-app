@@ -102,7 +102,45 @@ export default function RoomsScreen() {
         keyExtractor={(room) => room.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={[styles.list, { paddingBottom: tabClearance }]}
-        ListHeaderComponent={<Text style={styles.title}>{t('rooms.listTitle')}</Text>}
+        /**
+         * O `+` no título e o campo de código no rodapé existem porque, sem
+         * eles, **a primeira sala fechava a porta**: criar e entrar por
+         * convite só apareciam no estado vazio, e a partir da sala número 1
+         * nenhuma rota levava a `/league/create` ou a `/league/join`. Não era
+         * limite de plano — na API todo entitlement nasce em `Infinity`. Era
+         * a tela.
+         *
+         * O spec (`DESIGN-GYMRATS §5.11`) descreve a lista e os três estados e
+         * não prevê nenhum dos dois aqui, então o buraco nasce antes do
+         * código. §5.11 foi corrigido junto.
+         */
+        ListHeaderComponent={
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{t('rooms.listTitle')}</Text>
+            <Press
+              haptic="medium"
+              onPress={() => router.push('/league/create')}
+              style={styles.titleAction}
+              accessibilityLabel={t('rooms.create')}
+            >
+              <Plus size={22} color={c.fgOnAccent} />
+            </Press>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={[styles.joinRow, styles.joinRowInList]}>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              onSubmitEditing={join}
+              autoCapitalize="characters"
+              placeholder={t('rooms.code')}
+              placeholderTextColor={c.fgSubtle}
+              style={styles.input}
+            />
+            <Press onPress={join} style={styles.joinButton}><Text style={styles.joinText}>{t('rooms.join')}</Text></Press>
+          </View>
+        }
         ItemSeparatorComponent={() => <View style={styles.gap} />}
         renderItem={({ item }) => (
           <Press onPress={() => router.push(`/league/room/${item.id}`)} style={styles.roomRow}>
@@ -145,7 +183,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   list: { paddingHorizontal: space.lg, paddingTop: space.md },
   // 28, não 40: na captura de hoje o título ocupava mais altura que a única
   // linha de conteúdo da tela. A referência abre em ~23pt (§3.2.1).
-  title: { ...text.title2, color: c.fg, marginBottom: space.lg },
+  // O título mantém o bloco de 38 + 16 do §5.11; a margem saiu dele e foi
+  // para a linha, senão o `+` desalinha em 16pt do texto que ele acompanha.
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
+  title: { ...text.title2, color: c.fg },
+  // 44×44 é o alvo mínimo de toque da Apple. O círculo tem 40 e o resto é
+  // área invisível: encolher o alvo ao desenho é o erro clássico aqui.
+  titleAction: { width: 44, height: 44, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
   // Card, não faixa nua sobre o fundo. A borda de 1px é a mesma linha nos dois
   // modos: no claro ela desenha a aresta, no escuro ela some (§3.2.4).
   roomRow: {
@@ -184,6 +228,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   retryText: { ...text.bodyStrong, color: c.accent },
   createText: { ...text.bodyStrong, color: c.fgOnAccent },
   joinRow: { flexDirection: 'row', gap: space.sm, width: '100%', marginTop: space.md },
+  // Na lista o campo vem depois das salas, e precisa de mais respiro que no
+  // estado vazio: ali ele segue um botão, aqui ele segue um card.
+  joinRowInList: { marginTop: space.lg },
   input: { flex: 1, height: 50, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, paddingHorizontal: space.lg, color: c.fg, backgroundColor: c.surface, ...text.body },
   joinButton: { height: 50, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
   joinText: { ...text.label, color: c.fg },

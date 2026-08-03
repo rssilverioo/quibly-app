@@ -1200,8 +1200,27 @@ defeitos.
 
 | # | Bloco | Altura | Respiro abaixo |
 |---|---|---|---|
-| 1 | Título "Suas salas" | 38 | 16 |
+| 1 | Título "Suas salas" **+ botão `+` à direita** | 38 | 16 |
 | 2 | Linha de sala (card) | **72** | 12 |
+| 3 | Campo de código + "Entrar", no rodapé da lista | 50 | — |
+
+#### 1 e 3 — por que criar e entrar vivem também aqui
+
+**Corrigido em 03/08.** Esta seção listava criar-sala e entrar-por-código
+apenas no estado **Vazio**, e o código seguiu o spec ao pé da letra. O
+resultado: **a primeira sala fechava a porta.** A partir da sala número 1 a
+lista renderizava sem nenhum dos dois, e nenhuma rota alcançava
+`/league/create` nem `/league/join` — não por limite de plano, já que na API
+todo entitlement nasce em `Infinity`, mas por ausência de botão.
+
+O dono do produto encontrou de primeira, com a pergunta certa: *"criei 1 e não
+posso mais?"*.
+
+Regra que fica: **toda ação que existe no estado vazio precisa existir no
+estado cheio.** O vazio é uma porta de entrada, não o único lugar onde a ação
+mora. O `+` do título tem alvo de toque 44×44 (mínimo da Apple) e
+`accessibilityLabel` — botão só de ícone sem rótulo é mudo para o VoiceOver e
+invisível para a automação por toque.
 
 #### 2 — A linha de sala
 
