@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Modal, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, Plus } from 'lucide-react-native';
+import { ChevronRight, KeyRound, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { roomCoverThumbForId, ROOM_ROW_THUMB } from '../../assets/room-covers';
@@ -21,6 +21,8 @@ export default function RoomsScreen() {
   const tabClearance = useTabBarClearance();
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [code, setCode] = useState('');
+  /** Fechada, escolhendo entre as duas ações, ou digitando o código. */
+  const [sheet, setSheet] = useState<'closed' | 'choose' | 'code'>('closed');
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,8 +48,68 @@ export default function RoomsScreen() {
   };
   const join = () => {
     const normalized = code.trim();
-    if (normalized) router.push(`/league/join/${encodeURIComponent(normalized)}`);
+    if (!normalized) return;
+    setSheet('closed');
+    router.push(`/league/join/${encodeURIComponent(normalized)}`);
   };
+
+  /**
+   * A folha do `+`: criar uma sala, ou entrar numa que já existe.
+   *
+   * Fica em dois passos em vez de mostrar o campo de código de cara porque as
+   * duas ações não têm o mesmo peso — criar é o caminho comum, entrar por
+   * código é o raro, e quem chega com um convite sabe que veio por ele. O
+   * fundo escuro fecha ao toque: folha sem saída óbvia é armadilha.
+   */
+  const addSheet = (
+    <Modal
+      visible={sheet !== 'closed'}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setSheet('closed')}
+    >
+      <Press haptic={false} onPress={() => setSheet('closed')} scale={1} style={styles.backdrop}>
+        <View />
+      </Press>
+      <View style={[styles.sheet, { paddingBottom: space.xl + tabClearance / 2 }]}>
+        <View style={styles.sheetGrip} />
+        <Text style={styles.sheetTitle}>{t('rooms.addTitle')}</Text>
+
+        {sheet === 'choose' ? (
+          <>
+            <Press
+              haptic="medium"
+              onPress={() => { setSheet('closed'); router.push('/league/create'); }}
+              style={styles.sheetRow}
+            >
+              <View style={styles.sheetIcon}><Plus size={20} color={c.fgOnAccent} /></View>
+              <Text style={styles.sheetLabel}>{t('rooms.create')}</Text>
+              <ChevronRight size={18} color={c.fgSubtle} />
+            </Press>
+            <Press onPress={() => setSheet('code')} style={styles.sheetRow}>
+              <View style={[styles.sheetIcon, styles.sheetIconMuted]}><KeyRound size={20} color={c.fg} /></View>
+              <Text style={styles.sheetLabel}>{t('rooms.joinWithCode')}</Text>
+              <ChevronRight size={18} color={c.fgSubtle} />
+            </Press>
+          </>
+        ) : (
+          <View style={styles.joinRow}>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              onSubmitEditing={join}
+              autoCapitalize="characters"
+              autoFocus
+              placeholder={t('rooms.code')}
+              placeholderTextColor={c.fgSubtle}
+              style={styles.input}
+            />
+            <Press onPress={join} style={styles.joinButton}><Text style={styles.joinText}>{t('rooms.join')}</Text></Press>
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={c.accent} /></View>;
 
@@ -103,42 +165,32 @@ export default function RoomsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={[styles.list, { paddingBottom: tabClearance }]}
         /**
-         * O `+` no título e o campo de código no rodapé existem porque, sem
-         * eles, **a primeira sala fechava a porta**: criar e entrar por
-         * convite só apareciam no estado vazio, e a partir da sala número 1
-         * nenhuma rota levava a `/league/create` ou a `/league/join`. Não era
-         * limite de plano — na API todo entitlement nasce em `Infinity`. Era
-         * a tela.
+         * O `+` existe porque, sem ele, **a primeira sala fechava a porta**:
+         * criar e entrar por convite só apareciam no estado vazio, e a partir
+         * da sala número 1 nenhuma rota levava a `/league/create` ou a
+         * `/league/join`. Não era limite de plano — na API todo entitlement
+         * nasce em `Infinity`. Era a tela.
          *
          * O spec (`DESIGN-GYMRATS §5.11`) descreve a lista e os três estados e
-         * não prevê nenhum dos dois aqui, então o buraco nasce antes do
+         * não previa nenhum dos dois aqui, então o buraco nasce antes do
          * código. §5.11 foi corrigido junto.
+         *
+         * Uma porta só, que pergunta: a lista não carrega campo de código
+         * solto no rodapé. Quem tem sala quase nunca vai entrar noutra, e um
+         * input permanente para a ação rara rouba a atenção da lista, que é o
+         * conteúdo da tela.
          */
         ListHeaderComponent={
           <View style={styles.titleRow}>
             <Text style={styles.title}>{t('rooms.listTitle')}</Text>
             <Press
               haptic="medium"
-              onPress={() => router.push('/league/create')}
+              onPress={() => setSheet('choose')}
               style={styles.titleAction}
-              accessibilityLabel={t('rooms.create')}
+              accessibilityLabel={t('rooms.addTitle')}
             >
               <Plus size={22} color={c.fgOnAccent} />
             </Press>
-          </View>
-        }
-        ListFooterComponent={
-          <View style={[styles.joinRow, styles.joinRowInList]}>
-            <TextInput
-              value={code}
-              onChangeText={setCode}
-              onSubmitEditing={join}
-              autoCapitalize="characters"
-              placeholder={t('rooms.code')}
-              placeholderTextColor={c.fgSubtle}
-              style={styles.input}
-            />
-            <Press onPress={join} style={styles.joinButton}><Text style={styles.joinText}>{t('rooms.join')}</Text></Press>
           </View>
         }
         ItemSeparatorComponent={() => <View style={styles.gap} />}
@@ -157,6 +209,7 @@ export default function RoomsScreen() {
           </Press>
         )}
       />
+      {addSheet}
     </SafeAreaView>
   );
 }
@@ -228,9 +281,17 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   retryText: { ...text.bodyStrong, color: c.accent },
   createText: { ...text.bodyStrong, color: c.fgOnAccent },
   joinRow: { flexDirection: 'row', gap: space.sm, width: '100%', marginTop: space.md },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: c.bg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingHorizontal: space.lg, paddingTop: space.md },
+  sheetGrip: { alignSelf: 'center', width: 36, height: 4, borderRadius: radius.full, backgroundColor: c.border, marginBottom: space.lg },
+  sheetTitle: { ...text.bodyStrong, color: c.fgMuted, marginBottom: space.md },
+  // 64 de altura dá o mesmo respiro da linha de sala (72) sem competir com ela.
+  sheetRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, height: 64, borderRadius: radius.sm, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: space.md, marginBottom: space.sm },
+  sheetIcon: { width: 40, height: 40, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  sheetIconMuted: { backgroundColor: c.surfaceRaised, borderWidth: 1, borderColor: c.border },
+  sheetLabel: { ...text.bodyStrong, color: c.fg, flex: 1 },
   // Na lista o campo vem depois das salas, e precisa de mais respiro que no
   // estado vazio: ali ele segue um botão, aqui ele segue um card.
-  joinRowInList: { marginTop: space.lg },
   input: { flex: 1, height: 50, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, paddingHorizontal: space.lg, color: c.fg, backgroundColor: c.surface, ...text.body },
   joinButton: { height: 50, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
   joinText: { ...text.label, color: c.fg },
