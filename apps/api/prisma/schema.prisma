@@ -312,6 +312,7 @@ model League {
   endDate     DateTime      @map("end_date") @db.Date
   privacy     LeaguePrivacy @default(private)
   mode        LeagueMode    @default(competitive)
+  participationMode String  @default("photo") @map("participation_mode")
   status      LeagueStatus  @default(upcoming)
   inviteCode  String        @unique @map("invite_code")
   maxMembers  Int           @default(50) @map("max_members")
@@ -354,13 +355,15 @@ model LeagueMember {
 model FeedPost {
   id             String   @id @default(uuid()) @db.Uuid
   leagueId       String   @map("league_id") @db.Uuid
-  sessionId      String   @map("session_id") @db.Uuid
+  sessionId      String?  @map("session_id") @db.Uuid
   userId         String   @map("user_id")
   showProofPhoto Boolean  @default(false) @map("show_proof_photo")
+  caption        String?  @db.VarChar(280)
+  photoUrl       String?  @map("photo_url")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   league    League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  session   StudySession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   StudySession?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user      Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
   reactions FeedReaction[]
   comments  FeedComment[]

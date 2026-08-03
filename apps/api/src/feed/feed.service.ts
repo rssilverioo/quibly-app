@@ -38,10 +38,20 @@ export class FeedService {
           },
           session: {
             select: {
+              id: true,
               totalDurationMinutes: true,
               pointsEarned: true,
+              xpEarned: true,
               isVerified: true,
               proofMode: true,
+              subject: {
+                select: { id: true, name: true, color: true },
+              },
+              proofChecks: {
+                where: { status: 'passed' },
+                select: { photoUrl: true },
+                take: 1,
+              },
             },
           },
           reactions: true,
@@ -83,8 +93,21 @@ export class FeedService {
       }
 
       const { reactions: _reactions, ...postWithoutReactions } = post;
+      const proofPhotoUrl = post.showProofPhoto
+        ? post.session?.proofChecks[0]?.photoUrl ?? null
+        : null;
+      const photoUrl = post.photoUrl ?? proofPhotoUrl;
       return {
         ...postWithoutReactions,
+        kind: post.session ? 'session' : 'standalone',
+        photoUrl,
+        session: post.session
+          ? {
+              ...post.session,
+              minutes: Number(post.session.totalDurationMinutes),
+              proofPhotoUrl,
+            }
+          : null,
         user: {
           ...post.user,
           username: displayNameMap.get(post.userId) ?? post.user.username,
@@ -103,6 +126,128 @@ export class FeedService {
     });
 
     return { posts: enrichedPosts, total, page, limit };
+  }
+
+  async getChallengeMemberPosts(
+    challengeId: string,
+    requestingUserId: string,
+    memberUserId: string,
+    page: number,
+    limit: number,
+  ) {
+    const [challenge, requesterMembership, targetMembership] = await Promise.all([
+      this.prisma.league.findUnique({
+        where: { id: challengeId },
+        select: { id: true, startDate: true, endDate: true },
+      }),
+      this.prisma.leagueMember.findUnique({
+        where: {
+          leagueId_userId: { leagueId: challengeId, userId: requestingUserId },
+        },
+      }),
+      this.prisma.leagueMember.findUnique({
+        where: {
+          leagueId_userId: { leagueId: challengeId, userId: memberUserId },
+        },
+      }),
+    ]);
+
+    if (!challenge) throw new NotFoundException('Challenge not found');
+    if (!requesterMembership) {
+      throw new ForbiddenException('You are not a room member');
+    }
+    if (!targetMembership) throw new NotFoundException('Member not found');
+
+    const where = {
+      leagueId: challengeId,
+      userId: memberUserId,
+      createdAt: { gte: challenge.startDate, lt: challenge.endDate },
+    };
+    const offset = (page - 1) * limit;
+    const [posts, total, members] = await Promise.all([
+      this.prisma.feedPost.findMany({
+        where,
+        include: {
+          user: { select: { username: true, handle: true, avatarUrl: true } },
+          session: {
+            select: {
+              id: true,
+              totalDurationMinutes: true,
+              pointsEarned: true,
+              xpEarned: true,
+              isVerified: true,
+              proofMode: true,
+              subject: { select: { id: true, name: true, color: true } },
+              proofChecks: {
+                where: { status: 'passed' },
+                select: { photoUrl: true },
+                take: 1,
+              },
+            },
+          },
+          reactions: true,
+          comments: {
+            include: {
+              user: { select: { username: true, handle: true, avatarUrl: true } },
+            },
+            orderBy: { createdAt: 'desc' as const },
+            take: 3,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.feedPost.count({ where }),
+      this.prisma.leagueMember.findMany({
+        where: { leagueId: challengeId },
+        select: { userId: true, displayName: true },
+      }),
+    ]);
+
+    const displayNameMap = new Map(
+      members.map((member) => [member.userId, member.displayName]),
+    );
+    const items = posts.map((post) => {
+      const reactions: Record<string, number> = {};
+      const userReactions: string[] = [];
+      for (const reaction of post.reactions) {
+        reactions[reaction.emoji] = (reactions[reaction.emoji] ?? 0) + 1;
+        if (reaction.userId === requestingUserId) userReactions.push(reaction.emoji);
+      }
+      const proofPhotoUrl = post.showProofPhoto
+        ? post.session?.proofChecks[0]?.photoUrl ?? null
+        : null;
+      const { reactions: _rawReactions, ...basePost } = post;
+      return {
+        ...basePost,
+        kind: post.session ? 'session' : 'standalone',
+        photoUrl: post.photoUrl ?? proofPhotoUrl,
+        session: post.session
+          ? {
+              ...post.session,
+              minutes: Number(post.session.totalDurationMinutes),
+              proofPhotoUrl,
+            }
+          : null,
+        user: {
+          ...post.user,
+          username: displayNameMap.get(post.userId) ?? post.user.username,
+        },
+        reactions,
+        userReactions,
+        latestComments: post.comments.map((comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            username:
+              displayNameMap.get(comment.userId) ?? comment.user.username,
+          },
+        })),
+      };
+    });
+
+    return { items, total, page, limit };
   }
 
   async toggleReaction(userId: string, postId: string, emoji: string) {
