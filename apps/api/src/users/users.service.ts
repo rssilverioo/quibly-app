@@ -111,16 +111,32 @@ export class UsersService {
   }
 
   async deleteUser(userId: string) {
+    // 0. Ler o avatar ANTES de apagar o perfil — a URL guardada é o único
+    //    lugar onde a chave real do objeto existe, e a extensão faz parte
+    //    dela (`avatars/<id>/avatar.png`). Com o perfil já apagado, o arquivo
+    //    fica sem endereço e sobrevive à exclusão da conta.
+    const perfil = await this.prisma.profile.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
     // 1. Delete profile from database (cascade deletes related data)
     await this.prisma.profile.delete({ where: { id: userId } }).catch(() => {
       // Profile may not exist — continue with cleanup
     });
 
     // 2. Delete avatar from S3
-    try {
-      await this.storageService.deleteObject(`avatars/${userId}`);
-    } catch (err) {
-      this.logger.warn(`Failed to delete avatar for user ${userId}: ${err}`);
+    //    `chaveDaUrl` devolve null para URL que não é nossa — foto vinda do
+    //    login social, por exemplo. Aí não há o que apagar.
+    const chaveDoAvatar = perfil?.avatarUrl
+      ? this.storageService.chaveDaUrl(perfil.avatarUrl)
+      : null;
+    if (chaveDoAvatar) {
+      try {
+        await this.storageService.deleteObject(chaveDoAvatar);
+      } catch (err) {
+        this.logger.warn(`Failed to delete avatar for user ${userId}: ${err}`);
+      }
     }
 
     // 3. Delete Firebase Auth user
