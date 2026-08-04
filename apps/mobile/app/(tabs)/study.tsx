@@ -21,7 +21,60 @@ export default function StudyScreen() {
   const { c } = useTheme();
   const tabBarClearance = useTabBarClearance();
   const { profile } = useAuth();
-  const { isPaused, subjectName: pausedSubjectName } = useSessionStore();
+  const {
+    isPaused,
+    isRunning,
+    currentSession,
+    subjectName: pausedSubjectName,
+    displayedElapsedSeconds,
+  } = useSessionStore();
+
+  /**
+   * Uma sessão **rodando** também precisa aparecer aqui.
+   *
+   * Este card era `{isPaused && …}`: aparecia se você tinha pausado e sumia se
+   * estava rodando. Como sair de `session/active` não para nada — o servidor é
+   * que conta o tempo, via heartbeat —, o efeito era uma sessão viva e invisível
+   * no app inteiro. Rodando e parado ficavam idênticos na tela, e a leitura
+   * natural de quem usa é "pausou sozinho".
+   *
+   * Foi exatamente esse o relato do dono do produto em 04/08: *"se eu saio dele,
+   * ele não continua rolando"*. Continuava; só não havia como saber.
+   */
+  const temSessaoViva = Boolean(currentSession) && (isRunning || isPaused);
+
+  /**
+   * O relógio precisa bater, e nada aqui o faria bater sozinho.
+   *
+   * `displayedElapsedSeconds()` é derivado do último beat do servidor mais o
+   * tempo desde então — ou seja, o valor certo é calculado **no render**, e sem
+   * um render por segundo o card mostraria um número parado. Card de "estudando
+   * agora" com número congelado é exatamente a impressão de sessão morta que
+   * este trabalho existe para desfazer.
+   *
+   * Só bate quando a aba está em foco e a sessão está correndo: parada, o
+   * servidor já congelou a contagem e reagendar não mudaria pixel nenhum.
+   */
+  const [, forcarRender] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (!temSessaoViva || !isRunning) return;
+      const id = setInterval(() => forcarRender((n) => n + 1), 1000);
+      return () => clearInterval(id);
+    }, [temSessaoViva, isRunning]),
+  );
+
+  const segundos = temSessaoViva ? displayedElapsedSeconds() : 0;
+  const relogio = [
+    Math.floor(segundos / 3600),
+    Math.floor((segundos % 3600) / 60),
+    segundos % 60,
+  ]
+    // A hora só aparece depois que existe: um card que abre em "00:23:14"
+    // desperdiça o dado mais informativo (os minutos) no campo mais estável.
+    .slice(segundos >= 3600 ? 0 : 1)
+    .map((n) => String(n).padStart(2, '0'))
+    .join(':');
 
   const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
 
@@ -62,25 +115,40 @@ export default function StudyScreen() {
               não tem número grande em lugar nenhum (§2.2, §7). Hierarquia aqui
               vem de posição: a ação primária vem antes do dado. */}
 
-          {/* Resume takes priority over starting fresh */}
-          {isPaused && (
+          {/* Uma sessão viva — rodando ou pausada — vem antes de começar outra.
+              A cor é o que separa os dois estados: âmbar pede ação (você
+              parou), o acento apenas informa (está correndo, e o tempo ao lado
+              prova). */}
+          {temSessaoViva && (
             <Animated.View entering={FadeInDown.duration(300).delay(80)}>
               <Press
                 haptic="medium"
                 scale={0.985}
                 onPress={() => router.push('/session/active')}
-                style={[styles.resumeCard, { backgroundColor: c.surface, borderColor: c.warning }]}
+                accessibilityLabel={`${isPaused ? tr('sessionPaused') : tr('sessionRunning')} · ${relogio}`}
+                style={[
+                  styles.resumeCard,
+                  { backgroundColor: c.surface, borderColor: isPaused ? c.warning : c.accent },
+                ]}
               >
-                <View style={[styles.pausedDot, { backgroundColor: c.warning }]} />
+                <View
+                  style={[styles.pausedDot, { backgroundColor: isPaused ? c.warning : c.accent }]}
+                />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ ...t.bodyStrong, color: c.fg }}>{tr('sessionPaused')}</Text>
+                  <Text style={{ ...t.bodyStrong, color: c.fg }}>
+                    {isPaused ? tr('sessionPaused') : tr('sessionRunning')}
+                  </Text>
                   {!!pausedSubjectName && (
                     <Text style={{ ...t.caption, color: c.fgSubtle, marginTop: 2 }}>
                       {pausedSubjectName}
                     </Text>
                   )}
                 </View>
-                <Text style={{ ...t.label, color: c.warning }}>{tr('resume')}</Text>
+                {/* Enquanto roda, o tempo é a informação; parado, ele já está
+                    congelado e o que importa é o convite para voltar. */}
+                <Text style={{ ...t.label, color: isPaused ? c.warning : c.fgMuted }}>
+                  {isPaused ? tr('resume') : relogio}
+                </Text>
               </Press>
             </Animated.View>
           )}

@@ -8,6 +8,7 @@
   "xpLabel": "XP",
   "levelProgress": "Level {{current}} → Level {{next}}",
   "xpProgress": "{{current}} / {{total}} XP",
+  "sessionRunning": "Studying now",
   "sessionPaused": "Session paused",
   "resume": "Resume",
   "startStudying": "Start Studying",
