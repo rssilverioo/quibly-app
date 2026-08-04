@@ -115,7 +115,7 @@ Nosso trunfo — hoje está escondido atrás de um paywall de 3 flashcards/dia.
 
 | Entrega | Detalhe |
 |---|---|
-| 🔴 Captura de aula reformulada | É o diferencial contra o YPT; hoje é secundária na UI |
+| 🔴 Captura de aula reformulada | É o diferencial contra o YPT; hoje é secundária na UI. **Confirmado em 03/08 como adiada, não cortada** — ver `DIRECAO-PRODUTO §6`, que até então não a mencionava e por isso parecia tê-la eliminado. Vem junto o conserto da Biblioteca, que hoje é aba escondida e deixa a captura levando a lugar nenhum. |
 | 🔴 Todo material gerado com `topicId` | Liga o loop de IA ao currículo |
 | 🔴 Quiz alimenta `TopicMastery` | Acertos/erros por tópico, ease factor |
 | 🟢 Revisão espaçada (FSRS) | `next_due` por tópico |
