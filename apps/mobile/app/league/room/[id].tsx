@@ -15,7 +15,7 @@ import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { useAuth } from '../../../contexts/AuthContext';
 import { cacheFeedPost } from '../../../lib/feed-detail-cache';
 import { feedDayLabel, feedPagePosts, roomFeedPostToCardPost, startsNewFeedDay } from '../../../lib/feed-post';
-import { challengeTimeLeft, isStudyChallenge } from '../../../lib/rooms-home';
+import { challengeTimeLeft } from '../../../lib/rooms-home';
 import { getLiveMembers, type LiveMember } from '../../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
@@ -139,7 +139,6 @@ export default function RoomFeedScreen() {
   }
 
   const challenge = room.active_challenge;
-  const studyMode = isStudyChallenge(challenge);
   // Largura de dentro do card: a lista recua 16 de cada lado e o card tem 1pt
   // de borda de cada lado.
   const alturaDaCapa = roomCoverHeight(larguraDaJanela - space.lg * 2 - 2);
@@ -179,7 +178,16 @@ export default function RoomFeedScreen() {
     </Press>
   );
 
-  const liveStrip = studyMode && live.length > 0 ? (
+  /**
+   * Quem está com o timer ligado aparece aqui, em **qualquer** sala.
+   *
+   * Isto já foi atrás de `studyMode`, e o modo caiu em 04/08/2026 por decisão do
+   * dono do produto: não existe sala de foto e sala de timer. Existe uma sala,
+   * com duas portas — postar a foto, ou ligar o timer —, e quem liga o timer
+   * aparece estudando para o grupo. É o focus mode, e continua sendo a única
+   * coisa que mudamos de propósito em relação ao GymRats.
+   */
+  const liveStrip = live.length > 0 ? (
     <View style={styles.liveStrip}>
       <Text style={styles.overline}>{t('rooms.studyingNow')}</Text>
       {live.map((member) => (
@@ -199,7 +207,7 @@ export default function RoomFeedScreen() {
         keyExtractor={(post) => post.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}{studyMode ? <Press onPress={() => router.push('/session/setup')} style={styles.timer}><Timer size={18} color={c.fg} /><Text style={styles.timerLabel}>{t('rooms.startTimer')}</Text></Press> : null}</>}
+        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}<Press onPress={() => router.push('/session/setup')} style={styles.timer}><Timer size={18} color={c.fg} /><Text style={styles.timerLabel}>{t('rooms.startTimer')}</Text></Press></>}
         renderItem={({ item, index }) => (
           <View>
             {startsNewFeedDay(posts, index) ? <Text style={styles.day}>{feedDayLabel(item.created_at, i18n.language)}</Text> : null}
@@ -229,8 +237,11 @@ export default function RoomFeedScreen() {
         ) : (
           <View style={styles.emptyBlock}>
             <Mascot state="reading" size={120} animate={false} />
-            <Text style={styles.emptyTitle}>{t(studyMode ? 'rooms.feedEmptyTitle' : 'rooms.photoFeedEmptyTitle')}</Text>
-            <Text style={styles.stateBody}>{t(studyMode ? 'rooms.feedEmptySubtitle' : 'rooms.photoFeedEmptySubtitle')}</Text>
+            {/* Um texto só: sem modo, não há dois vazios diferentes a
+                descrever. Ele nomeia as duas portas, que é o que a pessoa
+                precisa saber para sair do vazio. */}
+            <Text style={styles.emptyTitle}>{t('rooms.feedEmptyTitle')}</Text>
+            <Text style={styles.stateBody}>{t('rooms.feedEmptySubtitle')}</Text>
           </View>
         )}
       />

@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Camera, Timer, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import Press from '../../components/ui/Press';
@@ -57,10 +57,6 @@ export default function CreateRoomScreen() {
 
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
-  // Foto é o padrão porque é o GymRats puro: quem não souber o que escolher
-  // recebe a prestação de contas por foto, que é o produto de referência. Modo
-  // estudo é a adição deliberada, e quem a quer sabe que a quer.
-  const [mode, setMode] = useState<'photo' | 'study'>('photo');
   const [days, setDays] = useState(7);
   /**
    * Prazo por **data final**, e não por número de dias digitado.
@@ -140,13 +136,6 @@ export default function CreateRoomScreen() {
 
   const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
 
-  // Os mesmos dois cartões de `challenge/new.tsx`, com as mesmas chaves: se um
-  // dia o texto do modo mudar, muda nos dois lugares de uma vez.
-  const modes = [
-    { id: 'photo' as const, Icon: Camera, title: t('rooms.photoMode'), subtitle: t('rooms.photoModeSubtitle') },
-    { id: 'study' as const, Icon: Timer, title: t('rooms.studyMode'), subtitle: t('rooms.studyModeSubtitle') },
-  ];
-
   const onCreate = async () => {
     if (!canSubmit) return;
     if (!user) {
@@ -156,8 +145,8 @@ export default function CreateRoomScreen() {
     setError(null);
     setCreating(true);
     try {
-      setCreated(await createRoom(name.trim(), displayName.trim(), mode, prazoEmDias));
-      track('room_created', { participation_mode: mode, duration_days: prazoEmDias });
+      setCreated(await createRoom(name.trim(), displayName.trim(), prazoEmDias));
+      track('room_created', { duration_days: prazoEmDias });
     } catch (err) {
       // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
       // para ação destrutiva, não para "não deu certo".
@@ -232,25 +221,6 @@ export default function CreateRoomScreen() {
             returnKeyType="done"
             onSubmitEditing={onCreate}
           />
-
-          <Text style={styles.sectionLabel}>{t('rooms.challengeMode')}</Text>
-          <View style={styles.modeRow}>
-            {modes.map(({ id, Icon, title, subtitle }) => {
-              const selected = mode === id;
-              return (
-                <Press
-                  key={id}
-                  onPress={() => setMode(id)}
-                  accessibilityLabel={title}
-                  style={[styles.modeCard, selected && styles.selected]}
-                >
-                  <Icon size={22} color={selected ? c.accent : c.fgMuted} />
-                  <Text style={styles.modeTitle}>{title}</Text>
-                  <Text style={styles.modeSubtitle}>{subtitle}</Text>
-                </Press>
-              );
-            })}
-          </View>
 
           <Text style={styles.sectionLabel}>{t('rooms.duration')}</Text>
           <View style={styles.daysRow}>

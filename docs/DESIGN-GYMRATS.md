@@ -493,7 +493,7 @@ Referência: `gr-en-14-challenge.png` e `real-play-store-feed.png`.
 | 2 | Título da sala | 38 (line-height de `title2`) | 12 | cap-top 96,7 / baseline 114,6 |
 | 3 | **Capa** | **144** | 0 (colada) | 128,8 → 266,1 = **137,9pt** |
 | 4 | **Faixa de três colunas** | **56** | 20 | 266,7 → 319,5 = **52,8pt** |
-| 5 | (modo estudo) Faixa "estudando agora" | conteúdo | 12 | sem referência — `INFERIDO:` |
+| 5 | Faixa "estudando agora" (quando há alguém) | conteúdo | 12 | sem referência — `INFERIDO:` |
 | 6 | Separador de dia | 41 (12 acima / 17 texto / 12 abaixo) | — | **37,7pt** |
 | 7 | Linha de post (card) | **72** | **12** entre linhas do mesmo dia | 69,9pt / gap 10,9pt |
 | — | FAB | 56, canto inferior direito | 16 acima da tab bar | Ø 54,7 / margem direita 18,2 |
@@ -1023,11 +1023,15 @@ em `c.accent`. Nada de `Alert.alert` de parabéns.
 7/30/90/365, modo easy/competitive/hardcore, slider de 2–100 membros, toggle
 público/privado. Tudo isso é **desafio**, não sala, e migra inteiro para §5.7.
 
-Note o que **não** voltou com a revisão de 04/08: nada dessa lista. Voltaram
-duas perguntas — modo de participação (foto/estudo) e duração —, e nenhuma
-delas é datas soltas, rigor de prova, teto de membros ou privacidade. A tela
-continua sendo curta de propósito; ela só deixou de produzir uma sala que não
-funciona.
+Note o que **não** voltou com a revisão de 04/08: nada dessa lista. Voltou
+**uma** pergunta — o prazo —, e ela não é datas soltas, rigor de prova, teto de
+membros nem privacidade. A tela continua curta de propósito; ela só deixou de
+produzir uma sala que não funciona.
+
+> O modo de participação (foto/estudo) chegou a entrar aqui na manhã de 04/08 e
+> **saiu na mesma tarde**, junto com o conceito de modo — ver
+> `DIRECAO-PRODUTO §7`. Não existe sala de foto e sala de timer: toda sala tem
+> as duas portas. O bloco 4 desta seção, com os dois cartões, morreu com ele.
 
 #### Estados
 
@@ -1069,9 +1073,14 @@ Hoje o `modeCard` tem `minHeight: 150` e o ícone não selecionado usa `c.fg` �
 **desce para 136 e o ícone não selecionado vai para `c.fgMuted`**, senão os dois
 cards competem antes de haver escolha.
 
-**A escolha do modo é a decisão mais consequente do app** (`DIRECAO-PRODUTO §6`:
-o modo estudo é o que liga a presença ao vivo). Ela merece os dois cards e a
-altura; não vire um toggle.
+> ⚠️ **A escolha do modo não existe mais** (revogada em 04/08/2026, ver
+> `DIRECAO-PRODUTO §7`). ~~"A escolha do modo é a decisão mais consequente do
+> app: o modo estudo é o que liga a presença ao vivo. Ela merece os dois cards e
+> a altura; não vire um toggle."~~
+>
+> Toda sala tem as duas portas, e a presença ao vivo vale em qualquer uma. As
+> medidas do `modeCard` ficam registradas porque o padrão de cartão-de-escolha
+> segue valendo para outras telas — só não há mais escolha de modo a fazer.
 
 #### Estados
 

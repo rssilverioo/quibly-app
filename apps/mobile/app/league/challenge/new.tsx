@@ -2,14 +2,12 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Camera, Timer, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import Press from '../../../components/ui/Press';
 import { createChallenge } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
-
-type ParticipationMode = 'photo' | 'study';
 
 const isoAfterDays = (days: number) => {
   const date = new Date();
@@ -24,7 +22,6 @@ export default function NewChallengeScreen() {
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [title, setTitle] = useState('');
-  const [mode, setMode] = useState<ParticipationMode>('photo');
   const [days, setDays] = useState(7);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +35,6 @@ export default function NewChallengeScreen() {
         title: title.trim(),
         metric: 'minutes',
         ends_on: isoAfterDays(days),
-        participation_mode: mode,
       });
       router.back();
     } catch (err) {
@@ -48,11 +44,6 @@ export default function NewChallengeScreen() {
       setSaving(false);
     }
   };
-
-  const modes = [
-    { id: 'photo' as const, Icon: Camera, title: t('rooms.photoMode'), subtitle: t('rooms.photoModeSubtitle') },
-    { id: 'study' as const, Icon: Timer, title: t('rooms.studyMode'), subtitle: t('rooms.studyModeSubtitle') },
-  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -70,19 +61,6 @@ export default function NewChallengeScreen() {
           style={styles.input}
           maxLength={80}
         />
-        <Text style={styles.label}>{t('rooms.challengeMode')}</Text>
-        <View style={styles.modeRow}>
-          {modes.map(({ id, Icon, title, subtitle }) => {
-            const selected = mode === id;
-            return (
-              <Press key={id} onPress={() => setMode(id)} style={[styles.modeCard, selected && styles.selected]}>
-                <Icon size={22} color={selected ? c.accent : c.fgMuted} />
-                <Text style={styles.modeTitle}>{title}</Text>
-                <Text style={styles.modeSubtitle}>{subtitle}</Text>
-              </Press>
-            );
-          })}
-        </View>
         <Text style={styles.label}>{t('rooms.duration')}</Text>
         <View style={styles.daysRow}>
           {[7, 14, 30].map((value) => (

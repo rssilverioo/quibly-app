@@ -219,10 +219,9 @@ export interface CreatedRoom {
 export const createRoom = (
   name: string,
   display_name: string,
-  participation_mode: 'photo' | 'study',
   duration_days: number,
 ): Promise<CreatedRoom> =>
-  api.post('/rooms', { name, display_name, participation_mode, duration_days });
+  api.post('/rooms', { name, display_name, duration_days });
 
 export const getRoomFeed = (roomId: string): Promise<RoomFeedPage> =>
   api.get(`/rooms/${roomId}/feed?page=1&limit=20`);
@@ -280,7 +279,9 @@ export interface CreateChallengeInput {
   title: string;
   metric: 'minutes';
   ends_on: string;
-  participation_mode: 'photo' | 'study';
+  // `participation_mode` saiu em 04/08/2026, com o conceito de modo. O servidor
+  // ainda aceita o campo — a coluna tem `@default('photo')` e ninguém mais a lê
+  // —, mas nenhuma tela o envia. Ver `ActiveChallenge.participation_mode`.
 }
 
 export const createChallenge = (roomId: string, input: CreateChallengeInput) =>

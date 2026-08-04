@@ -22,24 +22,25 @@ const servicoSalas = ler('../services/rooms.ts');
  * estado vivo que não aparece na tela.
  */
 describe('a sala nasce funcionando', () => {
-  it('asks for mode and duration when the room is created', () => {
-    expect(criarSala).toContain("t('rooms.challengeMode')");
+  it('asks for the deadline, and no longer for a mode', () => {
     expect(criarSala).toContain("t('rooms.duration')");
-    // Os mesmos dois modos de `challenge/new.tsx`, pelas mesmas chaves.
-    expect(criarSala).toContain("t('rooms.photoMode')");
-    expect(criarSala).toContain("t('rooms.studyMode')");
+    // O modo caiu em 04/08/2026: não existe sala de foto e sala de timer.
+    // Toda sala tem as duas portas, e quem liga o timer aparece na sala.
+    expect(criarSala).not.toContain("t('rooms.challengeMode')");
+    expect(criarSala).not.toContain("participation_mode");
   });
 
-  it('sends both to the server instead of letting the room be born inert', () => {
-    // Só o prefixo: o quarto argumento passou a ser `prazoEmDias`, que resolve
-    // a régua e o calendário num número só. Travar o nome dele aqui quebraria o
-    // teste a cada refatoração sem proteger nada.
-    expect(criarSala).toContain('createRoom(name.trim(), displayName.trim(), mode,');
-    expect(servicoSalas).toContain('participation_mode');
+  it('sends the deadline, so the room is not born inert', () => {
+    // Só o prefixo: o último argumento é `prazoEmDias`, que resolve a régua e o
+    // calendário num número só. Travar o nome dele aqui quebraria o teste a
+    // cada refatoração sem proteger nada.
+    expect(criarSala).toContain('createRoom(name.trim(), displayName.trim(),');
     expect(servicoSalas).toContain('duration_days');
   });
 
-  it('defaults to photo, which is the GymRats the reference describes', () => {
-    expect(criarSala).toContain("useState<'photo' | 'study'>('photo')");
+  it('leaves the timer available in every room, with no mode to gate it', () => {
+    const sala = ler('../app/league/room/[id].tsx');
+    expect(sala).not.toContain('isStudyChallenge');
+    expect(sala).toContain("t('rooms.startTimer')");
   });
 });

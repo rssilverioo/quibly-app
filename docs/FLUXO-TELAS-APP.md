@@ -136,9 +136,13 @@ topo do feed é a coisa mais vista do app; não quero duas chamadas nele.
 ## 5. Criar sala — `/room/create`
 
 ~~Dois campos: **nome da sala** e **como você aparece**. Botão. Fim.~~
-**Revisto em 2026-08-04 pelo dono do produto, depois de usar o app: são
-quatro** — nome da sala, como você aparece, **modo** (foto/estudo) e
-**duração** (7/14/30 dias).
+**Revisto duas vezes em 2026-08-04, pelo dono do produto, usando o app.** São
+**três**: nome da sala, como você aparece e **prazo** (7/14/30 dias ou uma data
+no calendário).
+
+De manhã foram quatro — havia também o **modo** (foto/estudo). O modo saiu à
+tarde, junto com o conceito: não existe sala de foto e sala de timer, existe uma
+sala com duas portas. Ver `DIRECAO-PRODUTO §7`.
 
 Por quê: com dois campos a sala nascia sem desafio, e sem desafio
 `isStudyChallenge` é falso — somem o botão do timer e a faixa de "estudando
@@ -146,9 +150,9 @@ agora". A sala nascia como um GymRats pior, e o que faltava só se conseguia por
 um segundo passo que nenhuma tela pedia. O GymRats, que é a referência, resolve
 tudo na criação do grupo.
 
-Modo e duração **continuam sendo do desafio**; mudou onde se pergunta. A §6
-segue valendo inteira — é por onde passa o próximo desafio, quando este
-terminar.
+O prazo **continua sendo do desafio**; mudou onde se pergunta. A §6 segue
+valendo — é por onde passa o próximo desafio, quando este terminar —, e ela
+também perdeu o seletor de modo.
 
 Depois: código + botão de compartilhar, que já funciona (`create.tsx:162`).
 
