@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react-native';
+import { Camera, Timer, X } from 'lucide-react-native';
 
 import Press from '../../components/ui/Press';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,16 +23,27 @@ import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { track } from '../../lib/analytics';
 
 /**
- * Criar sala — dois campos, e só.
+ * Criar sala — e, com ela, o desafio.
  *
- * `FLUXO §5` e `DESIGN-GYMRATS §5.6`: prazo, modo, tamanho do grupo e
- * público/privado são propriedades do **desafio**, não da sala, e moram em
- * `challenge/new.tsx`. Isto aqui saiu de 840 linhas para o que a tela realmente
- * pergunta: como a sala se chama e como você aparece nela.
+ * ~~"Criar sala — dois campos, e só. `FLUXO §5` e `DESIGN-GYMRATS §5.6`: prazo,
+ * modo, tamanho do grupo e público/privado são propriedades do **desafio**, não
+ * da sala, e moram em `challenge/new.tsx`."~~ **Revogado em 04/08/2026 pelo dono
+ * do produto, depois de usar o app.**
  *
- * A tela manda os dois campos e nada mais. Datas, modo, privacidade e teto de
- * membros são preenchidos pelo `POST /rooms` no servidor — este cliente já os
- * inventou por um tempo, contra `POST /leagues`, e não precisa mais.
+ * A separação era coerente no papel e furada na mão: a sala nascia sem desafio,
+ * e como `isStudyChallenge(null)` é falso, ela nascia **sem o botão do timer e
+ * sem a faixa de "estudando agora"**. Tudo que nos separa do GymRats ficava
+ * atrás de um segundo passo que nenhuma tela pedia — e quem criasse a primeira
+ * sala recebia um GymRats pior, sem a parte que é nossa.
+ *
+ * O modo e a duração continuam sendo propriedades do desafio. O que mudou é
+ * **onde se pergunta**: aqui, uma vez, como o GymRats faz ao criar o grupo.
+ * `DIRECAO-PRODUTO` já dizia "a escolha acontece uma vez"; só tinha suposto que
+ * a porta era a tela de desafio.
+ *
+ * `challenge/new.tsx` continua existindo e não foi tocada: é por onde passa o
+ * **próximo** desafio, quando o primeiro termina. Os controles daqui são os
+ * mesmos de lá, de propósito — mesmas chaves de tradução, mesma régua de dias.
  */
 
 export default function CreateRoomScreen() {
@@ -43,11 +54,23 @@ export default function CreateRoomScreen() {
 
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
+  // Foto é o padrão porque é o GymRats puro: quem não souber o que escolher
+  // recebe a prestação de contas por foto, que é o produto de referência. Modo
+  // estudo é a adição deliberada, e quem a quer sabe que a quer.
+  const [mode, setMode] = useState<'photo' | 'study'>('photo');
+  const [days, setDays] = useState(7);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedRoom | null>(null);
 
   const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
+
+  // Os mesmos dois cartões de `challenge/new.tsx`, com as mesmas chaves: se um
+  // dia o texto do modo mudar, muda nos dois lugares de uma vez.
+  const modes = [
+    { id: 'photo' as const, Icon: Camera, title: t('rooms.photoMode'), subtitle: t('rooms.photoModeSubtitle') },
+    { id: 'study' as const, Icon: Timer, title: t('rooms.studyMode'), subtitle: t('rooms.studyModeSubtitle') },
+  ];
 
   const onCreate = async () => {
     if (!canSubmit) return;
@@ -58,8 +81,8 @@ export default function CreateRoomScreen() {
     setError(null);
     setCreating(true);
     try {
-      setCreated(await createRoom(name.trim(), displayName.trim()));
-      track('room_created');
+      setCreated(await createRoom(name.trim(), displayName.trim(), mode, days));
+      track('room_created', { participation_mode: mode, duration_days: days });
     } catch (err) {
       // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
       // para ação destrutiva, não para "não deu certo".
@@ -133,6 +156,40 @@ export default function CreateRoomScreen() {
             returnKeyType="done"
             onSubmitEditing={onCreate}
           />
+
+          <Text style={styles.sectionLabel}>{t('rooms.challengeMode')}</Text>
+          <View style={styles.modeRow}>
+            {modes.map(({ id, Icon, title, subtitle }) => {
+              const selected = mode === id;
+              return (
+                <Press
+                  key={id}
+                  onPress={() => setMode(id)}
+                  accessibilityLabel={title}
+                  style={[styles.modeCard, selected && styles.selected]}
+                >
+                  <Icon size={22} color={selected ? c.accent : c.fgMuted} />
+                  <Text style={styles.modeTitle}>{title}</Text>
+                  <Text style={styles.modeSubtitle}>{subtitle}</Text>
+                </Press>
+              );
+            })}
+          </View>
+
+          <Text style={styles.sectionLabel}>{t('rooms.duration')}</Text>
+          <View style={styles.daysRow}>
+            {[7, 14, 30].map((value) => (
+              <Press
+                key={value}
+                onPress={() => setDays(value)}
+                accessibilityLabel={t('rooms.durationDays', { count: value })}
+                style={[styles.day, days === value && styles.selected]}
+              >
+                <Text style={styles.dayText}>{t('rooms.durationDays', { count: value })}</Text>
+              </Press>
+            ))}
+          </View>
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
         <View style={styles.footer}>
@@ -166,6 +223,37 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   fieldSpaced: { marginTop: space.lg },
   error: { ...text.caption, color: c.danger, marginTop: space.sm },
   label: { ...text.caption, color: c.fgMuted },
+  // Daqui para baixo, os mesmos valores de `challenge/new.tsx`. Não é
+  // duplicação por descuido: são duas telas que precisam parecer a mesma
+  // pergunta, e o dia em que divergirem visualmente é o dia em que a escolha
+  // do modo parece duas coisas diferentes.
+  sectionLabel: { ...text.overline, color: c.fgMuted, marginTop: space.xl },
+  modeRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
+  modeCard: {
+    flex: 1,
+    minHeight: 136,
+    padding: space.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: radius.lg,
+    backgroundColor: c.surface,
+    gap: space.sm,
+  },
+  selected: { borderColor: c.accent, backgroundColor: c.accentSoft },
+  modeTitle: { ...text.bodyStrong, color: c.fg },
+  modeSubtitle: { ...text.caption, color: c.fgMuted },
+  daysRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
+  day: {
+    flex: 1,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: radius.md,
+    backgroundColor: c.surface,
+  },
+  dayText: { ...text.label, color: c.fg },
   code: { ...text.title3, color: c.fg, letterSpacing: 3, marginTop: space.xs },
   linkRow: { minHeight: 44, justifyContent: 'center' },
   link: { ...text.bodyStrong, color: c.accent },

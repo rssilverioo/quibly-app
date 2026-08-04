@@ -146,3 +146,107 @@ describe('RoomsService.listForUser', () => {
     expect(result).toEqual(expect.objectContaining({ kind: 'standalone' }));
   });
 });
+
+/**
+ * A sala nascia inerte: sem desafio, `isStudyChallenge` é falso no cliente, e
+ * com ele somem o botão do timer e a faixa de "estudando agora". Criar o
+ * desafio era um segundo passo que nada na tela pedia.
+ */
+describe('RoomsService.create', () => {
+  const leagueFake = (over: Record<string, unknown> = {}) => ({
+    id: 'room-1',
+    name: 'Cursinho 2026',
+    inviteCode: 'ABC123',
+    maxMembers: 50,
+    createdAt: new Date('2026-08-04T10:00:00.000Z'),
+    startDate: new Date('2026-08-04T00:00:00.000Z'),
+    endDate: new Date('2026-09-03T00:00:00.000Z'),
+    participationMode: 'photo',
+    ...over,
+  });
+
+  const montar = (league = leagueFake()) => {
+    const leagues = { create: jest.fn().mockResolvedValue(league) };
+    const prisma = {
+      league: {
+        update: jest
+          .fn()
+          .mockImplementation(({ data }) =>
+            Promise.resolve({ ...league, ...data }),
+          ),
+      },
+    };
+    const service = new RoomsService(
+      prisma as any,
+      leagues as any,
+      {} as any,
+      {} as any,
+    );
+    return { service, leagues, prisma };
+  };
+
+  it('opens a live challenge window when the client says how long', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-04T10:00:00.000Z'));
+    const { service, leagues } = montar();
+
+    const room = await service.create('user-1', {
+      name: 'Cursinho 2026',
+      display_name: 'Rô',
+      participation_mode: 'study',
+      duration_days: 30,
+    });
+
+    // A janela morta de 1970 é o que fazia `activeChallenge` ser null.
+    expect(leagues.create).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ start_date: '2026-08-04', end_date: '2026-09-03' }),
+    );
+    expect(room.activeChallenge).toEqual(
+      expect.objectContaining({
+        participationMode: 'study',
+        status: 'active',
+        // O título é o nome da sala: quem cria deu um nome só.
+        title: 'Cursinho 2026',
+        participantCount: 1,
+      }),
+    );
+    jest.useRealTimers();
+  });
+
+  it('writes the mode outside CreateLeagueDto, which does not know it', async () => {
+    const { service, prisma } = montar();
+
+    await service.create('user-1', {
+      name: 'Cursinho 2026',
+      display_name: 'Rô',
+      participation_mode: 'study',
+      duration_days: 30,
+    });
+
+    // `League.mode` do leagues.service é outro eixo (rigor de prova). Misturar
+    // os dois é o que DIRECAO-PRODUTO proíbe explicitamente.
+    expect(prisma.league.update).toHaveBeenCalledWith({
+      where: { id: 'room-1' },
+      data: { participationMode: 'study' },
+    });
+  });
+
+  it('keeps the old dead window for a client that sends neither field', async () => {
+    // A build 1.2.1 está em campo e manda só nome e display_name. Ela precisa
+    // continuar criando sala exatamente como antes.
+    const { service, leagues, prisma } = montar();
+
+    const room = await service.create('user-1', {
+      name: 'Cursinho 2026',
+      display_name: 'Rô',
+    });
+
+    expect(leagues.create).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ start_date: '1970-01-01', end_date: '1970-01-02' }),
+    );
+    expect(room.activeChallenge).toBeNull();
+    expect(prisma.league.update).not.toHaveBeenCalled();
+  });
+});
