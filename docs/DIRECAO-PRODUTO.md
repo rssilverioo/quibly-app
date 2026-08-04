@@ -176,33 +176,47 @@ A presença ao vivo não é uma tela separada nem um ranking paralelo — ela mo
 **dentro da sala**, no topo do feed: quem está estudando neste momento. É o
 gatilho que o feed assíncrono sozinho não dá.
 
-### Refinamento de 2026-07-31: o timer é um MODO, não uma mudança global
+### ~~Refinamento de 2026-07-31: o timer é um MODO~~ — REVOGADO em 2026-08-04
 
-Correção posterior do dono do produto, e ela é a que fecha o desenho:
+> **Revogado pelo dono do produto, depois de usar o app.** A versão anterior
+> desta seção dizia que o pomodoro era "uma **opção do desafio**, escolhida na
+> criação", com uma tabela de dois modos (Foto e Estudo) e a regra de que "a
+> presença ao vivo só existe no modo estudo".
+>
+> **Não existe sala de foto e sala de timer. Existe uma sala, com duas portas.**
 
-> **100% fiel ao GymRats. O estudo por pomodoro vira um modo do desafio.**
+A frase do dono, que é a que vale:
 
-Ou seja, não espalhamos timer e presença por todo o app. O GymRats permanece
-intacto como base, e o pomodoro é uma **opção do desafio**, escolhida na
-criação:
+> *"Não quero uma sala específica com isso. Hoje a sala você pode postar sua
+> foto lá e estudei, OU você liga o timer e estudou. Eu quero que o timer ligado
+> eu apenas apareço dentro da sala que tem alguém estudando — tipo a pessoa na
+> matéria X, tipo um focus mode."*
 
-| Modo | Como se registra | Presença ao vivo |
+| Porta | Como se registra | Presença ao vivo |
 |---|---|---|
-| **Foto** (padrão) | tira a foto e posta — GymRats puro | não |
-| **Estudo** | liga o pomodoro; ao encerrar vira post com minutos, matéria e XP | **sim** — a sala mostra quem está estudando agora |
+| **Foto** | tira a foto e posta — GymRats puro | não há o que mostrar |
+| **Timer** | liga o cronômetro; ao encerrar vira post com minutos, matéria e XP | **sim** — a sala mostra quem está estudando agora |
 
-Por que isto é melhor do que ter as duas portas sempre visíveis: um grupo que
-quer só a prestação de contas por foto não carrega uma interface de timer que
-não usa, e um grupo de cursinho liga o modo estudo e ganha a sala ao vivo. A
-escolha acontece uma vez, na criação do desafio, e a sala inteira se adapta.
+As duas convivem em **toda** sala, sem escolha na criação e sem configuração.
 
-**A presença ao vivo só existe no modo estudo.** No modo foto, a sala é
-exatamente o GymRats — sem faixa de "estudando agora", porque não há timer para
-alimentá-la.
+**Por que a versão anterior estava errada.** O argumento era "um grupo que quer
+só prestação de contas por foto não carrega uma interface de timer que não usa".
+O custo real dessa economia era um botão a mais numa tela — e o preço foi alto:
+a sala nascia sem o que nos diferencia, a escolha acontecia antes de a pessoa
+saber o que estava escolhendo, e o app ganhou um conceito que precisava ser
+explicado em dois cartões na criação. Um botão ignorado é mais barato que um
+conceito.
 
-Nota de implementação: `League.mode` já existe no schema hoje
-(`easy | competitive | hardcore`), mas é outro eixo — trata de rigor de prova.
-Este é um eixo novo e precisa de campo próprio; não sobrecarregue o existente.
+**A presença ao vivo é a única coisa que mudamos de propósito** em relação ao
+GymRats, e agora ela vale em qualquer sala — que é o que a frase de abertura
+desta seção sempre disse: *"a única diferença é que a sala mostra quem está
+estudando agora"*.
+
+Nota de implementação: a coluna `League.participationMode` continua no banco com
+`@default('photo')`, e **ninguém a lê**. Fica como vestígio até haver motivo
+para tocar naquela tabela; remover agora custaria migração e não compraria nada.
+`League.mode` (`easy | competitive | hardcore`) é outro eixo — rigor de prova —
+e segue valendo.
 
 **Descoberta de salas públicas.** O modelo é grupo privado de gente que se
 conhece. Diretório público é problema de quem já tem massa.

@@ -139,21 +139,20 @@ export interface AnalyticsEventProps {
   room_viewed: NoExtraProps;
   room_joined: { mode: string };
   /**
-   * ~~Sem propriedades desde 2026-08-02, e de propósito: `mode` e `privacy`
-   * descreviam o desafio, não a sala, e o cliente teria que **inventar** os
-   * valores para mandá-los.~~ Aquele comentário terminava com "um dia isto vira
-   * `challenge_created`, com o modo de participação; não invente antes da tela".
+   * Só o prazo. `participation_mode` esteve aqui por algumas horas em
+   * 04/08/2026 e saiu no mesmo dia, junto com o conceito: **não existe sala de
+   * foto e sala de timer.** Existe uma sala, com duas portas, e quem liga o
+   * timer aparece estudando para o grupo.
    *
-   * **A tela chegou em 04/08/2026.** Criar sala passou a perguntar o modo e a
-   * duração (`app/league/create.tsx`), então estes dois valores não são mais
-   * invenção do cliente — são a escolha de quem criou, que é justamente o dado
-   * que faltava para saber se alguém usa o modo estudo.
+   * Não há o que medir sobre uma escolha que ninguém faz mais. O que passou a
+   * valer a pena medir é quanta gente **usa** cada porta — e isso já sai de
+   * `session_started` e do post de foto, sem precisar de campo aqui.
    *
    * Continua `room_created` e não `challenge_created` porque o evento marca o
    * momento em que a sala nasce; o desafio nasce junto e não tem instante
    * próprio para registrar.
    */
-  room_created: { participation_mode: 'photo' | 'study'; duration_days: number };
+  room_created: { duration_days: number };
   invite_shared: { room_id: string };
   /** The invite/join preview loaded — denominator for room_joined via invite. */
   invite_opened: { is_member: boolean };

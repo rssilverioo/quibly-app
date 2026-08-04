@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   Share,
@@ -13,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Camera, Timer, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import Press from '../../components/ui/Press';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,6 +23,7 @@ import { createRoom, type CreatedRoom } from '../../services/rooms';
 import { inviteUrl } from '@quibly/shared/constants';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { track } from '../../lib/analytics';
+import { diasAte, emDias } from '../../lib/prazo-desafio';
 
 /**
  * Criar sala — e, com ela, o desafio.
@@ -47,30 +50,91 @@ import { track } from '../../lib/analytics';
  */
 
 export default function CreateRoomScreen() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { user } = useAuth();
 
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
-  // Foto é o padrão porque é o GymRats puro: quem não souber o que escolher
-  // recebe a prestação de contas por foto, que é o produto de referência. Modo
-  // estudo é a adição deliberada, e quem a quer sabe que a quer.
-  const [mode, setMode] = useState<'photo' | 'study'>('photo');
   const [days, setDays] = useState(7);
+  /**
+   * Prazo por **data final**, e não por número de dias digitado.
+   *
+   * Quem cria a sala pensa em data — "vai até a prova, dia 12" —, não em "45
+   * dias". A régua de 7/14/30 cobre o caso comum; o calendário cobre o resto sem
+   * obrigar ninguém a fazer a conta de cabeça.
+   *
+   * O contrato do servidor não muda: `duration_days` continua sendo o que sobe,
+   * e a conversão acontece aqui. Um campo `ends_on` no `POST /rooms` seria mais
+   * direto de ler, mas duplicaria o que `duration_days` já expressa e obrigaria
+   * a decidir fuso horário na fronteira — que é onde erro de data nasce.
+   */
+  const [prazoCustom, setPrazoCustom] = useState(false);
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
+  const [dataFinal, setDataFinal] = useState(() => emDias(30));
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedRoom | null>(null);
 
-  const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
+  // O que sobe é sempre `duration_days` — a data escolhida vira dias aqui.
+  const prazoEmDias = prazoCustom ? diasAte(dataFinal) : days;
+  const dataCurta = dataFinal.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
 
-  // Os mesmos dois cartões de `challenge/new.tsx`, com as mesmas chaves: se um
-  // dia o texto do modo mudar, muda nos dois lugares de uma vez.
-  const modes = [
-    { id: 'photo' as const, Icon: Camera, title: t('rooms.photoMode'), subtitle: t('rooms.photoModeSubtitle') },
-    { id: 'study' as const, Icon: Timer, title: t('rooms.studyMode'), subtitle: t('rooms.studyModeSubtitle') },
-  ];
+  /**
+   * O calendário mora numa folha, não na tela.
+   *
+   * Ele chegou desenhado no meio do formulário e ficou pesado: ~330pt de
+   * calendário permanente entre o prazo e o botão, empurrando "Criar sala" para
+   * fora e competindo com os campos que ainda faltavam preencher. Um seletor é
+   * um desvio momentâneo, não um bloco do formulário.
+   *
+   * Mesma folha do `+` da lista de salas (`(tabs)/index.tsx`), incluindo o fundo
+   * escuro que fecha ao toque — folha sem saída óbvia é armadilha.
+   */
+  const folhaDoCalendario = (
+    <Modal
+      visible={calendarioAberto}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setCalendarioAberto(false)}
+    >
+      <Press haptic={false} onPress={() => setCalendarioAberto(false)} scale={1} style={styles.backdrop}>
+        <View />
+      </Press>
+      <View style={styles.sheet}>
+        <View style={styles.sheetGrip} />
+        <Text style={styles.sheetTitle}>{t('rooms.durationEndsOn', { date: dataCurta })}</Text>
+        <DateTimePicker
+          value={dataFinal}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          // Amanhã é o primeiro fim possível: desafio que acaba hoje nasce
+          // encerrado.
+          minimumDate={emDias(1)}
+          maximumDate={emDias(365)}
+          locale={i18n.language}
+          onChange={(_evento, escolhida) => {
+            if (escolhida) {
+              setDataFinal(escolhida);
+              setPrazoCustom(true);
+            }
+            // No Android o diálogo é do sistema e se fecha sozinho ao escolher;
+            // no iOS o calendário é desenhado aqui dentro e quem fecha é o
+            // botão abaixo, para dar espaço a trocar de mês antes de decidir.
+            if (Platform.OS !== 'ios') setCalendarioAberto(false);
+          }}
+        />
+        {Platform.OS === 'ios' ? (
+          <Press onPress={() => { setPrazoCustom(true); setCalendarioAberto(false); }} style={styles.button}>
+            <Text style={styles.buttonText}>{t('done')}</Text>
+          </Press>
+        ) : null}
+      </View>
+    </Modal>
+  );
+
+  const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
 
   const onCreate = async () => {
     if (!canSubmit) return;
@@ -81,8 +145,8 @@ export default function CreateRoomScreen() {
     setError(null);
     setCreating(true);
     try {
-      setCreated(await createRoom(name.trim(), displayName.trim(), mode, days));
-      track('room_created', { participation_mode: mode, duration_days: days });
+      setCreated(await createRoom(name.trim(), displayName.trim(), prazoEmDias));
+      track('room_created', { duration_days: prazoEmDias });
     } catch (err) {
       // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
       // para ação destrutiva, não para "não deu certo".
@@ -135,6 +199,7 @@ export default function CreateRoomScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {header}
+      {folhaDoCalendario}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextInput
@@ -157,38 +222,45 @@ export default function CreateRoomScreen() {
             onSubmitEditing={onCreate}
           />
 
-          <Text style={styles.sectionLabel}>{t('rooms.challengeMode')}</Text>
-          <View style={styles.modeRow}>
-            {modes.map(({ id, Icon, title, subtitle }) => {
-              const selected = mode === id;
-              return (
-                <Press
-                  key={id}
-                  onPress={() => setMode(id)}
-                  accessibilityLabel={title}
-                  style={[styles.modeCard, selected && styles.selected]}
-                >
-                  <Icon size={22} color={selected ? c.accent : c.fgMuted} />
-                  <Text style={styles.modeTitle}>{title}</Text>
-                  <Text style={styles.modeSubtitle}>{subtitle}</Text>
-                </Press>
-              );
-            })}
-          </View>
-
           <Text style={styles.sectionLabel}>{t('rooms.duration')}</Text>
           <View style={styles.daysRow}>
             {[7, 14, 30].map((value) => (
               <Press
                 key={value}
-                onPress={() => setDays(value)}
+                onPress={() => { setPrazoCustom(false); setDays(value); }}
                 accessibilityLabel={t('rooms.durationDays', { count: value })}
-                style={[styles.day, days === value && styles.selected]}
+                style={[styles.day, !prazoCustom && days === value && styles.selected]}
               >
                 <Text style={styles.dayText}>{t('rooms.durationDays', { count: value })}</Text>
               </Press>
             ))}
+            {/* O chip vira a data depois de escolhida: "Outro" é um convite,
+                não uma resposta, e deixar o rótulo genérico obrigaria a linha
+                extra abaixo só para dizer o que foi escolhido. */}
+            <Press
+              onPress={() => setCalendarioAberto(true)}
+              // O rótulo acompanha o que o chip mostra. Ele já foi fixo em
+              // "Outro", e aí o VoiceOver anunciava um convite onde a tela já
+              // exibia uma resposta — além de deixar a data invisível para a
+              // automação por acessibilidade, que é como esta tela é conferida.
+              accessibilityLabel={
+                prazoCustom
+                  ? t('rooms.durationEndsOn', { date: dataCurta })
+                  : t('rooms.durationCustom')
+              }
+              style={[styles.day, prazoCustom && styles.selected]}
+            >
+              <Text style={styles.dayText} numberOfLines={1}>
+                {prazoCustom ? dataCurta : t('rooms.durationCustom')}
+              </Text>
+            </Press>
           </View>
+
+          {prazoCustom ? (
+            <Text style={styles.prazoResumo}>
+              {t('rooms.durationDays', { count: prazoEmDias })}
+            </Text>
+          ) : null}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
@@ -254,6 +326,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     backgroundColor: c.surface,
   },
   dayText: { ...text.label, color: c.fg },
+  prazoResumo: { ...text.caption, color: c.fgMuted, marginTop: space.sm },
+  // Os mesmos valores da folha do `+` em `(tabs)/index.tsx`: duas folhas que se
+  // parecem são uma linguagem; duas que quase se parecem são um descuido.
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: c.bg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.xl },
+  sheetGrip: { alignSelf: 'center', width: 36, height: 4, borderRadius: radius.full, backgroundColor: c.border, marginBottom: space.lg },
+  sheetTitle: { ...text.bodyStrong, color: c.fgMuted, marginBottom: space.md },
   code: { ...text.title3, color: c.fg, letterSpacing: 3, marginTop: space.xs },
   linkRow: { minHeight: 44, justifyContent: 'center' },
   link: { ...text.bodyStrong, color: c.accent },

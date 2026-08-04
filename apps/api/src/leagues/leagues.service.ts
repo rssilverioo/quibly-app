@@ -232,8 +232,23 @@ export class LeaguesService {
 
     const leagueIds = memberships.map((m) => m.leagueId);
 
+    /**
+     * **Você entra na lista.** Este `where` tinha `userId: { not: userId }`, e
+     * era o defeito relatado em 04/08/2026: o dono do produto ligou o timer,
+     * estava estudando, e a faixa da sala continuou vazia.
+     *
+     * A exclusão fazia sentido para uma lista de "quem mais está aí", mas o
+     * consumidor é a faixa "estudando agora" dentro da sala — e ali você é o
+     * primeiro caso que importa. Numa sala de uma pessoa, excluir-se significa
+     * que a faixa **nunca** aparece; e mesmo numa sala cheia, não se ver na
+     * lista em que todo mundo o vê é confuso.
+     *
+     * É também o que o produto pede por escrito: *"eu quero que o timer ligado
+     * eu apenas apareço dentro da sala que tem alguém estudando"*
+     * (`DIRECAO-PRODUTO §7`).
+     */
     const peers = await this.prisma.leagueMember.findMany({
-      where: { leagueId: { in: leagueIds }, userId: { not: userId } },
+      where: { leagueId: { in: leagueIds } },
       select: {
         userId: true,
         displayName: true,

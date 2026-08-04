@@ -257,3 +257,52 @@ describe('LeaguesService.findLiveMembers', () => {
     expect(prisma.studySession.findMany).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Relatado em 04/08/2026: o dono do produto ligou o timer, estava estudando, e
+ * a faixa da sala continuou vazia. A consulta tinha `userId: { not: userId }` —
+ * ela listava quem **mais** estava estudando, e numa sala de uma pessoa isso é
+ * ninguém, sempre.
+ */
+describe('LeaguesService.findLiveMembers — você aparece na sua própria sala', () => {
+  it('inclui quem chamou, em vez de listar só os outros', async () => {
+    const prisma = {
+      leagueMember: { findMany: jest.fn() },
+      studySession: { findMany: jest.fn() },
+    };
+    prisma.leagueMember.findMany
+      .mockResolvedValueOnce([{ leagueId: 'sala-a' }])
+      // Sala de uma pessoa só: eu.
+      .mockResolvedValueOnce([
+        { userId: 'eu', displayName: 'Rô', league: { id: 'sala-a', name: 'Cursinho' } },
+      ]);
+    prisma.studySession.findMany.mockResolvedValue([
+      {
+        id: 'minha-sessao',
+        userId: 'eu',
+        startedAt: new Date(Date.now() - 10 * 60_000),
+        proofMode: false,
+        subject: { name: 'Matemática', color: '#abcdef' },
+        user: { username: 'rodrigo', handle: 'rodrigo', avatarUrl: null },
+      },
+    ]);
+
+    const live = await new LeaguesService(prisma as any, {} as any).findLiveMembers('eu');
+
+    expect(live).toHaveLength(1);
+    expect(live[0]).toEqual(
+      expect.objectContaining({
+        user_id: 'eu',
+        league_id: 'sala-a',
+        // O nome vem da participação naquela sala, não do perfil global.
+        display_name: 'Rô',
+        subject_name: 'Matemática',
+        elapsed_minutes: 10,
+      }),
+    );
+
+    // A consulta não pode voltar a excluir quem chamou.
+    const filtroDosPares = prisma.leagueMember.findMany.mock.calls[1][0].where;
+    expect(filtroDosPares.userId).toBeUndefined();
+  });
+});
