@@ -190,23 +190,39 @@ export interface CreatedRoom {
   invite_code: string;
   max_members: number;
   created_at: string;
-  active_challenge: null;
+  /** Não-nulo desde 04/08: a sala nasce com o desafio. Ver `createRoom`. */
+  active_challenge: ActiveChallenge | null;
   my_membership: { role: string; display_name: string };
 }
 
 /**
- * Criar sala pergunta **duas** coisas, e é assim de propósito
- * (`DESIGN-GYMRATS §5.6`): prazo, modo e tamanho do grupo são propriedades do
- * desafio, não da sala.
+ * Criar sala **é** criar o desafio.
  *
- * Isto aqui já foi `createLeague()` com datas e privacidade inventadas no
- * cliente. Não é mais necessário: o `POST /rooms` do servidor faz esse
- * preenchimento sozinho — é literalmente o mesmo default, só que do lado certo
- * da fronteira. Se um dia a sala deixar de nascer como liga, muda lá e a tela
- * não fica sabendo.
+ * ~~"Criar sala pergunta duas coisas, e é assim de propósito
+ * (`DESIGN-GYMRATS §5.6`): prazo, modo e tamanho do grupo são propriedades do
+ * desafio, não da sala."~~ **Revogado em 04/08/2026 pelo dono do produto.**
+ *
+ * A separação era defensável no papel e péssima na mão: a sala nascia sem
+ * desafio, e como `isStudyChallenge(null)` é falso, ela nascia **sem botão de
+ * timer e sem faixa de "estudando agora"**. Ou seja, tudo que nos diferencia do
+ * GymRats ficava atrás de um segundo passo que nenhuma tela pedia — e a sala
+ * recém-criada era um GymRats pior, sem a parte que é nossa.
+ *
+ * O GymRats, que é a referência, faz num fluxo só: criar o grupo é configurar
+ * o desafio. `DIRECAO-PRODUTO` já dizia que "a escolha acontece uma vez"; só
+ * tinha suposto que a porta era a tela de desafio. É a mesma regra, na porta
+ * certa.
+ *
+ * Os dois campos novos são opcionais no servidor de propósito: a build 1.2.1
+ * está em campo mandando só os dois primeiros, e para ela nada muda.
  */
-export const createRoom = (name: string, display_name: string): Promise<CreatedRoom> =>
-  api.post('/rooms', { name, display_name: display_name });
+export const createRoom = (
+  name: string,
+  display_name: string,
+  participation_mode: 'photo' | 'study',
+  duration_days: number,
+): Promise<CreatedRoom> =>
+  api.post('/rooms', { name, display_name, participation_mode, duration_days });
 
 export const getRoomFeed = (roomId: string): Promise<RoomFeedPage> =>
   api.get(`/rooms/${roomId}/feed?page=1&limit=20`);

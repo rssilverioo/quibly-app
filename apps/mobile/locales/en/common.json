@@ -25,96 +25,98 @@
     "profile": "Profile"
   },
   "rooms": {
-    "emptyTitle": "Study with your people",
-    "emptySubtitle": "Create a room for your group or enter the code you received.",
-    "create": "Create room",
+    "activeChallenge": "ACTIVE CHALLENGE",
+    "addTitle": "What do you want to do?",
+    "allRankings": "All rankings",
+    "averageCheckIns": "Average check-ins per day",
+    "backToFeed": "Back to the feed",
+    "captionPlaceholder": "Share what you studied",
+    "challengeEnded": "The challenge is over",
+    "challengeMode": "HOW THE GROUP PARTICIPATES",
+    "challengeName": "Challenge name",
+    "challengeWinner": "{{name}} won",
+    "chatEmpty": "Nobody has spoken yet",
+    "chatEmptySubtitle": "Send the first message to the group.",
+    "chatPlaceholder": "Message",
+    "chatUnavailable": "We couldn't open the chat",
+    "choosePhoto": "Choose photo",
     "code": "Room code",
-    "join": "Join",
-    "feedEmptyTitle": "Nobody has studied yet today",
+    "create": "Create room",
+    "createChallenge": "Create the next challenge",
+    "createChallengeAction": "Create challenge",
+    "createChallengeError": "We couldn't create the challenge",
+    "createRoomError": "We couldn't create the room",
+    "daysActive_one": "1 day active",
+    "daysActive_other": "{{count}} days active",
+    "daysLeftLabel": "days left",
+    "daysLeft_one": "1 day left",
+    "daysLeft_other": "{{count}} days left",
+    "detailsUnavailable": "Group details are unavailable right now.",
+    "displayNamePlaceholder": "How you show up",
+    "duration": "DEADLINE",
+    "durationDays": "{{count}} days",
+    "earlyBird": "Most early bird workouts",
+    "emptySubtitle": "Create a room for your group or enter the code you received.",
+    "emptyTitle": "Study with your people",
     "feedEmptySubtitle": "Start a session and your study will show up here.",
-    "photoFeedEmptySubtitle": "Post a photo and your study will show up here.",
+    "feedEmptyTitle": "Nobody has studied yet today",
+    "feedUnavailable": "We couldn't load this room's feed.",
+    "finishes": "Finishes {{date}}",
+    "groupStats": "Group stats",
+    "invite": "Invite",
+    "inviteAnotherCode": "Enter another code",
+    "inviteInvalid": "This invite no longer exists",
+    "invited": "You've been invited",
+    "join": "Join",
+    "joinError": "We couldn't join this room",
+    "joinWithCode": "Join with a code",
+    "leader": "Leader",
+    "leaderboard": "LEADERBOARD",
+    "leaderboardEmpty": "Nobody has scored yet",
     "listTitle": "Your rooms",
-    "createChallenge": "Create the next challenge"
-    ,"postPhoto": "Post photo"
-    ,"startTimer": "Start timer"
-    ,"newPost": "New photo"
-    ,"captionPlaceholder": "Share what you studied"
-    ,"takePhoto": "Take photo"
-    ,"choosePhoto": "Choose photo"
-    ,"publishPhoto": "Post to feed"
-    ,"publishing": "Posting…"
-    ,"studyingNow": "STUDYING NOW"
-    ,"minutesNow_one": "for {{count}} min"
-    ,"minutesNow_other": "for {{count}} min"
-    ,"activeChallenge": "ACTIVE CHALLENGE"
-    ,"daysLeft_one": "1 day left"
-    ,"daysLeft_other": "{{count}} days left"
-    ,"yourRank": "You are #{{rank}} of {{count}}"
-    ,"notRanked": "Start studying to join the leaderboard"
-    ,"leaderboard": "LEADERBOARD"
-    ,"you": "you"
-    ,"noChallenge": "NO ACTIVE CHALLENGE"
-    ,"newChallenge": "New challenge"
-    ,"challengeName": "Challenge name"
-    ,"challengeMode": "HOW THE GROUP PARTICIPATES"
-    ,"photoMode": "Photo"
-    ,"photoModeSubtitle": "Post a photo of what you studied. No timer."
-    ,"studyMode": "Study"
-    ,"studyModeSubtitle": "Use the timer and show up as studying now."
-    ,"duration": "DEADLINE"
-    ,"durationDays": "{{count}} days"
-    ,"createChallengeAction": "Create challenge"
-    ,"memberHistory": "Challenge history"
-    ,"memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} in this challenge"
-    ,"memberNoPosts": "No study posted in this challenge yet."
-    ,"daysLeftLabel": "days left"
-    ,"started": "Started {{date}}"
-    ,"finishes": "Finishes {{date}}"
-    ,"invite": "Invite"
-    ,"rankingsPreview": "Rankings"
-    ,"daysActive_one": "1 day active"
-    ,"daysActive_other": "{{count}} days active"
-    ,"allRankings": "All rankings"
-    ,"groupStats": "Group stats"
-    ,"totalCheckIns": "Total check-ins"
-    ,"totalDaysActive": "Total days active"
-    ,"averageCheckIns": "Average check-ins per day"
-    ,"earlyBird": "Most early bird workouts"
-    ,"nightOwl": "Most night owl check-ins"
-    ,"detailsUnavailable": "Group details are unavailable right now."
-    ,"tryAgain": "Try again"
-    ,"loadFailed": "We couldn't load your rooms right now."
-    ,"post": "Post"
-    ,"postUnavailable": "Post unavailable"
-    ,"photoFeedEmptyTitle": "Nobody has posted yet today"
-    ,"leader": "Leader"
-    ,"roomUnavailable": "We couldn't open this room"
-    ,"rankingsTitle": "Rankings"
-    ,"rankingsUnavailable": "We couldn't load the rankings"
-    ,"leaderboardEmpty": "Nobody has scored yet"
-    ,"challengeWinner": "{{name}} won"
-    ,"challengeEnded": "The challenge is over"
-    ,"backToFeed": "Back to the feed"
-    ,"newRoom": "New room"
-    ,"roomNamePlaceholder": "Room name"
-    ,"displayNamePlaceholder": "How you show up"
-    ,"shareInvite": "Share invite"
-    ,"openRoom": "Open the room"
-    ,"createRoomError": "We couldn't create the room"
-    ,"loginRequired": "Sign in to create a room"
-    ,"invited": "You've been invited"
-    ,"inviteInvalid": "This invite no longer exists"
-    ,"inviteAnotherCode": "Enter another code"
-    ,"joinError": "We couldn't join this room"
-    ,"roomFull": "This room is full"
-    ,"roomEnded": "This challenge has already ended"
-    ,"chatEmpty": "Nobody has spoken yet"
-    ,"chatEmptySubtitle": "Send the first message to the group."
-    ,"chatPlaceholder": "Message"
-    ,"chatUnavailable": "We couldn't open the chat"
-    ,"createChallengeError": "We couldn't create the challenge"
-    ,"postError": "We couldn't post the photo"
-    ,"feedUnavailable": "We couldn't load this room's feed."
+    "loadFailed": "We couldn't load your rooms right now.",
+    "loginRequired": "Sign in to create a room",
+    "memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} in this challenge",
+    "memberHistory": "Challenge history",
+    "memberNoPosts": "No study posted in this challenge yet.",
+    "minutesNow_one": "for {{count}} min",
+    "minutesNow_other": "for {{count}} min",
+    "newChallenge": "New challenge",
+    "newPost": "New photo",
+    "newRoom": "New room",
+    "nightOwl": "Most night owl check-ins",
+    "noChallenge": "NO ACTIVE CHALLENGE",
+    "notRanked": "Start studying to join the leaderboard",
+    "openRoom": "Open the room",
+    "photoFeedEmptySubtitle": "Post a photo and your study will show up here.",
+    "photoFeedEmptyTitle": "Nobody has posted yet today",
+    "photoMode": "Photo",
+    "photoModeSubtitle": "Post a photo of what you studied. No timer.",
+    "post": "Post",
+    "postError": "We couldn't post the photo",
+    "postPhoto": "Post photo",
+    "postUnavailable": "Post unavailable",
+    "publishPhoto": "Post to feed",
+    "publishing": "Posting…",
+    "rankingsPreview": "Rankings",
+    "rankingsTitle": "Rankings",
+    "rankingsUnavailable": "We couldn't load the rankings",
+    "roomEnded": "This challenge has already ended",
+    "roomFull": "This room is full",
+    "roomNamePlaceholder": "Room name",
+    "roomUnavailable": "We couldn't open this room",
+    "shareInvite": "Share invite",
+    "startTimer": "Start timer",
+    "started": "Started {{date}}",
+    "studyMode": "Study",
+    "studyModeSubtitle": "Use the timer and show up as studying now.",
+    "studyingNow": "STUDYING NOW",
+    "takePhoto": "Take photo",
+    "totalCheckIns": "Total check-ins",
+    "totalDaysActive": "Total days active",
+    "tryAgain": "Try again",
+    "you": "you",
+    "yourRank": "You are #{{rank}} of {{count}}"
   },
   "members": "Members",
   "members_one": "{{count}} member",

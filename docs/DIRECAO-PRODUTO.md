@@ -119,6 +119,42 @@ backend terminar — espera o contrato, que é a primeira entrega do domínio.
 
 ## 6. O que fica de fora agora, e por quê
 
+### Captura de aula — adiada para a Fase 4, **não cortada**
+
+*Decisão de 2026-08-03, tomada porque este documento a tinha perdido.*
+
+Até aqui a captura de aula não aparecia neste documento **em lugar nenhum** —
+nem entre o que entra, nem entre o que fica de fora. Enquanto isso a tela
+seguia viva e alcançável (`app/lesson/capture.tsx`, pelo card na aba Estudar),
+e o `ROADMAP §Fase 4` a chamava de *"o diferencial contra o YPT"*. Dois
+documentos vivos discordando, e o mais novo discordando **por omissão**.
+
+Omissão é o pior dos três estados. Código que ninguém defende por escrito é
+exatamente o que apodrece em silêncio — foi assim que o feed passou semanas
+vazio e a Live Activity nunca funcionou uma vez sequer. Então a decisão fica
+registrada aqui, com nome e data:
+
+**A captura de aula continua no produto e continua no código. Ela não recebe
+trabalho, tela nova nem prioridade até o loop social fechar** — ou seja, até
+alguém tirar uma foto e vê-la aparecer no feed (`PLANO-FECHAMENTO §Etapa 2`).
+Quando isso acontecer, ela volta pela porta da frente, na Fase 4, que é onde o
+`ROADMAP` já a colocou.
+
+Por que não apagar: é a única coisa no app que o YPT e o GymRats não têm.
+Apagar por arrumação, na véspera de precisar dela, é destruir opção — e o
+custo de mantê-la parada é zero, já que nenhuma linha dela bloqueia o loop.
+
+Por que não promover agora: a tese deste documento é que **o produto é o loop
+social**. Enquanto ele não fecha, tudo que disputa atenção com ele atrasa a
+única pergunta que importa.
+
+**Dívida que vem junto, e que a decisão não resolve:** a Biblioteca — para onde
+o material capturado vai — é uma aba escondida (`NativeTabs.Trigger hidden`),
+que não abre por deep link e só se alcança por um toque dentro da Estudar. Ou
+seja, hoje a captura leva a um lugar enterrado. Isso se conserta **quando ela
+voltar à Fase 4**, não antes; capturar para lugar nenhum é pior que não
+capturar, e é assim que está.
+
 **Presença ao vivo.** ~~Adiada.~~ **REVERTIDO em 2026-07-31 pelo dono do
 produto, e a correção é dele:** a presença ao vivo é *a* diferença deliberada
 entre nós e o GymRats. Não é um extra do YPT que sobrou — é a única coisa que

@@ -135,17 +135,34 @@ topo do feed é a coisa mais vista do app; não quero duas chamadas nele.
 
 ## 5. Criar sala — `/room/create`
 
-Dois campos: **nome da sala** e **como você aparece**. Botão. Fim.
+~~Dois campos: **nome da sala** e **como você aparece**. Botão. Fim.~~
+**Revisto em 2026-08-04 pelo dono do produto, depois de usar o app: são
+quatro** — nome da sala, como você aparece, **modo** (foto/estudo) e
+**duração** (7/14/30 dias).
+
+Por quê: com dois campos a sala nascia sem desafio, e sem desafio
+`isStudyChallenge` é falso — somem o botão do timer e a faixa de "estudando
+agora". A sala nascia como um GymRats pior, e o que faltava só se conseguia por
+um segundo passo que nenhuma tela pedia. O GymRats, que é a referência, resolve
+tudo na criação do grupo.
+
+Modo e duração **continuam sendo do desafio**; mudou onde se pergunta. A §6
+segue valendo inteira — é por onde passa o próximo desafio, quando este
+terminar.
+
 Depois: código + botão de compartilhar, que já funciona (`create.tsx:162`).
 
-Morrem daqui, porque são configuração de **desafio** e não de sala: datas de
-início e fim, durações rápidas de 7/30/90/365 dias, modo
-easy/competitive/hardcore, e o slider de 2–100 membros. Some também
+Morrem daqui, e continuam mortos depois da revisão de 04/08: datas de início e
+fim soltas, durações de 7/30/90/365 dias, modo easy/competitive/hardcore (que é
+rigor de prova, outro eixo), e o slider de 2–100 membros. Some também
 público/privado — a §6 é explícita, o modelo é grupo privado de gente que se
 conhece, e um toggle "público" no app é uma promessa de descoberta que não
 existe.
 
-De 828 linhas sobram ~120.
+A régua de duração que voltou é 7/14/30, a mesma da §6, e não a de quatro
+opções que morreu aqui.
+
+De 828 linhas sobram ~200.
 
 ---
 

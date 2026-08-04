@@ -35,31 +35,55 @@ const getReactNativePersistence = (
  * and the app hangs on the splash — the very symptom we are trying to make
  * legible. Instead the problem is recorded and `app/_layout.tsx` renders it.
  */
-const REQUIRED = [
-  'EXPO_PUBLIC_FIREBASE_API_KEY',
-  'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
-  'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'EXPO_PUBLIC_FIREBASE_APP_ID',
-] as const;
+/**
+ * Cada variável precisa ser lida como `process.env.NOME_LITERAL`, e é por isso
+ * que esta tabela existe em vez de uma lista de nomes.
+ *
+ * `babel-preset-expo` só substitui `process.env.X` quando a chave é literal
+ * (`inline-env-vars.js`: `t.isStringLiteral(key)`). Um acesso computado —
+ * `process.env[nome]` — atravessa o build intacto, e no bundle de release
+ * `process.env` não carrega nenhuma chave `EXPO_PUBLIC_*`. Ou seja, o
+ * `REQUIRED.filter((name) => !process.env[name])` que estava aqui acusava as
+ * seis como ausentes em **todo** build de produção, por melhor configurado que
+ * estivesse.
+ *
+ * Foi o que chegou ao TestFlight em 04/08: o `eas.json` carregava as seis em
+ * `build.production.env` desde 30/07, elas eram inlinadas corretamente no
+ * `firebaseConfig` abaixo — e esta tela bloqueava o app mesmo assim, nomeando
+ * variáveis que estavam ali no bundle. Um guarda que existe para tornar a
+ * falha legível passou a ser a falha.
+ *
+ * Agora a checagem e a configuração leem da mesma tabela, então é impossível
+ * uma variável estar presente para uma e ausente para a outra.
+ */
+const CONFIG_ENV = {
+  EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  EXPO_PUBLIC_FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+};
 
-const missing = REQUIRED.filter((name) => !process.env[name]);
+const missing = Object.keys(CONFIG_ENV).filter(
+  (nome) => !CONFIG_ENV[nome as keyof typeof CONFIG_ENV],
+);
 
 /** Non-null when the build shipped without Firebase configuration. */
 export const firebaseConfigError: string | null = missing.length
-  ? `Missing ${missing.length} environment variable(s): ${missing.join(', ')}.\n\n` +
-    'apps/mobile/.env is gitignored, so it never reaches the EAS builder. ' +
-    'The variables have to live on EAS: eas env:push production --path .env'
+  ? `Faltam ${missing.length} variável(is) de ambiente: ${missing.join(', ')}.\n\n` +
+    'No build elas vêm de `build.<perfil>.env`, em apps/mobile/eas.json — ' +
+    'confira o perfil usado neste build. Em desenvolvimento vêm de ' +
+    'apps/mobile/.env, que é gitignored e não chega ao builder.'
   : null;
 
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? '',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
+  apiKey: CONFIG_ENV.EXPO_PUBLIC_FIREBASE_API_KEY ?? '',
+  authDomain: CONFIG_ENV.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
+  projectId: CONFIG_ENV.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? '',
+  storageBucket: CONFIG_ENV.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
+  messagingSenderId: CONFIG_ENV.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
+  appId: CONFIG_ENV.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

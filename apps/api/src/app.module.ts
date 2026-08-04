@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { HealthModule } from './health/health.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -91,6 +92,7 @@ import { ChallengesModule } from './challenges/challenges.module';
     FocusAreasModule,
     RoomsModule,
     ChallengesModule,
+    HealthModule,
   ],
   providers: [
     {

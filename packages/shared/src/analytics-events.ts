@@ -139,14 +139,21 @@ export interface AnalyticsEventProps {
   room_viewed: NoExtraProps;
   room_joined: { mode: string };
   /**
-   * Sem propriedades desde 2026-08-02, e de propósito. `mode` e `privacy`
-   * descreviam o desafio, não a sala — e desde que criar sala virou dois campos
-   * (`DESIGN-GYMRATS §5.6`) quem os define é o `POST /rooms` no servidor. O
-   * cliente teria que **inventar** os dois valores para continuar mandando, que
-   * é exatamente o defeito que a mudança removeu. Um dia isto vira
-   * `challenge_created`, com o modo de participação; não invente antes da tela.
+   * ~~Sem propriedades desde 2026-08-02, e de propósito: `mode` e `privacy`
+   * descreviam o desafio, não a sala, e o cliente teria que **inventar** os
+   * valores para mandá-los.~~ Aquele comentário terminava com "um dia isto vira
+   * `challenge_created`, com o modo de participação; não invente antes da tela".
+   *
+   * **A tela chegou em 04/08/2026.** Criar sala passou a perguntar o modo e a
+   * duração (`app/league/create.tsx`), então estes dois valores não são mais
+   * invenção do cliente — são a escolha de quem criou, que é justamente o dado
+   * que faltava para saber se alguém usa o modo estudo.
+   *
+   * Continua `room_created` e não `challenge_created` porque o evento marca o
+   * momento em que a sala nasce; o desafio nasce junto e não tem instante
+   * próprio para registrar.
    */
-  room_created: NoExtraProps;
+  room_created: { participation_mode: 'photo' | 'study'; duration_days: number };
   invite_shared: { room_id: string };
   /** The invite/join preview loaded — denominator for room_joined via invite. */
   invite_opened: { is_member: boolean };

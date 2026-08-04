@@ -15,15 +15,58 @@ export class RoomsService {
     private readonly storageService: StorageService,
   ) {}
 
+  /**
+   * A sala nasce **com** o desafio, quando o cliente diz como ela funciona.
+   *
+   * O par `1970-01-01`/`1970-01-02` não é lixo: é uma janela morta deliberada,
+   * e é ela que faz `activeChallenge` ser `null`. O efeito colateral era o
+   * defeito — sala recém-criada não mostrava timer nem faixa de "estudando
+   * agora", porque as duas coisas dependem de um desafio em modo `study`, e
+   * criar esse desafio era um segundo passo que nada na tela pedia.
+   *
+   * Com `participation_mode` e `duration_days` a janela nasce viva e o modo
+   * vale desde o primeiro segundo. Sem eles, a janela morta continua — é o que
+   * a build 1.2.1 em campo manda, e ela deve seguir funcionando como sempre.
+   */
   async create(userId: string, dto: CreateRoomDto) {
+    const agora = new Date();
+    const nasceComDesafio = dto.duration_days != null;
+
+    // `@db.Date` guarda só a data; as strings vão no mesmo formato que
+    // `leagues.service` espera, e o cálculo é em UTC para não escorregar um dia
+    // para quem cria a sala perto da meia-noite.
+    const inicio = agora.toISOString().split('T')[0];
+    const fim = nasceComDesafio
+      ? new Date(
+          Date.UTC(
+            agora.getUTCFullYear(),
+            agora.getUTCMonth(),
+            agora.getUTCDate() + dto.duration_days!,
+          ),
+        )
+          .toISOString()
+          .split('T')[0]
+      : '1970-01-02';
+
     const league = await this.leaguesService.create(userId, {
       name: dto.name,
       display_name: dto.display_name,
-      start_date: '1970-01-01',
-      end_date: '1970-01-02',
+      start_date: nasceComDesafio ? inicio : '1970-01-01',
+      end_date: fim,
       privacy: 'private',
       mode: 'competitive',
     });
+
+    // O modo não passa por `leagues.service`: `CreateLeagueDto` não o conhece —
+    // `League.mode` de lá é outro eixo (rigor de prova), e sobrecarregá-lo era
+    // exatamente o que `DIRECAO-PRODUTO` proíbe.
+    const comModo =
+      nasceComDesafio && dto.participation_mode
+        ? await this.prisma.league.update({
+            where: { id: league.id },
+            data: { participationMode: dto.participation_mode },
+          })
+        : league;
 
     return {
       id: league.id,
@@ -31,7 +74,26 @@ export class RoomsService {
       inviteCode: league.inviteCode,
       maxMembers: league.maxMembers,
       createdAt: league.createdAt,
-      activeChallenge: null,
+      // O título do desafio é o nome da sala, e não um segundo nome a inventar:
+      // quem cria deu um nome só, e pedir outro seria pedir duas vezes a mesma
+      // coisa. `challenges.service` já resolve `description ?? name`.
+      activeChallenge: nasceComDesafio
+        ? {
+            id: league.id,
+            roomId: league.id,
+            title: league.name,
+            metric: 'minutes',
+            metricUnit: 'min',
+            participationMode: comModo.participationMode,
+            status: 'active',
+            startsAt: league.startDate,
+            endsAt: league.endDate,
+            serverTime: agora,
+            participantCount: 1,
+            leader: null,
+            me: { rank: null, metricValue: 0 },
+          }
+        : null,
       myMembership: { role: 'owner', displayName: dto.display_name },
     };
   }

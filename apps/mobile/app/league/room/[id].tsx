@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CalendarDays, Plus, Timer } from 'lucide-react-native';
@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import FeedRow from '../../../components/feed/FeedRow';
 import type { FirebaseFeedPost } from '../../../components/feed/PostCard';
 import { Mascot } from '../../../components/mascot';
-import { roomCoverForId, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
+import { roomCoverForId, roomCoverHeight } from '../../../assets/room-covers';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
@@ -29,6 +29,7 @@ export default function RoomFeedScreen() {
   const { t, i18n } = useTranslation('common');
   const { user } = useAuth();
   const { c } = useTheme();
+  const { width: larguraDaJanela } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [room, setRoom] = useState<RoomSummary | null>(null);
   const [posts, setPosts] = useState<FirebaseFeedPost[]>([]);
@@ -139,6 +140,9 @@ export default function RoomFeedScreen() {
 
   const challenge = room.active_challenge;
   const studyMode = isStudyChallenge(challenge);
+  // Largura de dentro do card: a lista recua 16 de cada lado e o card tem 1pt
+  // de borda de cada lado.
+  const alturaDaCapa = roomCoverHeight(larguraDaJanela - space.lg * 2 - 2);
   const timeLeft = challenge ? challengeTimeLeft(challenge.ends_at, challenge.server_time) : null;
 
   // Capa e faixa de três colunas são UM card só — na referência não há costura
@@ -149,7 +153,7 @@ export default function RoomFeedScreen() {
     <Press onPress={() => router.push({ pathname: '/league/challenge/[id]', params: { id: challenge.id, roomId: room.id } })} style={styles.hero}>
       <Image
         source={room.cover_url ? { uri: room.cover_url } : roomCoverForId(room.id)}
-        style={styles.cover}
+        style={[styles.cover, { height: alturaDaCapa }]}
         resizeMode="cover"
       />
 
@@ -199,8 +203,10 @@ export default function RoomFeedScreen() {
         renderItem={({ item, index }) => (
           <View>
             {startsNewFeedDay(posts, index) ? <Text style={styles.day}>{feedDayLabel(item.created_at, i18n.language)}</Text> : null}
-            {/* A moldura da linha mora aqui, não no `FeedRow`: a linha é o
-                conteúdo (72pt travados por teste) e o card é o recipiente. */}
+            {/* ~~"A moldura da linha mora aqui, não no `FeedRow`"~~ — era o
+                plano, e ficou pela metade: a moldura entrou aqui e não saiu de
+                lá, então cada linha vinha com duas. Quem desenha o card é o
+                `FeedRow`; aqui fica só o respiro entre um e outro. */}
             <View style={styles.postCard}>
               <FeedRow post={item} locale={i18n.language} onPress={() => { cacheFeedPost(item); router.push(`/league/feed/post/${item.id}`); }} />
             </View>
@@ -255,10 +261,11 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   // A capa é uma FAIXA, não um plano de fundo. O `maxHeight` protege telas
   // largas: em 393pt a proporção 2,5 dá 144pt, então o teto de 150 só age de um
   // iPad em diante — a 170 ele nunca agia.
+  // Sem `aspectRatio` e sem `maxHeight` de propósito: a altura vem de
+  // `alturaDeCapa`, e o porquê está lá. Repor qualquer um dos dois traz de
+  // volta o card de 871pt.
   cover: {
     width: '100%',
-    aspectRatio: ROOM_COVER_ASPECT_RATIO,
-    maxHeight: 150,
     backgroundColor: c.skeleton,
   },
   // 56 = 14 de respiro + 28 de conteúdo + 14. `space-evenly` é o que reproduz a
@@ -286,15 +293,20 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   // 12 + 17 de linha + 12 = 41pt (REF 37,7). Minúsculas, não caixa alta: a
   // referência repete este separador 3–5 vezes por tela e escolheu não pesar.
   day: { ...text.caption, color: c.fgMuted, textAlign: 'center', paddingVertical: space.md },
-  postCard: {
-    backgroundColor: c.surface,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: c.border,
-    paddingLeft: space.sm,
-    paddingRight: space.lg,
-    marginBottom: space.md,
-  },
+  // **Só espaçamento.** Este bloco já teve `surface`, `radius.sm`, borda de 1px
+  // e o par `paddingLeft: sm` / `paddingRight: lg` — exatamente os mesmos
+  // valores que `FeedRow.row` já aplica. O resultado eram duas molduras
+  // idênticas, uma dentro da outra, e o padding horizontal cobrado duas vezes:
+  // a linha aparecia com 382pt de largura dentro de um card de 408.
+  //
+  // Quem fica com a moldura é o `FeedRow`, e não por acaso: a dele está medida
+  // contra a referência (72pt externos com borda de 1px dão os 69,9pt internos
+  // do GymRats). Recriá-la aqui por fora empurrava o card real para 74pt e
+  // afinava a linha.
+  //
+  // O respiro de 12pt entre linhas continua aqui, que é o lugar certo — o
+  // `FeedRow` não conhece o vizinho, como o comentário dele mesmo diz.
+  postCard: { marginBottom: space.md },
   emptyBlock: { alignItems: 'center', paddingTop: space.xxl },
   emptyTitle: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
   stateBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.sm },

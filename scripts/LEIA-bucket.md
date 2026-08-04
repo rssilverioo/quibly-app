@@ -119,20 +119,39 @@ falhar.
 
 ### Conferir que funcionou
 
-```sh
-# Publique uma foto pelo app e pegue o photo_url do feed. Deve dar 200.
-curl -o /dev/null -w "%{http_code}\n" \
-  https://t3.storage.dev/nomads-public/room-posts/<roomId>/<userId>/<postId>
+⚠️ **Leia o `<Code>` do corpo, não só o status.** A versão anterior desta seção
+comparava apenas `%{http_code}`, e isso não discrimina o caso que mais importa:
+um bucket **que não existe** responde `404` igualzinho a um bucket público sem
+aquele objeto. Quem seguisse o roteiro antigo veria `404`, leria "público,
+funcionou" e teria criado nada. Foi o que a sonda de 04/08 encontrou — e só
+porque olhou o corpo.
 
-# O controle, que TEM que continuar 403:
-curl -o /dev/null -w "%{http_code}\n" \
-  https://t3.storage.dev/nomads-uploads/proof-photos/qualquer-coisa
+```sh
+# Existe e está público? Objeto inexistente deve dar 404 **NoSuchKey**.
+# Se vier 404 NoSuchBucket, o bucket não foi criado — volte para a §5.
+# Se vier 403 AccessDenied, ele existe mas continua privado: o --acl não pegou.
+for b in nomads-public nomads-uploads; do
+  printf "%-16s " "$b"
+  curl -s -o /tmp/r -w "%{http_code}" "https://t3.storage.dev/$b/sonda-$(date +%s)"
+  grep -o "<Code>[^<]*</Code>" /tmp/r; echo
+done
 ```
 
-O segundo comando não é opcional. Se ele responder 200 ou `404 NoSuchKey`, o
-bucket errado ficou público e a privacidade da prova foi embora junto — objeto
-inexistente sob prefixo **público** responde `404`, sob prefixo **privado**
-responde `403`. É o teste que discrimina sem precisar de credencial.
+Esperado depois de tudo pronto:
+
+| bucket | status | `<Code>` |
+|---|---|---|
+| `nomads-public` | `404` | `NoSuchKey` |
+| `nomads-uploads` | `403` | `AccessDenied` |
+
+A linha do `nomads-uploads` não é opcional. Se ela virar `404`, o bucket errado
+ficou público e a privacidade da prova foi embora junto. É o teste que
+discrimina sem precisar de credencial nenhuma.
+
+**Estado em 04/08/2026:** `nomads-public` → `404 NoSuchBucket`,
+`nomads-uploads` → `403 AccessDenied`. Ou seja: o bucket público **ainda não
+existe** e o privado está intacto. A §5 continua por fazer, e é o único elo que
+falta na Etapa 2 — os dois lados do código já estão prontos e testados.
 
 ## 6. O que acontece com o que já está lá
 
