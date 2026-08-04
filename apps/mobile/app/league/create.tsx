@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   Share,
@@ -82,6 +83,60 @@ export default function CreateRoomScreen() {
 
   // O que sobe é sempre `duration_days` — a data escolhida vira dias aqui.
   const prazoEmDias = prazoCustom ? diasAte(dataFinal) : days;
+  const dataCurta = dataFinal.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
+
+  /**
+   * O calendário mora numa folha, não na tela.
+   *
+   * Ele chegou desenhado no meio do formulário e ficou pesado: ~330pt de
+   * calendário permanente entre o prazo e o botão, empurrando "Criar sala" para
+   * fora e competindo com os campos que ainda faltavam preencher. Um seletor é
+   * um desvio momentâneo, não um bloco do formulário.
+   *
+   * Mesma folha do `+` da lista de salas (`(tabs)/index.tsx`), incluindo o fundo
+   * escuro que fecha ao toque — folha sem saída óbvia é armadilha.
+   */
+  const folhaDoCalendario = (
+    <Modal
+      visible={calendarioAberto}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setCalendarioAberto(false)}
+    >
+      <Press haptic={false} onPress={() => setCalendarioAberto(false)} scale={1} style={styles.backdrop}>
+        <View />
+      </Press>
+      <View style={styles.sheet}>
+        <View style={styles.sheetGrip} />
+        <Text style={styles.sheetTitle}>{t('rooms.durationEndsOn', { date: dataCurta })}</Text>
+        <DateTimePicker
+          value={dataFinal}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          // Amanhã é o primeiro fim possível: desafio que acaba hoje nasce
+          // encerrado.
+          minimumDate={emDias(1)}
+          maximumDate={emDias(365)}
+          locale={i18n.language}
+          onChange={(_evento, escolhida) => {
+            if (escolhida) {
+              setDataFinal(escolhida);
+              setPrazoCustom(true);
+            }
+            // No Android o diálogo é do sistema e se fecha sozinho ao escolher;
+            // no iOS o calendário é desenhado aqui dentro e quem fecha é o
+            // botão abaixo, para dar espaço a trocar de mês antes de decidir.
+            if (Platform.OS !== 'ios') setCalendarioAberto(false);
+          }}
+        />
+        {Platform.OS === 'ios' ? (
+          <Press onPress={() => { setPrazoCustom(true); setCalendarioAberto(false); }} style={styles.button}>
+            <Text style={styles.buttonText}>{t('done')}</Text>
+          </Press>
+        ) : null}
+      </View>
+    </Modal>
+  );
 
   const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
 
@@ -155,6 +210,7 @@ export default function CreateRoomScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {header}
+      {folhaDoCalendario}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextInput
@@ -208,46 +264,32 @@ export default function CreateRoomScreen() {
                 <Text style={styles.dayText}>{t('rooms.durationDays', { count: value })}</Text>
               </Press>
             ))}
+            {/* O chip vira a data depois de escolhida: "Outro" é um convite,
+                não uma resposta, e deixar o rótulo genérico obrigaria a linha
+                extra abaixo só para dizer o que foi escolhido. */}
             <Press
-              // No Android o seletor é um diálogo e precisa ser aberto; no iOS
-              // ele é desenhado na própria tela e abre junto com a escolha.
-              onPress={() => { setPrazoCustom(true); setCalendarioAberto(true); }}
-              accessibilityLabel={t('rooms.durationCustom')}
+              onPress={() => setCalendarioAberto(true)}
+              // O rótulo acompanha o que o chip mostra. Ele já foi fixo em
+              // "Outro", e aí o VoiceOver anunciava um convite onde a tela já
+              // exibia uma resposta — além de deixar a data invisível para a
+              // automação por acessibilidade, que é como esta tela é conferida.
+              accessibilityLabel={
+                prazoCustom
+                  ? t('rooms.durationEndsOn', { date: dataCurta })
+                  : t('rooms.durationCustom')
+              }
               style={[styles.day, prazoCustom && styles.selected]}
             >
-              <Text style={styles.dayText}>{t('rooms.durationCustom')}</Text>
+              <Text style={styles.dayText} numberOfLines={1}>
+                {prazoCustom ? dataCurta : t('rooms.durationCustom')}
+              </Text>
             </Press>
           </View>
 
           {prazoCustom ? (
-            <View style={styles.calendario}>
-              {/* A data e a contagem juntas: a pessoa escolhe por data, mas o
-                  que a sala vive é o número de dias. Mostrar só um dos dois
-                  esconde metade da decisão. */}
-              <Text style={styles.prazoResumo}>
-                {t('rooms.durationEndsOn', {
-                  date: dataFinal.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' }),
-                })}
-                {' · '}
-                {t('rooms.durationDays', { count: prazoEmDias })}
-              </Text>
-              {Platform.OS === 'ios' || calendarioAberto ? (
-                <DateTimePicker
-                  value={dataFinal}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  // Amanhã é o primeiro fim possível: desafio que acaba hoje
-                  // nasce encerrado.
-                  minimumDate={emDias(1)}
-                  maximumDate={emDias(365)}
-                  locale={i18n.language}
-                  onChange={(_evento, escolhida) => {
-                    setCalendarioAberto(false);
-                    if (escolhida) setDataFinal(escolhida);
-                  }}
-                />
-              ) : null}
-            </View>
+            <Text style={styles.prazoResumo}>
+              {t('rooms.durationDays', { count: prazoEmDias })}
+            </Text>
           ) : null}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -314,8 +356,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     backgroundColor: c.surface,
   },
   dayText: { ...text.label, color: c.fg },
-  calendario: { marginTop: space.md, gap: space.sm },
-  prazoResumo: { ...text.caption, color: c.fgMuted },
+  prazoResumo: { ...text.caption, color: c.fgMuted, marginTop: space.sm },
+  // Os mesmos valores da folha do `+` em `(tabs)/index.tsx`: duas folhas que se
+  // parecem são uma linguagem; duas que quase se parecem são um descuido.
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: c.bg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.xl },
+  sheetGrip: { alignSelf: 'center', width: 36, height: 4, borderRadius: radius.full, backgroundColor: c.border, marginBottom: space.lg },
+  sheetTitle: { ...text.bodyStrong, color: c.fgMuted, marginBottom: space.md },
   code: { ...text.title3, color: c.fg, letterSpacing: 3, marginTop: space.xs },
   linkRow: { minHeight: 44, justifyContent: 'center' },
   link: { ...text.bodyStrong, color: c.accent },
