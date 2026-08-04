@@ -38,9 +38,16 @@ describe('a sala nasce funcionando', () => {
     expect(servicoSalas).toContain('duration_days');
   });
 
-  it('leaves the timer available in every room, with no mode to gate it', () => {
+  it('keeps the room free of both the mode gate and the timer control', () => {
+    // O portão do modo caiu de manhã; o botão do timer, à tarde. A sala mostra
+    // o **resultado** — quem está estudando agora, e o post quando encerra —,
+    // não o controle. Ligar o timer é na aba Estudar, que já escolhe matéria e
+    // duração.
     const sala = ler('../app/league/room/[id].tsx');
+    const abaEstudar = ler('../app/(tabs)/study.tsx');
+
     expect(sala).not.toContain('isStudyChallenge');
-    expect(sala).toContain("t('rooms.startTimer')");
+    expect(sala).not.toContain("t('rooms.startTimer')");
+    expect(abaEstudar).toContain("router.push('/session/setup')");
   });
 });

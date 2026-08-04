@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, CalendarDays, Plus, Timer } from 'lucide-react-native';
+import { ArrowLeft, CalendarDays, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import FeedRow from '../../../components/feed/FeedRow';
@@ -186,6 +186,12 @@ export default function RoomFeedScreen() {
    * com duas portas — postar a foto, ou ligar o timer —, e quem liga o timer
    * aparece estudando para o grupo. É o focus mode, e continua sendo a única
    * coisa que mudamos de propósito em relação ao GymRats.
+   *
+   * **Ligar o timer não acontece aqui.** O botão morava logo abaixo desta faixa
+   * e saiu no mesmo dia: a porta é a aba Estudar (`(tabs)/study.tsx`), que já
+   * tinha o botão e é onde se escolhe matéria e duração. A sala mostra o
+   * resultado — quem está estudando agora, e o post quando encerra —, não o
+   * controle.
    */
   const liveStrip = live.length > 0 ? (
     <View style={styles.liveStrip}>
@@ -207,7 +213,7 @@ export default function RoomFeedScreen() {
         keyExtractor={(post) => post.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}<Press onPress={() => router.push('/session/setup')} style={styles.timer}><Timer size={18} color={c.fg} /><Text style={styles.timerLabel}>{t('rooms.startTimer')}</Text></Press></>}
+        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}</>}
         renderItem={({ item, index }) => (
           <View>
             {startsNewFeedDay(posts, index) ? <Text style={styles.day}>{feedDayLabel(item.created_at, i18n.language)}</Text> : null}
@@ -299,8 +305,6 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   livePerson: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   liveName: { ...text.bodyStrong, color: c.fg },
   liveMeta: { ...text.caption, color: c.fgMuted },
-  timer: { height: 52, borderWidth: 1, borderColor: c.border, borderRadius: radius.sm, backgroundColor: c.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, marginBottom: space.md },
-  timerLabel: { ...text.label, color: c.fg },
   // 12 + 17 de linha + 12 = 41pt (REF 37,7). Minúsculas, não caixa alta: a
   // referência repete este separador 3–5 vezes por tela e escolheu não pesar.
   day: { ...text.caption, color: c.fgMuted, textAlign: 'center', paddingVertical: space.md },
