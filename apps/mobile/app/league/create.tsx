@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Camera, Timer, X } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import Press from '../../components/ui/Press';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,6 +22,7 @@ import { createRoom, type CreatedRoom } from '../../services/rooms';
 import { inviteUrl } from '@quibly/shared/constants';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { track } from '../../lib/analytics';
+import { diasAte, emDias } from '../../lib/prazo-desafio';
 
 /**
  * Criar sala — e, com ela, o desafio.
@@ -47,7 +49,7 @@ import { track } from '../../lib/analytics';
  */
 
 export default function CreateRoomScreen() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { user } = useAuth();
@@ -59,9 +61,27 @@ export default function CreateRoomScreen() {
   // estudo é a adição deliberada, e quem a quer sabe que a quer.
   const [mode, setMode] = useState<'photo' | 'study'>('photo');
   const [days, setDays] = useState(7);
+  /**
+   * Prazo por **data final**, e não por número de dias digitado.
+   *
+   * Quem cria a sala pensa em data — "vai até a prova, dia 12" —, não em "45
+   * dias". A régua de 7/14/30 cobre o caso comum; o calendário cobre o resto sem
+   * obrigar ninguém a fazer a conta de cabeça.
+   *
+   * O contrato do servidor não muda: `duration_days` continua sendo o que sobe,
+   * e a conversão acontece aqui. Um campo `ends_on` no `POST /rooms` seria mais
+   * direto de ler, mas duplicaria o que `duration_days` já expressa e obrigaria
+   * a decidir fuso horário na fronteira — que é onde erro de data nasce.
+   */
+  const [prazoCustom, setPrazoCustom] = useState(false);
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
+  const [dataFinal, setDataFinal] = useState(() => emDias(30));
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedRoom | null>(null);
+
+  // O que sobe é sempre `duration_days` — a data escolhida vira dias aqui.
+  const prazoEmDias = prazoCustom ? diasAte(dataFinal) : days;
 
   const canSubmit = name.trim().length > 0 && displayName.trim().length > 0 && !creating;
 
@@ -81,8 +101,8 @@ export default function CreateRoomScreen() {
     setError(null);
     setCreating(true);
     try {
-      setCreated(await createRoom(name.trim(), displayName.trim(), mode, days));
-      track('room_created', { participation_mode: mode, duration_days: days });
+      setCreated(await createRoom(name.trim(), displayName.trim(), mode, prazoEmDias));
+      track('room_created', { participation_mode: mode, duration_days: prazoEmDias });
     } catch (err) {
       // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
       // para ação destrutiva, não para "não deu certo".
@@ -181,14 +201,54 @@ export default function CreateRoomScreen() {
             {[7, 14, 30].map((value) => (
               <Press
                 key={value}
-                onPress={() => setDays(value)}
+                onPress={() => { setPrazoCustom(false); setDays(value); }}
                 accessibilityLabel={t('rooms.durationDays', { count: value })}
-                style={[styles.day, days === value && styles.selected]}
+                style={[styles.day, !prazoCustom && days === value && styles.selected]}
               >
                 <Text style={styles.dayText}>{t('rooms.durationDays', { count: value })}</Text>
               </Press>
             ))}
+            <Press
+              // No Android o seletor é um diálogo e precisa ser aberto; no iOS
+              // ele é desenhado na própria tela e abre junto com a escolha.
+              onPress={() => { setPrazoCustom(true); setCalendarioAberto(true); }}
+              accessibilityLabel={t('rooms.durationCustom')}
+              style={[styles.day, prazoCustom && styles.selected]}
+            >
+              <Text style={styles.dayText}>{t('rooms.durationCustom')}</Text>
+            </Press>
           </View>
+
+          {prazoCustom ? (
+            <View style={styles.calendario}>
+              {/* A data e a contagem juntas: a pessoa escolhe por data, mas o
+                  que a sala vive é o número de dias. Mostrar só um dos dois
+                  esconde metade da decisão. */}
+              <Text style={styles.prazoResumo}>
+                {t('rooms.durationEndsOn', {
+                  date: dataFinal.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' }),
+                })}
+                {' · '}
+                {t('rooms.durationDays', { count: prazoEmDias })}
+              </Text>
+              {Platform.OS === 'ios' || calendarioAberto ? (
+                <DateTimePicker
+                  value={dataFinal}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  // Amanhã é o primeiro fim possível: desafio que acaba hoje
+                  // nasce encerrado.
+                  minimumDate={emDias(1)}
+                  maximumDate={emDias(365)}
+                  locale={i18n.language}
+                  onChange={(_evento, escolhida) => {
+                    setCalendarioAberto(false);
+                    if (escolhida) setDataFinal(escolhida);
+                  }}
+                />
+              ) : null}
+            </View>
+          ) : null}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
@@ -254,6 +314,8 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     backgroundColor: c.surface,
   },
   dayText: { ...text.label, color: c.fg },
+  calendario: { marginTop: space.md, gap: space.sm },
+  prazoResumo: { ...text.caption, color: c.fgMuted },
   code: { ...text.title3, color: c.fg, letterSpacing: 3, marginTop: space.xs },
   linkRow: { minHeight: 44, justifyContent: 'center' },
   link: { ...text.bodyStrong, color: c.accent },

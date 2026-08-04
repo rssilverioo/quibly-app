@@ -31,7 +31,10 @@ describe('a sala nasce funcionando', () => {
   });
 
   it('sends both to the server instead of letting the room be born inert', () => {
-    expect(criarSala).toContain('createRoom(name.trim(), displayName.trim(), mode, days)');
+    // Só o prefixo: o quarto argumento passou a ser `prazoEmDias`, que resolve
+    // a régua e o calendário num número só. Travar o nome dele aqui quebraria o
+    // teste a cada refatoração sem proteger nada.
+    expect(criarSala).toContain('createRoom(name.trim(), displayName.trim(), mode,');
     expect(servicoSalas).toContain('participation_mode');
     expect(servicoSalas).toContain('duration_days');
   });
