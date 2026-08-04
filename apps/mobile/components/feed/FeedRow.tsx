@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import type { FirebaseFeedPost } from './PostCard';
@@ -35,14 +35,40 @@ export default function FeedRow({ post, locale, onPress }: FeedRowProps) {
   // continuem concordando se alguém mexer no mapeador.
   const photo = post.proof_photo_url;
 
+  /**
+   * Foto que não carrega cai no mesmo ladrilho de quem não tem foto.
+   *
+   * `styles.thumbnail` não tem cor de fundo, então uma `<Image>` que falha fica
+   * **transparente** — 56pt de buraco invisível, indistinguível de espaço vazio.
+   * O efeito, visto na tela em 04/08, era a leitura invertida: a linha COM foto
+   * parecia não ter miniatura, e a linha SEM foto era a única a mostrar um
+   * bloco (o coelho do `fallback`).
+   *
+   * Hoje a causa das falhas é conhecida — o bucket público não existe e a URL
+   * responde 403 (`scripts/LEIA-bucket.md`). Mas isto não é remendo para aquilo:
+   * mesmo com o bucket no ar, rede cai e objeto some, e a resposta certa nunca é
+   * um buraco. Quando o bucket subir, esta linha para de aparecer sozinha.
+   *
+   * O estado é por URL: se o post trocar de foto, uma falha antiga não pode
+   * condenar a nova.
+   */
+  const [falhou, setFalhou] = useState(false);
+  useEffect(() => { setFalhou(false); }, [photo]);
+  const mostraFoto = Boolean(photo) && !falhou;
+
   // Nada de texto em cima da miniatura — nem a hora, nem contagem de reação.
   // A referência nunca escreve sobre foto, e sem véu de 72% a conta de
   // contraste não fecha (`DESIGN-GYMRATS §3.2.4`, regra do `fgOnScrim`).
   // Título, autor e hora ficam ao lado da foto, nunca por cima.
   return (
     <Press onPress={onPress} style={styles.row}>
-      {photo ? (
-        <Image source={{ uri: photo }} style={styles.thumbnail} resizeMode="cover" />
+      {mostraFoto ? (
+        <Image
+          source={{ uri: photo! }}
+          style={styles.thumbnail}
+          resizeMode="cover"
+          onError={() => setFalhou(true)}
+        />
       ) : (
         <View style={styles.fallback}>
           <Mascot state="idle" size={34} plate={false} animate={false} />

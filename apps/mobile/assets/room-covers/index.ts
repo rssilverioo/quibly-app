@@ -59,4 +59,7 @@ export const ROOM_ROW_THUMB = { width: 72, height: 40 } as const;
  * as palmeiras da direita simplesmente sumiam. Casar este valor com a arte faz
  * a capa mostrar a composição inteira.
  */
-export const ROOM_COVER_ASPECT_RATIO = 2.5;
+// A proporção e a altura vivem em `lib/room-cover.ts`: este arquivo faz
+// `require` de PNG e por isso não pode ser importado por teste. Reexportado
+// aqui para não quebrar quem já importava daqui.
+export { ROOM_COVER_ASPECT_RATIO, ROOM_COVER_MAX_HEIGHT, roomCoverHeight } from '../../lib/room-cover';

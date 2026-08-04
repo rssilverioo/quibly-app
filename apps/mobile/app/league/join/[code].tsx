@@ -4,6 +4,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +18,7 @@ import { ArrowLeft, CalendarDays, Users } from 'lucide-react-native';
 
 import { Mascot } from '../../../components/mascot';
 import Press from '../../../components/ui/Press';
-import { roomCoverForId, ROOM_COVER_ASPECT_RATIO } from '../../../assets/room-covers';
+import { roomCoverForId, roomCoverHeight } from '../../../assets/room-covers';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLeaguePreview, joinLeague, type LeaguePreview } from '../../../services/leagues';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
@@ -34,6 +35,9 @@ function daysLeft(endDate: string): number {
 export default function JoinRoomScreen() {
   const { t } = useTranslation('common');
   const { c } = useTheme();
+  const { width: larguraDaJanela } = useWindowDimensions();
+  // Mesma conta da tela da sala: 16pt de recuo de cada lado e 1pt de borda.
+  const alturaDaCapa = roomCoverHeight(larguraDaJanela - space.lg * 2 - 2);
   const styles = useMemo(() => makeStyles(c), [c]);
   const { code } = useLocalSearchParams<{ code: string }>();
   const { user } = useAuth();
@@ -102,7 +106,7 @@ export default function JoinRoomScreen() {
           {/* A forma do card é conhecida: capa 144 + faixa 56. Esperar com a
               forma certa é melhor que um spinner (§4.4). */}
           <View style={styles.card}>
-            <View style={styles.coverSkeleton} />
+            <View style={[styles.coverSkeleton, { height: alturaDaCapa }]} />
             <View style={styles.strip} />
           </View>
         </View>
@@ -148,7 +152,7 @@ export default function JoinRoomScreen() {
           {/* É o mesmo bloco da §5.1 de propósito: quem chega por convite vê
               exatamente a sala que vai encontrar. */}
           <View style={styles.card}>
-            <Image source={roomCoverForId(preview.id)} style={styles.cover} resizeMode="cover" />
+            <Image source={roomCoverForId(preview.id)} style={[styles.cover, { height: alturaDaCapa }]} resizeMode="cover" />
             <View style={styles.strip}>
               <View style={styles.statColumn}>
                 <Users size={22} color={c.fgMuted} />
@@ -215,8 +219,11 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     backgroundColor: c.surface,
     overflow: 'hidden',
   },
-  cover: { width: '100%', aspectRatio: ROOM_COVER_ASPECT_RATIO, maxHeight: 150, backgroundColor: c.skeleton },
-  coverSkeleton: { width: '100%', aspectRatio: ROOM_COVER_ASPECT_RATIO, maxHeight: 150, backgroundColor: c.skeleton },
+  // Sem `aspectRatio` nem `maxHeight`: a altura vem de `roomCoverHeight`, e o
+  // porquê está lá. Este arquivo tinha o mesmo par que quebrou a tela da sala —
+  // aqui o sintoma nunca foi notado porque a tela é curta e o vazio cabia nela.
+  cover: { width: '100%', backgroundColor: c.skeleton },
+  coverSkeleton: { width: '100%', backgroundColor: c.skeleton },
   strip: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' },
   statColumn: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   statValue: { ...text.bodyStrong, color: c.fg },
