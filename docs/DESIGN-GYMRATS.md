@@ -972,8 +972,24 @@ as outras telas.
 
 **Sem referência.** `INFERIDO:` inteiro, por analogia com a disciplina medida.
 
-`FLUXO §5` é explícito: **dois campos.** Nome da sala e como você aparece. 840
-linhas viram ~120.
+> ⚠️ **Revisto em 2026-08-04 pelo dono do produto, depois de usar o app.**
+> ~~"`FLUXO §5` é explícito: **dois campos.** Nome da sala e como você
+> aparece."~~ São **quatro**: nome, como você aparece, modo e duração.
+>
+> A regra de dois campos era coerente e produzia uma sala inútil. Sem desafio,
+> `activeChallenge` nasce `null`, `isStudyChallenge(null)` é falso, e com ele
+> somem **o botão do timer e a faixa de "estudando agora"** — tudo o que nos
+> separa do GymRats ficava atrás de um segundo passo que nenhuma tela pedia.
+>
+> O GymRats, que é a referência desta seção, faz num fluxo só: criar o grupo é
+> configurar o desafio. `DIRECAO-PRODUTO` já dizia que "a escolha acontece uma
+> vez"; só tinha suposto que a porta era a tela de desafio. O modo e a duração
+> **continuam sendo propriedades do desafio** — mudou onde se pergunta, não a
+> quem pertencem.
+>
+> §5.7 continua valendo inteira: é por onde passa o *próximo* desafio, quando o
+> primeiro termina. Os controles das duas telas são os mesmos, pelas mesmas
+> chaves de tradução, de propósito.
 
 #### Blocos
 
@@ -981,8 +997,16 @@ linhas viram ~120.
 |---|---|---|---|
 | 1 | Cabeçalho: `X` à esquerda + "Nova sala" centralizado | 56 | 16 |
 | 2 | Campo "Nome da sala" | 54 | 16 |
-| 3 | Campo "Como você aparece" | 54 | — |
+| 3 | Campo "Como você aparece" | 54 | 24 |
+| 4 | Rótulo "Como funciona" + dois cartões de modo, lado a lado | 136 | 24 |
+| 5 | Rótulo "Duração" + régua de 7/14/30 dias | 46 | — |
 | — | Botão primário, no rodapé | 54, margem 16 | inset |
+
+Blocos 4 e 5 são **os mesmos de §5.7**, com os mesmos valores: cartão
+`minHeight: 136` com ícone 22, `radius.lg`, borda 1px `c.border`, fundo
+`c.surface`; selecionado vira borda `c.accent` e fundo `c.accentSoft`. Rótulo em
+`text.overline` / `c.fgMuted`. Se as duas telas divergirem visualmente, a
+escolha do modo passa a parecer duas perguntas diferentes.
 
 | Bloco | Tipografia | Cor |
 |---|---|---|
@@ -998,6 +1022,12 @@ em `c.accent`. Nada de `Alert.alert` de parabéns.
 **O que morre aqui, e é ~700 linhas:** datas de início e fim, durações rápidas de
 7/30/90/365, modo easy/competitive/hardcore, slider de 2–100 membros, toggle
 público/privado. Tudo isso é **desafio**, não sala, e migra inteiro para §5.7.
+
+Note o que **não** voltou com a revisão de 04/08: nada dessa lista. Voltaram
+duas perguntas — modo de participação (foto/estudo) e duração —, e nenhuma
+delas é datas soltas, rigor de prova, teto de membros ou privacidade. A tela
+continua sendo curta de propósito; ela só deixou de produzir uma sala que não
+funciona.
 
 #### Estados
 
