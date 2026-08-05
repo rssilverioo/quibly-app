@@ -19,6 +19,7 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.quibly.app",
+      "appleTeamId": "3HWKHD9KF8",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
         "applinks:tryquibly.com",
@@ -31,7 +32,8 @@
         "NSMicrophoneUsageDescription": "Quibly needs the microphone to record your class and turn it into notes.",
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSSupportsLiveActivities": true
       }
     },
     "android": {
@@ -100,7 +102,7 @@
       ],
       "expo-audio",
       "./plugins/withFirebaseModularHeaders",
-      "./plugins/withLiveActivity",
+      "@bacons/apple-targets",
       "./plugins/withResourceBundleSigning"
     ],
     "experiments": {

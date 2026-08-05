@@ -61,6 +61,8 @@
     <string>Quibly needs the microphone to record your class and turn it into notes.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Quibly needs photo library access to pick a profile picture and import class material.</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
