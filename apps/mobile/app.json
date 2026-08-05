@@ -31,7 +31,8 @@
         "NSMicrophoneUsageDescription": "Quibly needs the microphone to record your class and turn it into notes.",
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSSupportsLiveActivities": true
       }
     },
     "android": {
@@ -100,7 +101,7 @@
       ],
       "expo-audio",
       "./plugins/withFirebaseModularHeaders",
-      "./plugins/withLiveActivity",
+      "@bacons/apple-targets",
       "./plugins/withResourceBundleSigning"
     ],
     "experiments": {
