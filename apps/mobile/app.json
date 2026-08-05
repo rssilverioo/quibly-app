@@ -19,6 +19,7 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.quibly.app",
+      "appleTeamId": "3HWKHD9KF8",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
         "applinks:tryquibly.com",
