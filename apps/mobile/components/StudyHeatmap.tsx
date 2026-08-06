@@ -23,6 +23,10 @@ const LARGURA_DIAS = 28;
  */
 const DIAS_NOMEADOS = [1, 3, 5];
 
+/** Uma lista de textos, ou nada — nunca uma string fatiada por engano. */
+const lista = (v: unknown): string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string') ? v : [];
+
 /**
  * O mapa de constância do perfil — as barrinhas do GitHub, em azul.
  *
@@ -82,8 +86,11 @@ export default function StudyHeatmap() {
 
   const total = diasComEstudo(semanas);
   const meses = rotulosDeMes(semanas);
-  const nomesDeMes = tc('monthsShort', { returnObjects: true }) as string[];
-  const nomesDeDia = tc('weekdaysShort', { returnObjects: true }) as string[];
+  // `returnObjects` devolve a chave crua como string se a tradução faltar, e aí
+  // `nomes[3]` daria a *letra* de índice 3 — meses viram "n", "t", "s". A grade
+  // ficaria de pé com legendas sem sentido, que é pior do que sem legenda.
+  const nomesDeMes = lista(tc('monthsShort', { returnObjects: true }));
+  const nomesDeDia = lista(tc('weekdaysShort', { returnObjects: true }));
 
   return (
     <View style={styles.bloco}>
@@ -102,7 +109,7 @@ export default function StudyHeatmap() {
         <View style={styles.diasDaSemana}>
           <View style={{ height: ALTURA_MES }} />
           {nomesDeDia.map((nome, i) => (
-            <Text key={nome} style={styles.rotuloDia}>
+            <Text key={i} style={styles.rotuloDia}>
               {DIAS_NOMEADOS.includes(i) ? nome : ''}
             </Text>
           ))}
