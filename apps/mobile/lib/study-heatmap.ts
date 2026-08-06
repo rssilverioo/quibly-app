@@ -94,3 +94,54 @@ export function montarSemanas(
 /** Quantos dias da janela tiveram estudo. É o número que a legenda resume. */
 export const diasComEstudo = (semanas: DiaDoMapa[][]): number =>
   semanas.flat().filter((d) => !d.preenchimento && d.nivel > 0).length;
+
+/** Um mês nomeado acima da coluna em que ele começa. `mes` é 0..11. */
+export interface RotuloDeMes {
+  coluna: number;
+  mes: number;
+}
+
+/**
+ * Onde escrever os nomes dos meses acima da grade.
+ *
+ * Sem eles a grade é um retângulo de quadrados sem escala: dá para ver que
+ * houve estudo, mas não *quando*. É o rótulo que transforma o desenho em linha
+ * do tempo — e é por isso que o GitHub os mantém mesmo no celular.
+ *
+ * O mês é marcado na coluna em que ele **aparece pela primeira vez**, e não na
+ * que o contém em maioria: o olho procura o começo do mês, não o seu centro.
+ *
+ * `MIN_COLUNAS` existe porque a primeira e a última coluna quase sempre trazem
+ * um mês pela metade. Sem o corte, "jul" e "ago" sairiam colados a dois pixels
+ * um do outro nas bordas — dois rótulos ilegíveis valem menos que um só.
+ */
+const MIN_COLUNAS = 3;
+
+export function rotulosDeMes(semanas: DiaDoMapa[][]): RotuloDeMes[] {
+  const rotulos: RotuloDeMes[] = [];
+  let mesAnterior = -1;
+
+  semanas.forEach((semana, coluna) => {
+    // O mês da coluna é o do seu primeiro dia; a semana que atravessa a virada
+    // pertence ao mês em que começou.
+    const mes = doTexto(semana[0].data).getMonth();
+    if (mes === mesAnterior) return;
+    mesAnterior = mes;
+
+    const ultimo = rotulos.at(-1);
+    if (ultimo && coluna - ultimo.coluna < MIN_COLUNAS) {
+      // Perto demais do anterior: o mês novo toma o lugar do velho em vez de
+      // se espremer ao lado dele. Assim a borda esquerda não fica com um mês
+      // de uma coluna só escrito por cima do seguinte.
+      rotulos[rotulos.length - 1] = { coluna, mes };
+      return;
+    }
+    rotulos.push({ coluna, mes });
+  });
+
+  // O último rótulo não pode nascer sem espaço para ser lido.
+  const ultimo = rotulos.at(-1);
+  if (ultimo && semanas.length - ultimo.coluna < MIN_COLUNAS) rotulos.pop();
+
+  return rotulos;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diasComEstudo, montarSemanas, nivelDeEstudo } from './study-heatmap';
+import { diasComEstudo, montarSemanas, nivelDeEstudo, rotulosDeMes } from './study-heatmap';
 
 /**
  * O mapa de constância erra em silêncio: um dia a mais no começo desloca a
@@ -66,5 +66,43 @@ describe('montarSemanas', () => {
 
   it('returns nothing when the window is inverted', () => {
     expect(montarSemanas('2026-08-08', '2026-08-05', {})).toEqual([]);
+  });
+});
+
+describe('rotulosDeMes', () => {
+  it('marks the column where each month first appears', () => {
+    const semanas = montarSemanas('2026-01-01', '2026-06-30', {});
+    const meses = rotulosDeMes(semanas).map((r) => r.mes);
+    // Janeiro a junho, em ordem e sem repetir.
+    expect(meses).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('puts each label on a column that really belongs to that month', () => {
+    const semanas = montarSemanas('2026-01-01', '2026-12-31', {});
+    for (const { coluna, mes } of rotulosDeMes(semanas)) {
+      // O rótulo não pode apontar para uma coluna cujo mês é outro — foi o
+      // erro clássico de rotular pelo índice da semana em vez da data dela.
+      const mesesDaColuna = semanas[coluna].map((d) => Number(d.data.slice(5, 7)) - 1);
+      expect(mesesDaColuna).toContain(mes);
+    }
+  });
+
+  it('drops a trailing label with no room to be read', () => {
+    // A janela acaba no dia 2 de setembro: "set" nasceria na última coluna,
+    // espremido contra a borda. Melhor não existir.
+    const semanas = montarSemanas('2026-06-01', '2026-09-02', {});
+    expect(rotulosDeMes(semanas).map((r) => r.mes)).not.toContain(8);
+  });
+
+  it('does not stack two labels on top of each other at the left edge', () => {
+    const semanas = montarSemanas('2026-01-30', '2026-05-31', {});
+    const colunas = rotulosDeMes(semanas).map((r) => r.coluna);
+    for (let i = 1; i < colunas.length; i++) {
+      expect(colunas[i] - colunas[i - 1]).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('has nothing to label when there are no weeks', () => {
+    expect(rotulosDeMes([])).toEqual([]);
   });
 });

@@ -3,12 +3,25 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { getStudyHeatmap } from '../services/sessions';
-import { diasComEstudo, montarSemanas, type DiaDoMapa } from '../lib/study-heatmap';
+import { diasComEstudo, montarSemanas, rotulosDeMes, type DiaDoMapa } from '../lib/study-heatmap';
 import { useTheme, type Palette, radius, space, text } from '../theme';
 
 /** Lado do quadradinho, e o respiro entre eles. */
 const CELULA = 12;
 const VAO = 3;
+/** O passo de uma coluna para a próxima. É o que posiciona o nome do mês. */
+const PASSO = CELULA + VAO;
+/** Faixa dos nomes de mês, acima da grade. */
+const ALTURA_MES = 15;
+/** Coluna fixa dos dias da semana, à esquerda. */
+const LARGURA_DIAS = 28;
+
+/**
+ * Só seg/qua/sex ganham nome, como no GitHub. Os sete caberiam — em 12pt de
+ * altura, ilegíveis e encostados uns nos outros. Três bastam para o olho
+ * ancorar a linha, que é a única função deles.
+ */
+const DIAS_NOMEADOS = [1, 3, 5];
 
 /**
  * O mapa de constância do perfil — as barrinhas do GitHub, em azul.
@@ -30,6 +43,9 @@ const VAO = 3;
 export default function StudyHeatmap() {
   const { c } = useTheme();
   const { t } = useTranslation('profile');
+  // Meses e dias da semana vivem em `common`: são vocabulário de calendário, não
+  // do perfil, e o `StreakCalendarModal` ainda os carrega em array no código.
+  const { t: tc } = useTranslation('common');
   const styles = useMemo(() => makeStyles(c), [c]);
   const scroller = useRef<ScrollView>(null);
 
@@ -65,6 +81,9 @@ export default function StudyHeatmap() {
   }
 
   const total = diasComEstudo(semanas);
+  const meses = rotulosDeMes(semanas);
+  const nomesDeMes = tc('monthsShort', { returnObjects: true }) as string[];
+  const nomesDeDia = tc('weekdaysShort', { returnObjects: true }) as string[];
 
   return (
     <View style={styles.bloco}>
@@ -76,34 +95,62 @@ export default function StudyHeatmap() {
         <Text style={styles.periodo}>{t('heatmapPeriod')}</Text>
       </View>
 
-      <ScrollView
-        ref={scroller}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        // Abre em "hoje". `onContentSizeChange` e não `useEffect`: a largura só
-        // existe depois do primeiro layout.
-        onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: false })}
-        contentContainerStyle={styles.grade}
-      >
-        {semanas.map((semana) => (
-          <View key={semana[0].data} style={styles.coluna}>
-            {semana.map((dia) => (
-              <View
-                key={dia.data}
-                style={[
-                  styles.celula,
-                  dia.nivel === 0
-                    ? { backgroundColor: c.skeleton }
-                    : { backgroundColor: c.accent, opacity: OPACIDADE[dia.nivel] },
-                  // O recuo até domingo existe para alinhar a semana, não para
-                  // afirmar que houve estudo antes da janela.
-                  dia.preenchimento && styles.forasDaJanela,
-                ]}
-              />
-            ))}
+      <View style={styles.corpo}>
+        {/* Os dias da semana ficam FORA do ScrollView. Dentro, eles rolariam
+            junto com a grade e a legenda da linha sumiria justamente quando se
+            olha para dezembro — que é quando ela serve para alguma coisa. */}
+        <View style={styles.diasDaSemana}>
+          <View style={{ height: ALTURA_MES }} />
+          {nomesDeDia.map((nome, i) => (
+            <Text key={nome} style={styles.rotuloDia}>
+              {DIAS_NOMEADOS.includes(i) ? nome : ''}
+            </Text>
+          ))}
+        </View>
+
+        <ScrollView
+          ref={scroller}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          // Abre em "hoje". `onContentSizeChange` e não `useEffect`: a largura só
+          // existe depois do primeiro layout.
+          onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: false })}
+        >
+          <View>
+            {/* Os meses são posicionados por `left`, e não por uma célula vazia
+                por coluna: o nome é mais largo que os 12pt da coluna, e num
+                layout de fluxo ele empurraria a grade para fora do alinhamento. */}
+            <View style={[styles.faixaDeMeses, { width: semanas.length * PASSO }]}>
+              {meses.map(({ coluna, mes }) => (
+                <Text key={`${coluna}-${mes}`} style={[styles.rotuloMes, { left: coluna * PASSO }]}>
+                  {nomesDeMes[mes]}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.grade}>
+              {semanas.map((semana) => (
+                <View key={semana[0].data} style={styles.coluna}>
+                  {semana.map((dia) => (
+                    <View
+                      key={dia.data}
+                      style={[
+                        styles.celula,
+                        dia.nivel === 0
+                          ? { backgroundColor: c.skeleton }
+                          : { backgroundColor: c.accent, opacity: OPACIDADE[dia.nivel] },
+                        // O recuo até domingo existe para alinhar a semana, não
+                        // para afirmar que houve estudo antes da janela.
+                        dia.preenchimento && styles.forasDaJanela,
+                      ]}
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
           </View>
-        ))}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       <View style={styles.legenda}>
         <Text style={styles.legendaTexto}>{t('heatmapLess')}</Text>
@@ -144,10 +191,29 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   cabecalho: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs },
   titulo: { ...text.bodyStrong, color: c.fg },
   periodo: { ...text.caption, color: c.fgMuted },
+  corpo: { flexDirection: 'row' },
+  diasDaSemana: { width: LARGURA_DIAS },
+  /**
+   * 10pt e não `text.caption` (12): aqui o texto precisa caber na altura de uma
+   * célula, e `lineHeight` tem de ser exatamente `CELULA` para a linha do nome
+   * cair sobre a linha dos quadrados. Um `lineHeight` de token desalinharia os
+   * dois — é a única exceção de escala do bloco, e é geométrica.
+   */
+  rotuloDia: {
+    fontSize: 10,
+    lineHeight: CELULA,
+    height: CELULA,
+    marginBottom: VAO,
+    color: c.fgMuted,
+  },
+  faixaDeMeses: { height: ALTURA_MES },
+  rotuloMes: { position: 'absolute', top: 0, fontSize: 10, lineHeight: ALTURA_MES, color: c.fgMuted },
   grade: { flexDirection: 'row', gap: VAO },
   coluna: { gap: VAO },
   celula: { width: CELULA, height: CELULA, borderRadius: 3 },
   forasDaJanela: { opacity: 0.25 },
-  legenda: { flexDirection: 'row', alignItems: 'center', gap: VAO },
+  // Alinhada à direita, embaixo da grade, como no GitHub — e não centralizada:
+  // a legenda é nota de rodapé, não um segundo cabeçalho.
+  legenda: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: VAO },
   legendaTexto: { ...text.caption, color: c.fgMuted, marginHorizontal: space.xs },
 });
