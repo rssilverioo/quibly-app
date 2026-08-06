@@ -122,5 +122,7 @@
   "retry": "Tentar de novo",
   "optional": "(opcional)",
   "verified": "Verificado",
-  "notNow": "Agora não"
+  "notNow": "Agora não",
+  "monthsShort": ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"],
+  "weekdaysShort": ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
 }

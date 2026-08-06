@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Linking,
@@ -29,8 +30,21 @@ export default function PricingScreen() {
 
   const isPro = usage?.plan === 'PRO';
 
+  /**
+   * Compra desligada: a tela não deve existir nem por deep link.
+   *
+   * A porta da interface (a linha "Meu plano" no perfil) já está escondida, mas
+   * `quibly://pricing` continua resolvendo — e o que apareceria é justamente o
+   * paywall sem preços, que é o estado que motivou desligar.
+   */
   useEffect(() => {
-    track('paywall_viewed', { trigger: 'settings' });
+    if (!COMPRAS_NO_APP_ATIVAS) router.replace('/(tabs)');
+  }, [router]);
+
+  useEffect(() => {
+    // Não registrar visualização de um paywall que ninguém pode usar: seria
+    // poluir o funil de monetização com ruído.
+    if (COMPRAS_NO_APP_ATIVAS) track('paywall_viewed', { trigger: 'settings' });
   }, []);
   const isBrl = i18n.language === 'pt-BR';
   const selectedPackage = billing === 'monthly' ? monthlyPackage : yearlyPackage;

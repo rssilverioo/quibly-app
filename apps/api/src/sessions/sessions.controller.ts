@@ -108,6 +108,21 @@ export class SessionsController {
     return this.sessionsService.getStudyDates(user.userId, year, month);
   }
 
+  /**
+   * Precisa ficar acima de `@Get(':id')`, senão o Nest casa "study-heatmap"
+   * como id de sessão — a mesma armadilha já anotada em `leagues.controller`.
+   */
+  @Get('study-heatmap')
+  getStudyHeatmap(
+    @CurrentUser() user: AuthedUser,
+    @Query('days') rawDays?: string,
+  ) {
+    // 371 = 53 semanas cheias, o recorte do GitHub. O teto de 731 evita que
+    // alguém peça a vida inteira e derrube a consulta.
+    const days = Math.min(731, Math.max(1, Number.parseInt(rawDays ?? '371', 10) || 371));
+    return this.sessionsService.getStudyHeatmap(user.userId, days);
+  }
+
   @Get(':id')
   getSessionById(@CurrentUser() user: AuthedUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.sessionsService.getSessionById(id, user.userId);

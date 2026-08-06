@@ -737,3 +737,65 @@ describe('SessionsService.abandonSession', () => {
     expect(prisma.tx.studySession.update).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * O mapa de constância do perfil — a grade estilo GitHub.
+ *
+ * A janela termina **hoje**, e não no fim do mês: um mapa que corta no dia 1º
+ * esconde justamente a sequência recente, que é a informação com valor.
+ */
+describe('SessionsService.getStudyHeatmap', () => {
+  const prismaFake = (sessions: unknown[]) => ({
+    studySession: { findMany: jest.fn().mockResolvedValue(sessions) },
+  });
+
+  it('soma os minutos do dia quando houve mais de uma sessão', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-06T15:00:00.000Z'));
+    const prisma = prismaFake([
+      { endedAt: new Date('2026-08-05T10:00:00.000Z'), totalDurationMinutes: 25 },
+      { endedAt: new Date('2026-08-05T20:00:00.000Z'), totalDurationMinutes: 35 },
+      { endedAt: new Date('2026-08-06T09:00:00.000Z'), totalDurationMinutes: 50 },
+    ]);
+
+    const mapa = await new SessionsService(
+      prisma as any, {} as any, {} as any, {} as any, {} as any,
+    ).getStudyHeatmap('eu', 371);
+
+    // Duas sessões no dia 5 viram um dia de 60 minutos, não dois registros.
+    expect(mapa.days).toEqual([
+      { date: '2026-08-05', minutes: 60 },
+      { date: '2026-08-06', minutes: 50 },
+    ]);
+    expect(mapa.to).toBe('2026-08-06');
+    jest.useRealTimers();
+  });
+
+  it('pede uma janela que termina hoje e cobre os dias pedidos', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-06T15:00:00.000Z'));
+    const prisma = prismaFake([]);
+
+    const mapa = await new SessionsService(
+      prisma as any, {} as any, {} as any, {} as any, {} as any,
+    ).getStudyHeatmap('eu', 7);
+
+    // 7 dias contando hoje: 31/07 a 06/08.
+    expect(mapa.from).toBe('2026-07-31');
+    expect(mapa.to).toBe('2026-08-06');
+    // Só dias COM estudo viajam pelo fio; os zeros a tela preenche.
+    expect(mapa.days).toEqual([]);
+    jest.useRealTimers();
+  });
+
+  it('só conta sessão creditada, como o resto do produto', async () => {
+    const prisma = prismaFake([]);
+    await new SessionsService(
+      prisma as any, {} as any, {} as any, {} as any, {} as any,
+    ).getStudyHeatmap('eu', 30);
+
+    const filtro = prisma.studySession.findMany.mock.calls[0][0].where;
+    expect(filtro.userId).toBe('eu');
+    expect(filtro.endedAt).toBeDefined();
+  });
+});

@@ -14,6 +14,7 @@ import {
 
 import { useAuth } from '../../contexts/AuthContext';
 import { logout as firebaseLogout, deleteAccount, updateProfile } from '../../services/auth';
+import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import { uploadAvatar } from '../../services/storage';
 import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
 import { xpForLevel, calculateTitle } from '@quibly/shared/constants';
@@ -23,6 +24,7 @@ import { useTheme, type Palette, text, space, radius } from '../../theme';
 import i18n from '../../lib/i18n';
 import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
+import StudyHeatmap from '../../components/StudyHeatmap';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -271,12 +273,22 @@ export default function ProfileScreen() {
           </>
         )}
 
+        {/* O mapa de constância vem depois das conquistas e antes dos ajustes:
+            é leitura do que você fez, e ajuste é o que você muda. Ele some
+            sozinho quando não há dado — ver `StudyHeatmap`. */}
+        <StudyHeatmap />
+
         <Text style={styles.sectionTitle}>{t('settings')}</Text>
 
         {/* Conta. "Minhas Ligas" saiu daqui: era a única porta para
             `app/league/index.tsx`, que `FLUXO §10` já matou (§3.4). */}
         <View style={styles.group}>
-          <SettingsRow styles={styles} c={c} Icon={Crown} label={t('pricing:myPlan')} onPress={() => router.push('/pricing')} divider />
+          {/* "Meu plano" só aparece quando há plano a comprar. Compra no app
+              está desligada desde 06/08 (`services/iap.ts`), e uma porta para
+              um paywall que não vende é pior que porta nenhuma. */}
+          {COMPRAS_NO_APP_ATIVAS ? (
+            <SettingsRow styles={styles} c={c} Icon={Crown} label={t('pricing:myPlan')} onPress={() => router.push('/pricing')} divider />
+          ) : null}
           <SettingsRow styles={styles} c={c} Icon={Pencil} label={t('editProfile')} onPress={() => router.push('/profile/edit')} divider />
           {/* O escuro não sumiu — está a um toque (`theme/index.ts`). */}
           <SettingsRow
