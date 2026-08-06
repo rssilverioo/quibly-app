@@ -24,6 +24,7 @@ import { useTheme, type Palette, text, space, radius } from '../../theme';
 import i18n from '../../lib/i18n';
 import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
+import StudyHeatmap from '../../components/StudyHeatmap';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -271,6 +272,11 @@ export default function ProfileScreen() {
             </ScrollView>
           </>
         )}
+
+        {/* O mapa de constância vem depois das conquistas e antes dos ajustes:
+            é leitura do que você fez, e ajuste é o que você muda. Ele some
+            sozinho quando não há dado — ver `StudyHeatmap`. */}
+        <StudyHeatmap />
 
         <Text style={styles.sectionTitle}>{t('settings')}</Text>
 

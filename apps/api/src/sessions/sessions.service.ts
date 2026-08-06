@@ -877,6 +877,73 @@ export class SessionsService {
     };
   }
 
+  /**
+   * Minutos por dia numa **janela corrida**, para o mapa de constância.
+   *
+   * Existe ao lado de `getStudyDates` em vez de substituí-lo porque as duas
+   * perguntas são diferentes: o calendário do perfil pergunta "como foi o mês
+   * de julho", e este pergunta "como foram os últimos N dias até hoje" — que é
+   * o recorte do GitHub e o que mostra constância. Fundir os dois num endpoint
+   * só daria dois modos com parâmetros mutuamente exclusivos.
+   *
+   * A janela termina **hoje**, não no fim do mês: um mapa que corta no dia 1º
+   * esconde exatamente a sequência recente, que é a informação com valor.
+   *
+   * Devolve só os dias com estudo. Preencher os zeros é trabalho da tela, que
+   * já precisa montar a grade de qualquer forma — mandar 365 zeros pelo fio
+   * seria pagar banda para transportar ausência.
+   */
+  async getStudyHeatmap(userId: string, days: number) {
+    /**
+     * A janela é calculada **em UTC**, e isso não é detalhe.
+     *
+     * A primeira versão usava `setHours(23,59,59,999)`, que é hora local, e
+     * depois `toISOString()` para formatar. Num servidor em UTC−3 o fim do dia
+     * local vira 02:59 do dia seguinte em UTC, e o `to` saía como **amanhã** —
+     * a grade ganhava uma coluna a mais e a semana inteira deslocava. Pego pelo
+     * teste, não pela tela.
+     *
+     * UTC também é o que o agrupamento por dia abaixo usa (`toISOString`), e o
+     * que `getStudyDates` já usava. Uma convenção só, não duas.
+     *
+     * **Dívida conhecida:** agrupar por UTC significa que quem estuda às 22h em
+     * UTC−3 é contado no dia seguinte. Consertar isso exige o fuso do usuário
+     * (`Profile.timezone`, que o `ROADMAP §Fase 1` prevê); trocar a convenção só
+     * aqui deixaria este mapa discordando do calendário e da sequência.
+     */
+    const agora = new Date();
+    const fim = new Date(
+      Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate(), 23, 59, 59, 999),
+    );
+    const inicio = new Date(fim);
+    inicio.setUTCDate(inicio.getUTCDate() - (days - 1));
+    inicio.setUTCHours(0, 0, 0, 0);
+
+    const sessions = await this.prisma.studySession.findMany({
+      where: {
+        userId,
+        ...CREDITED_SESSION_FILTER,
+        endedAt: { gte: inicio, lte: fim },
+      },
+      select: { endedAt: true, totalDurationMinutes: true },
+    });
+
+    const porDia = new Map<string, number>();
+    for (const s of sessions) {
+      if (!s.endedAt) continue;
+      const dia = s.endedAt.toISOString().slice(0, 10);
+      porDia.set(dia, (porDia.get(dia) ?? 0) + Number(s.totalDurationMinutes ?? 0));
+    }
+
+    return {
+      from: inicio.toISOString().slice(0, 10),
+      to: fim.toISOString().slice(0, 10),
+      days: Array.from(porDia.entries())
+        .map(([date, minutes]) => ({ date, minutes }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    };
+  }
+
   async getSessionById(sessionId: string, userId: string) {
     const session = await this.prisma.studySession.findUnique({
       where: { id: sessionId },

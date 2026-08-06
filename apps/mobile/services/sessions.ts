@@ -157,3 +157,26 @@ export async function getStudyDates(year: number, month: number): Promise<StudyD
   );
   return result.dates;
 }
+
+export interface StudyHeatmap {
+  /** Primeiro dia da janela, `YYYY-MM-DD`. */
+  from: string;
+  /** Último dia — sempre hoje. */
+  to: string;
+  /** Só os dias COM estudo. Os zeros a tela preenche. */
+  days: StudyDate[];
+}
+
+/**
+ * O mapa de constância — a grade estilo GitHub do perfil.
+ *
+ * Janela corrida terminando **hoje**, e não o mês corrente: um mapa que corta
+ * no dia 1º esconde justamente a sequência recente. 371 dias são 53 semanas
+ * cheias, o mesmo recorte do GitHub.
+ *
+ * Separado de `getStudyDates`, que continua servindo o calendário mensal do
+ * perfil: são duas perguntas diferentes sobre os mesmos dados.
+ */
+export async function getStudyHeatmap(days = 371): Promise<StudyHeatmap> {
+  return api.get<StudyHeatmap>(`/sessions/study-heatmap?days=${days}`);
+}
