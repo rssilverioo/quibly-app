@@ -274,8 +274,9 @@ export default function ProfileScreen() {
         )}
 
         {/* O mapa de constância vem depois das conquistas e antes dos ajustes:
-            é leitura do que você fez, e ajuste é o que você muda. Ele some
-            sozinho quando não há dado — ver `StudyHeatmap`. */}
+            é leitura do que você fez, e ajuste é o que você muda. Conta sem
+            estudo nenhum desenha a grade cinza — quem some é só a falha de
+            rede, e ela avisa antes de sumir (ver `StudyHeatmap`). */}
         <StudyHeatmap />
 
         <Text style={styles.sectionTitle}>{t('settings')}</Text>

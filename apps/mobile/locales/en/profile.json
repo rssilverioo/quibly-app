@@ -21,6 +21,7 @@
   "heatmapPeriod": "in the last year",
   "heatmapLess": "Less",
   "heatmapMore": "More",
+  "heatmapError": "Couldn't load your consistency map",
   "settings": "Settings",
   "editProfile": "Edit Profile",
   "language": "Language",

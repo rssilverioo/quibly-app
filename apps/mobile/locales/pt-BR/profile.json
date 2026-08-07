@@ -21,6 +21,7 @@
   "heatmapPeriod": "no último ano",
   "heatmapLess": "Menos",
   "heatmapMore": "Mais",
+  "heatmapError": "Não deu para carregar seu mapa de constância",
   "settings": "Configurações",
   "editProfile": "Editar Perfil",
   "language": "Idioma",
