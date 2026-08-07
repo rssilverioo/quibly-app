@@ -14,7 +14,10 @@ export const metadata: Metadata = {
   description:
     'Upload any PDF and AI creates flashcards with images and quizzes automatically. Study smarter with gamification, XP, and streaks.',
   other: {
-    'theme-color': '#3B82F6',
+    // O azul do coelho novo. `#3B82F6` era um azul do Tailwind, não da marca —
+    // ele pintava a barra do navegador de uma cor que não existe em lugar nenhum
+    // do produto.
+    'theme-color': '#015FFD',
   },
 };
 
