@@ -72,14 +72,38 @@ function missing(op: string): boolean {
   return true;
 }
 
+/**
+ * O bloco atual da sessão, para a Live Activity contar para baixo como a tela.
+ *
+ * `totalSeconds === 0` é cronômetro livre: sem bloco, sem regressiva, sem
+ * barra. O rótulo vem traduzido do app porque a extensão de widget não carrega
+ * i18n — mandar a chave `session.phase.work` renderizaria a chave.
+ */
+export interface FaseDaSessao {
+  remainingSeconds: number;
+  totalSeconds: number;
+  label: string;
+}
+
+const SEM_FASE: FaseDaSessao = { remainingSeconds: 0, totalSeconds: 0, label: '' };
+
+const arredondar = (fase: FaseDaSessao): [number, number, string] => [
+  Math.max(0, Math.floor(fase.remainingSeconds)),
+  Math.max(0, Math.floor(fase.totalSeconds)),
+  fase.label,
+];
+
 export async function startLiveTimer(
   subject: string,
   elapsedSeconds: number,
   isRunning: boolean,
+  fase: FaseDaSessao = SEM_FASE,
 ): Promise<void> {
   if (missing('start')) return;
   try {
-    await StudyTimer!.start(subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning);
+    await StudyTimer!.start(
+      subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning, ...arredondar(fase),
+    );
   } catch (error) {
     note('start', 'falha ao iniciar o cronômetro externo', error);
   }
@@ -89,10 +113,13 @@ export async function updateLiveTimer(
   subject: string,
   elapsedSeconds: number,
   isRunning: boolean,
+  fase: FaseDaSessao = SEM_FASE,
 ): Promise<void> {
   if (missing('update')) return;
   try {
-    await StudyTimer!.update(subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning);
+    await StudyTimer!.update(
+      subject, Math.max(0, Math.floor(elapsedSeconds)), isRunning, ...arredondar(fase),
+    );
   } catch (error) {
     note('update', 'falha ao atualizar o cronômetro externo', error);
   }

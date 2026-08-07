@@ -86,6 +86,21 @@ describe('a Dynamic Island compacta não pode reservar largura infinita', () => 
     expect(codigo).toContain('JANELA_DO_CONTADOR');
   });
 
+  /**
+   * O app conta para baixo dentro do bloco; a Ilha contava para cima na sessão
+   * inteira. Dois números diferentes lado a lado, sem pista de qual valia.
+   */
+  it('conta para baixo quando há bloco, como a tela do app', () => {
+    expect(codigo).toContain('countsDown: true');
+    expect(codigo).toContain('phaseStartedAt...state.phaseEndsAt');
+  });
+
+  it('a barra é do sistema, não calculada por nós', () => {
+    // Uma barra que nós calculássemos ficaria congelada na fração do último
+    // heartbeat — 30 segundos de atraso, com o app suspenso.
+    expect(codigo).toContain('ProgressView(timerInterval:');
+  });
+
   it('usa o accent azul do app, e não o lime aposentado em 31/07', () => {
     // O cronômetro na tela de bloqueio era a última superfície do produto ainda
     // em verde-limão.

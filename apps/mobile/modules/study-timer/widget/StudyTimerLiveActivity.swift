@@ -62,7 +62,12 @@ struct StudyTimerLiveActivity: Widget {
         }
 
         DynamicIslandExpandedRegion(.bottom) {
-          ActionRow(isRunning: context.state.isRunning)
+          VStack(spacing: 8) {
+            if context.state.temFase {
+              BarraDaFase(state: context.state)
+            }
+            ActionRow(isRunning: context.state.isRunning)
+          }
         }
       } compactLeading: {
         // ~20pt. Sobra a silhueta e a bandeira — e é o suficiente.
@@ -126,42 +131,89 @@ private struct LockScreenView: View {
      O mascote fica em 44pt e não em 52: ele é a assinatura da marca no card, não
      o protagonista. Quem manda no espaço é o cronômetro.
      */
-    HStack(spacing: 12) {
-      CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
-        .frame(width: 44, height: 44)
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 10) {
+        CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
+          .frame(width: 34, height: 34)
 
-      VStack(alignment: .leading, spacing: 3) {
-        Text(context.attributes.subjectName.isEmpty
-             ? "ESTUDANDO"
-             : context.attributes.subjectName.uppercased())
-          .font(.system(size: 11, weight: .semibold))
-          .tracking(0.8)
-          .foregroundStyle(.white.opacity(0.55))
-          .lineLimit(1)
+        VStack(alignment: .leading, spacing: 1) {
+          TimerText(state: context.state)
+            .font(.system(size: 30, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(.white)
 
-        TimerText(state: context.state)
-          .font(.system(size: 38, weight: .semibold, design: .rounded))
-          .monospacedDigit()
-          // A 38pt, uma sessão que passa de 10 horas ganha dígito e empurraria
-          // os controles para fora. Encolher a fonte é melhor que truncar o
-          // tempo ou espremer os botões.
-          .lineLimit(1)
-          .minimumScaleFactor(0.8)
-          .foregroundStyle(.white)
+          Text(rotulo)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(.white.opacity(0.6))
+            .lineLimit(1)
+        }
+
+        Spacer(minLength: 8)
+
+        VStack(spacing: 6) {
+          LinkButton(
+            systemName: context.state.isRunning ? "pause.fill" : "play.fill",
+            url: context.state.isRunning ? "quibly://session/pause" : "quibly://session/resume"
+          )
+          LinkButton(systemName: "stop.fill", url: "quibly://session/end", tint: .red)
+        }
       }
 
-      Spacer(minLength: 12)
-
-      VStack(spacing: 8) {
-        LinkButton(
-          systemName: context.state.isRunning ? "pause.fill" : "play.fill",
-          url: context.state.isRunning ? "quibly://session/pause" : "quibly://session/resume"
-        )
-        LinkButton(systemName: "stop.fill", url: "quibly://session/end", tint: .red)
+      // A barra só existe quando há bloco. No cronômetro livre não há fração a
+      // mostrar — uma barra sem fim seria enfeite mentiroso.
+      if context.state.temFase {
+        BarraDaFase(state: context.state)
       }
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
+    .padding(.horizontal, 14)
+    .padding(.vertical, 10)
+  }
+
+  /// A matéria quando existe; senão a fase; senão o genérico.
+  private var rotulo: String {
+    let materia = context.attributes.subjectName
+    if !materia.isEmpty && !context.state.phaseLabel.isEmpty {
+      return "\(materia) · \(context.state.phaseLabel)"
+    }
+    if !materia.isEmpty { return materia }
+    return context.state.phaseLabel.isEmpty ? "Estudando" : context.state.phaseLabel
+  }
+}
+
+/**
+ A barra de progresso do bloco.
+
+ `ProgressView(timerInterval:)` pelo mesmo motivo do `Text(timerInterval:)`: o
+ sistema a avança sozinho, a partir de um intervalo fixo, com o processo do app
+ suspenso ou morto. Uma barra calculada por nós ficaria congelada na fração do
+ último update — que é a cada 30 segundos, no heartbeat.
+
+ Pausada, vira uma barra estática na fração já cumprida: o intervalo não avança
+ mais, e animar seria mentir sobre uma sessão parada.
+ */
+@available(iOS 16.1, *)
+private struct BarraDaFase: View {
+  let state: StudyTimerAttributes.ContentState
+
+  var body: some View {
+    if state.isRunning {
+      ProgressView(timerInterval: state.phaseStartedAt...state.phaseEndsAt, countsDown: false) {
+        EmptyView()
+      } currentValueLabel: {
+        EmptyView()
+      }
+      .progressViewStyle(.linear)
+      .tint(Color.quiblyAccent)
+    } else {
+      let fracao = state.phaseTotalSeconds > 0
+        ? Double(state.phaseTotalSeconds - state.phaseRemainingSeconds) / Double(state.phaseTotalSeconds)
+        : 0
+      ProgressView(value: max(0, min(1, fracao)))
+        .progressViewStyle(.linear)
+        .tint(Color.white.opacity(0.35))
+    }
   }
 }
 
@@ -188,13 +240,30 @@ private struct TimerText: View {
   private static let JANELA_DO_CONTADOR: TimeInterval = 24 * 60 * 60
 
   var body: some View {
-    if state.isRunning {
-      // A âncora: onde a sessão teria começado se tivesse corrido direto.
+    if state.isRunning && state.temFase {
+      /*
+       Regressiva, igual à tela do app.
+
+       Antes o app contava para baixo dentro do bloco e a Live Activity contava
+       para cima na sessão — dois números diferentes lado a lado, e nenhuma
+       pista de qual valia. Agora a régua é a mesma.
+
+       E há um efeito colateral bom: uma regressiva tem **largura máxima
+       conhecida** (o bloco inteiro), então a reserva de espaço que esticava a
+       Dynamic Island deixa de ser possível por construção — e não por causa do
+       teto de 24h, que passa a valer só para o cronômetro livre.
+       */
+      Text(timerInterval: state.phaseStartedAt...state.phaseEndsAt, countsDown: true)
+    } else if state.isRunning {
+      // Cronômetro livre: não há bloco, então contar para cima é a única
+      // leitura possível. Aqui o teto de 24h continua sendo o que segura a
+      // largura.
       let anchor = state.startedAt.addingTimeInterval(-Double(state.baseElapsedSeconds))
       Text(timerInterval: anchor...anchor.addingTimeInterval(Self.JANELA_DO_CONTADOR),
            countsDown: false)
     } else {
-      Text(Self.format(state.baseElapsedSeconds))
+      // Pausado: `timerInterval` não sabe parar, então o valor congela.
+      Text(Self.format(state.temFase ? state.phaseRemainingSeconds : state.baseElapsedSeconds))
     }
   }
 

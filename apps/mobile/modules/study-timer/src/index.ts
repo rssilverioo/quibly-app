@@ -31,8 +31,22 @@ export type StudyTimerEvents = {
 };
 
 declare class StudyTimerModuleType extends NativeModule<StudyTimerEvents> {
-  start(subject: string, elapsedSeconds: number, isRunning: boolean): Promise<void>;
-  update(subject: string, elapsedSeconds: number, isRunning: boolean): Promise<void>;
+  start(
+    subject: string,
+    elapsedSeconds: number,
+    isRunning: boolean,
+    phaseRemainingSeconds: number,
+    phaseTotalSeconds: number,
+    phaseLabel: string,
+  ): Promise<void>;
+  update(
+    subject: string,
+    elapsedSeconds: number,
+    isRunning: boolean,
+    phaseRemainingSeconds: number,
+    phaseTotalSeconds: number,
+    phaseLabel: string,
+  ): Promise<void>;
   stop(): Promise<void>;
   isBatteryOptimizationIgnored(): boolean;
   openBatterySettings(): Promise<void>;

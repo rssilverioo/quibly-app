@@ -43,7 +43,7 @@ public class StudyTimerModule: Module {
 
     Events("onNotificationAction")
 
-    AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool) in
+    AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in
       #if canImport(ActivityKit)
       guard #available(iOS 16.2, *) else {
         NSLog("[StudyTimer] iOS < 16.2: sem Live Activity neste aparelho.")
@@ -71,7 +71,8 @@ public class StudyTimerModule: Module {
       // Only one session can be live at a time (the server enforces it with a
       // 409), so adopt any existing activity rather than stacking a second.
       if let existing = Activity<StudyTimerAttributes>.activities.first {
-        await Self.update(existing, elapsedSeconds: elapsedSeconds, isRunning: isRunning)
+        await Self.update(existing, elapsedSeconds: elapsedSeconds, isRunning: isRunning,
+                          phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel)
         return
       }
 
@@ -79,7 +80,10 @@ public class StudyTimerModule: Module {
       let state = StudyTimerAttributes.ContentState(
         startedAt: Date(),
         baseElapsedSeconds: elapsedSeconds,
-        isRunning: isRunning
+        isRunning: isRunning,
+        phaseRemainingSeconds: phaseRemaining,
+        phaseTotalSeconds: phaseTotal,
+        phaseLabel: phaseLabel
       )
 
       do {
@@ -95,11 +99,12 @@ public class StudyTimerModule: Module {
       #endif
     }
 
-    AsyncFunction("update") { (subject: String, elapsedSeconds: Int, isRunning: Bool) in
+    AsyncFunction("update") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in
       #if canImport(ActivityKit)
       guard #available(iOS 16.2, *) else { return }
       guard let activity = Activity<StudyTimerAttributes>.activities.first else { return }
-      await Self.update(activity, elapsedSeconds: elapsedSeconds, isRunning: isRunning)
+      await Self.update(activity, elapsedSeconds: elapsedSeconds, isRunning: isRunning,
+                        phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel)
       #endif
     }
 
@@ -132,7 +137,10 @@ public class StudyTimerModule: Module {
   private static func update(
     _ activity: Activity<StudyTimerAttributes>,
     elapsedSeconds: Int,
-    isRunning: Bool
+    isRunning: Bool,
+    phaseRemaining: Int,
+    phaseTotal: Int,
+    phaseLabel: String
   ) async {
     // Re-anchoring `startedAt` to now on every update is what keeps the
     // lock-screen timer honest: the system counts forward from this instant,
@@ -141,7 +149,10 @@ public class StudyTimerModule: Module {
     let state = StudyTimerAttributes.ContentState(
       startedAt: Date(),
       baseElapsedSeconds: elapsedSeconds,
-      isRunning: isRunning
+      isRunning: isRunning,
+      phaseRemainingSeconds: phaseRemaining,
+      phaseTotalSeconds: phaseTotal,
+      phaseLabel: phaseLabel
     )
     await activity.update(.init(state: state, staleDate: nil))
   }
