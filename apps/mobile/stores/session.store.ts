@@ -9,6 +9,8 @@ import {
   startLiveTimer,
   updateLiveTimer,
   stopLiveTimer,
+  setLiveActionContext,
+  clearLiveActionContext,
 } from '../services/study-timer';
 import {
   schedulePhaseEndNotification,
@@ -219,12 +221,14 @@ export const useSessionStore = create<SessionState>((set, get) => {
         // now would be a lie, on screen or on the lock screen.
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
-        void stopLiveTimer();
+        clearLiveActionContext();
+      void stopLiveTimer();
       },
       onSessionGone: () => {
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
-        void stopLiveTimer();
+        clearLiveActionContext();
+      void stopLiveTimer();
       },
     });
     heartbeat.start();
@@ -327,6 +331,14 @@ export const useSessionStore = create<SessionState>((set, get) => {
       // Raise the lock-screen surface: the foreground service on Android (which
       // keeps the process, and therefore the heartbeat, alive) and the Live
       // Activity on iOS (which cannot, and only displays).
+      // O token nasce com a sessão e vai para o App Group, onde o App Intent
+      // da extensão o encontra. Sem ele os botões caem no deep link.
+      setLiveActionContext(
+        session.id,
+        (session as { live_action_token?: string | null }).live_action_token,
+        process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com',
+      );
+
       void startLiveTimer(
         get().subjectName ?? '',
         session.elapsed_seconds ?? 0,
@@ -345,6 +357,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     endSession: async () => {
       cancelSessionNotifications().catch(() => {});
       stopHeartbeat();
+      clearLiveActionContext();
       void stopLiveTimer();
 
       const state = get();
@@ -488,6 +501,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     reset: () => {
       cancelSessionNotifications().catch(() => {});
       stopHeartbeat();
+      clearLiveActionContext();
       void stopLiveTimer();
       set(initialState);
     },

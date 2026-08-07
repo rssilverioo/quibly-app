@@ -48,6 +48,9 @@ declare class StudyTimerModuleType extends NativeModule<StudyTimerEvents> {
     phaseLabel: string,
   ): Promise<void>;
   stop(): Promise<void>;
+  /** iOS: guarda no App Group o que o App Intent da extensão precisa. */
+  setActionContext(sessionId: string, token: string, apiBaseUrl: string): void;
+  clearActionContext(): void;
   isBatteryOptimizationIgnored(): boolean;
   openBatterySettings(): Promise<void>;
   getManufacturer(): string;

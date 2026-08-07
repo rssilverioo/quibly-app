@@ -125,6 +125,35 @@ export async function updateLiveTimer(
   }
 }
 
+/**
+ * Entrega à extensão o que o botão da Live Activity precisa para agir sozinho.
+ *
+ * Só iOS, e só faz sentido com `SESSION_ACTION_SECRET` no servidor — sem ele a
+ * API devolve `token` nulo e os botões seguem pelo deep link, que abre o app.
+ */
+export function setLiveActionContext(
+  sessionId: string,
+  token: string | null | undefined,
+  apiBaseUrl: string,
+): void {
+  if (missing('setActionContext') || !token) return;
+  try {
+    StudyTimer!.setActionContext(sessionId, token, apiBaseUrl);
+  } catch (error) {
+    note('setActionContext', 'não deu para compartilhar o contexto da sessão', error);
+  }
+}
+
+/** Apaga a credencial quando a sessão acaba. */
+export function clearLiveActionContext(): void {
+  if (missing('clearActionContext')) return;
+  try {
+    StudyTimer!.clearActionContext();
+  } catch (error) {
+    note('clearActionContext', 'não deu para limpar o contexto da sessão', error);
+  }
+}
+
 export async function stopLiveTimer(): Promise<void> {
   if (missing('stop')) return;
   try {

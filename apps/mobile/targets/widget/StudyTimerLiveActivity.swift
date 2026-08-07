@@ -155,9 +155,10 @@ private struct LockScreenView: View {
         VStack(spacing: 6) {
           LinkButton(
             systemName: context.state.isRunning ? "pause.fill" : "play.fill",
-            url: context.state.isRunning ? "quibly://session/pause" : "quibly://session/resume"
+            url: context.state.isRunning ? "quibly://session/pause" : "quibly://session/resume",
+            acao: context.state.isRunning ? "pause" : "resume"
           )
-          LinkButton(systemName: "stop.fill", url: "quibly://session/end", tint: .red)
+          LinkButton(systemName: "stop.fill", url: "quibly://session/end", acao: "end", tint: .red)
         }
       }
 
@@ -275,23 +276,45 @@ private struct TimerText: View {
   }
 }
 
+/**
+ Um controle da Live Activity, no melhor caminho que o aparelho oferece.
+
+ **iOS 17+** usa `Button(intent:)`: a ação acontece sem abrir o app, chamando a
+ API direto do Swift com o token de sessão (`SessionActionIntent`).
+
+ **iOS 16** não tem `Button(intent:)` em Live Activity, então cai no `Link`, que
+ abre o app e deixa o store fazer o resto. Mais lento, e é o que existe — até
+ este commit, esse caminho estava quebrado: nada tratava `quibly://session/*` e
+ o app mostrava "Unmatched Route".
+
+ Os dois terminam no **mesmo** serviço no servidor, então não há como as duas
+ rotas produzirem estados diferentes.
+ */
 @available(iOS 16.1, *)
 private struct LinkButton: View {
   let systemName: String
   let url: String
+  /// `pause` | `resume` | `end` — o que o App Intent vai pedir no iOS 17+.
+  let acao: String
   var tint: Color = .quiblyAccent
 
   var body: some View {
-    Link(destination: URL(string: url)!) {
-      Image(systemName: systemName)
-        .font(.system(size: 14, weight: .bold))
-        .foregroundStyle(tint)
-        // 40×30 e não 34×26: são os dois controles reais do card, e na tela
-        // bloqueada o dedo chega sem mira. O ganho de área não custa altura,
-        // porque quem define a altura do card é o cronômetro ao lado.
-        .frame(width: 40, height: 30)
-        .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
+    if #available(iOS 17.0, *) {
+      Button(intent: SessionActionIntent(acao: acao)) { rotulo }
+        .buttonStyle(.plain)
+    } else {
+      Link(destination: URL(string: url)!) { rotulo }
     }
+  }
+
+  private var rotulo: some View {
+    Image(systemName: systemName)
+      .font(.system(size: 14, weight: .bold))
+      .foregroundStyle(tint)
+      // 40×30 e não 34×26: são os dois controles reais do card, e na tela
+      // bloqueada o dedo chega sem mira.
+      .frame(width: 40, height: 30)
+      .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
   }
 }
 
@@ -301,25 +324,54 @@ private struct ActionRow: View {
 
   var body: some View {
     HStack(spacing: 10) {
-      Link(destination: URL(string: isRunning ? "quibly://session/pause" : "quibly://session/resume")!) {
-        Label(isRunning ? "Pausar" : "Retomar", systemImage: isRunning ? "pause.fill" : "play.fill")
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundStyle(.black)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 9)
-          .background(Color.quiblyAccent, in: Capsule())
-      }
+      AcaoLarga(
+        titulo: isRunning ? "Pausar" : "Retomar",
+        icone: isRunning ? "pause.fill" : "play.fill",
+        url: isRunning ? "quibly://session/pause" : "quibly://session/resume",
+        acao: isRunning ? "pause" : "resume",
+        fundo: Color.quiblyAccent,
+        texto: .black
+      )
 
-      Link(destination: URL(string: "quibly://session/end")!) {
-        Label("Encerrar", systemImage: "stop.fill")
-          .font(.system(size: 14, weight: .semibold))
-          .foregroundStyle(.white)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 9)
-          .background(Color.white.opacity(0.14), in: Capsule())
-      }
+      AcaoLarga(
+        titulo: "Encerrar",
+        icone: "stop.fill",
+        url: "quibly://session/end",
+        acao: "end",
+        fundo: Color.white.opacity(0.14),
+        texto: .white
+      )
     }
     .padding(.top, 4)
+  }
+}
+
+/// O botão em cápsula da Ilha expandida. Mesma escolha de caminho do `LinkButton`.
+@available(iOS 16.1, *)
+private struct AcaoLarga: View {
+  let titulo: String
+  let icone: String
+  let url: String
+  let acao: String
+  let fundo: Color
+  let texto: Color
+
+  var body: some View {
+    if #available(iOS 17.0, *) {
+      Button(intent: SessionActionIntent(acao: acao)) { rotulo }
+        .buttonStyle(.plain)
+    } else {
+      Link(destination: URL(string: url)!) { rotulo }
+    }
+  }
+
+  private var rotulo: some View {
+    Label(titulo, systemImage: icone)
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundStyle(texto)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 9)
+      .background(fundo, in: Capsule())
   }
 }
 

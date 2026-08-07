@@ -41,6 +41,34 @@ public class StudyTimerModule: Module {
   public func definition() -> ModuleDefinition {
     Name("StudyTimer")
 
+    /**
+     Guarda no App Group o que o App Intent da extensão precisa saber.
+
+     A extensão não enxerga o `UserDefaults.standard` do app, então este é o
+     único jeito de o botão da Live Activity descobrir **qual** sessão pausar e
+     **com que** credencial. Chamado no start da sessão e limpo no fim.
+
+     Sem isto o intent não tem o que fazer e o widget cai no deep link, que abre
+     o app — funciona, e é o caminho lento.
+     */
+    Function("setActionContext") { (sessionId: String, token: String, apiBaseUrl: String) in
+      guard let defaults = UserDefaults(suiteName: "group.com.quibly.app") else {
+        NSLog("[StudyTimer] App Group indisponível — os botões vão abrir o app.")
+        return
+      }
+      defaults.set(sessionId, forKey: "quibly.session.id")
+      defaults.set(token, forKey: "quibly.session.actionToken")
+      defaults.set(apiBaseUrl, forKey: "quibly.api.baseUrl")
+    }
+
+    /// Apaga a credencial quando a sessão acaba. Token vivo sem sessão é
+    /// superfície de ataque sem função.
+    Function("clearActionContext") {
+      guard let defaults = UserDefaults(suiteName: "group.com.quibly.app") else { return }
+      defaults.removeObject(forKey: "quibly.session.id")
+      defaults.removeObject(forKey: "quibly.session.actionToken")
+    }
+
     Events("onNotificationAction")
 
     AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in

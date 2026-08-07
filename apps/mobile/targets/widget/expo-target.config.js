@@ -44,5 +44,20 @@ module.exports = {
   // aparelho em uso sem necessidade.
   deploymentTarget: '16.1',
 
-  frameworks: ['SwiftUI', 'WidgetKit', 'ActivityKit'],
+  frameworks: ['SwiftUI', 'WidgetKit', 'ActivityKit', 'AppIntents'],
+
+  /**
+   * O App Group é o **único** canal entre o app e a extensão.
+   *
+   * A extensão não enxerga o `UserDefaults.standard` do app nem o chaveiro
+   * dele. Sem este grupo, o App Intent não saberia qual sessão pausar nem com
+   * que credencial — e os botões voltariam a depender de abrir o app.
+   *
+   * Precisa existir dos **dois lados**: aqui e no `ios.entitlements` do
+   * `app.json`. Um lado só compila e não compartilha nada, que é a forma
+   * silenciosa de isto falhar.
+   */
+  entitlements: {
+    'com.apple.security.application-groups': ['group.com.quibly.app'],
+  },
 };

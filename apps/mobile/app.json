@@ -34,6 +34,11 @@
           "audio"
         ],
         "NSSupportsLiveActivities": true
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.quibly.app"
+        ]
       }
     },
     "android": {
