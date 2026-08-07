@@ -188,23 +188,45 @@ describe('StorageService', () => {
     });
 
     /**
-     * O valor errado aqui não quebra nada na hora — ele grava. `avatarUrl` e
-     * `photoUrl` guardam a URL inteira, então uma base sem esquema vira linha no
-     * banco, uma por foto, e o único sintoma é um `<Image>` vazio.
+     * **Valor ruim não pode derrubar a API.**
+     *
+     * Isto já foi um `throw`, e em produção ele pôs a aplicação inteira num laço
+     * de reinício — login, feed e sessões fora do ar por uma variável de
+     * storage. O valor inválido agora é ignorado e o serviço volta ao endereço
+     * antigo: a foto continua com a URL errada, que é o que acontecia antes
+     * desta variável existir, e o resto do produto fica de pé.
      */
     it.each([
       ['sem esquema', 'cdn.tryquibly.com'],
       ['caminho relativo', '/uploads'],
       ['só o esquema', 'https://'],
-    ])('recusa subir com S3_PUBLIC_BASE_URL %s', (_caso, valor) => {
-      expect(() => makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: valor })).toThrow(
-        /S3_PUBLIC_BASE_URL/,
-      );
+    ])('ignora S3_PUBLIC_BASE_URL %s sem derrubar o serviço', async (_caso, valor) => {
+      const { service, send } = makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: valor });
+
+      const url = await service.uploadPublic('avatars/u/a.png', Buffer.from('x'), 'image/png');
+
+      // Cai no endereço antigo em vez de explodir.
+      expect(url).toBe(`${ENDPOINT}/nomads-public/avatars/u/a.png`);
+      expect(bucketDoUltimoComando(send)).toBe('nomads-public');
+    });
+
+    /**
+     * O mesmo editor de ambiente que entregou o JSON do Firebase escapado
+     * entrega esta variável entre aspas. O valor está certo, só chegou vestido —
+     * e recusá-lo por causa da roupa custaria a foto do feed.
+     */
+    it.each([
+      ['aspas duplas', '"https://cdn.tryquibly.com"'],
+      ['aspas simples', "'https://cdn.tryquibly.com'"],
+    ])('aceita a base embrulhada em %s', async (_caso, valor) => {
+      const { service } = makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: valor });
+
+      const url = await service.uploadPublic('avatars/u/a.png', Buffer.from('x'), 'image/png');
+
+      expect(url).toBe('https://cdn.tryquibly.com/avatars/u/a.png');
     });
 
     it('não estorva quem não setou a variável', () => {
-      // A recusa vale só para valor presente e inválido. Vazio é o caminho de
-      // compatibilidade, e tem que continuar subindo.
       expect(() => makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: '  ' })).not.toThrow();
     });
 
