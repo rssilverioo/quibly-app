@@ -22,6 +22,7 @@ import Press from '../../components/ui/Press';
 import { MascotBlock } from '../../components/mascot';
 import { useTheme, type Palette, text, space, radius } from '../../theme';
 import i18n from '../../lib/i18n';
+import { formatarTempoDeEstudo } from '../../lib/study-time';
 import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
 import StudyHeatmap from '../../components/StudyHeatmap';
@@ -170,7 +171,10 @@ export default function ProfileScreen() {
    */
   const numbers = [
     { key: 'streak', value: String(profile.current_streak), label: t('streakShort'), onPress: () => setShowStreakCalendar(true) },
-    { key: 'minutes', value: formatNumber(profile.total_study_minutes), label: t('minutesShort') },
+    // `formatNumber` fazia 1017 minutos virarem "1.0K Minutes" — a unidade que
+    // menos informa, na escala que menos informa. A mesma regra do resto do app:
+    // minuto até fechar a hora, hora depois. Ver `lib/study-time.ts`.
+    { key: 'minutes', value: formatarTempoDeEstudo(profile.total_study_minutes), label: t('studyTimeShort') },
     { key: 'level', value: String(currentLevel), label: t('levelShort') },
   ];
 

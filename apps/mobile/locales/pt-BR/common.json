@@ -78,8 +78,6 @@
     "memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} no desafio",
     "memberHistory": "Histórico no desafio",
     "memberNoPosts": "Nenhum estudo publicado neste desafio ainda.",
-    "minutesNow_one": "há {{count}} min",
-    "minutesNow_other": "há {{count}} min",
     "newChallenge": "Novo desafio",
     "newPost": "Nova foto",
     "newRoom": "Nova sala",
@@ -111,7 +109,8 @@
     "you": "você",
     "yourRank": "Você está em #{{rank}} de {{count}}",
     "durationCustom": "Outro",
-    "durationEndsOn": "Termina em {{date}}"
+    "durationEndsOn": "Termina em {{date}}",
+    "timeNow": "há {{time}}"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
@@ -123,6 +122,27 @@
   "optional": "(opcional)",
   "verified": "Verificado",
   "notNow": "Agora não",
-  "monthsShort": ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"],
-  "weekdaysShort": ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
+  "monthsShort": [
+    "jan",
+    "fev",
+    "mar",
+    "abr",
+    "mai",
+    "jun",
+    "jul",
+    "ago",
+    "set",
+    "out",
+    "nov",
+    "dez"
+  ],
+  "weekdaysShort": [
+    "dom",
+    "seg",
+    "ter",
+    "qua",
+    "qui",
+    "sex",
+    "sáb"
+  ]
 }

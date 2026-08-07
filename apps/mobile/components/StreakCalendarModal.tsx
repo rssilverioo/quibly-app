@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Flame, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { useTheme, type Palette, radius, space, text } from '../theme';
 import { getStudyDates, type StudyDate } from '../services/sessions';
+import { formatarTempoDeEstudo } from '../lib/study-time';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CELL_SIZE = Math.floor((SCREEN_WIDTH - 40 - 48) / 7);
@@ -98,8 +99,6 @@ export default function StreakCalendarModal({
 
   const daysStudied = studyDates.length;
   const totalMinutes = studyDates.reduce((sum, d) => sum + d.minutes, 0);
-  const totalHours = Math.floor(totalMinutes / 60);
-  const remainingMinutes = totalMinutes % 60;
 
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -209,9 +208,10 @@ export default function StreakCalendarModal({
           </View>
           <View style={styles.footerDivider} />
           <View style={styles.footerStat}>
-            <Text style={styles.footerValue}>
-              {totalHours}h {remainingMinutes}m
-            </Text>
+            {/* `{totalHours}h {remainingMinutes}m` escrevia `16h
+                57.1200000000000005m` na tela: os minutos vêm do Decimal do
+                Prisma, e o `% 60` sobre float não fecha. Ver `study-time.ts`. */}
+            <Text style={styles.footerValue}>{formatarTempoDeEstudo(totalMinutes)}</Text>
             <Text style={styles.footerLabel}>{t('streakCalendar.totalTime')}</Text>
           </View>
         </View>

@@ -78,8 +78,6 @@
     "memberChallengeSummary": "#{{rank}} · {{value}} {{unit}} in this challenge",
     "memberHistory": "Challenge history",
     "memberNoPosts": "No study posted in this challenge yet.",
-    "minutesNow_one": "for {{count}} min",
-    "minutesNow_other": "for {{count}} min",
     "newChallenge": "New challenge",
     "newPost": "New photo",
     "newRoom": "New room",
@@ -111,7 +109,8 @@
     "you": "you",
     "yourRank": "You are #{{rank}} of {{count}}",
     "durationCustom": "Other",
-    "durationEndsOn": "Ends on {{date}}"
+    "durationEndsOn": "Ends on {{date}}",
+    "timeNow": "for {{time}}"
   },
   "members": "Members",
   "members_one": "{{count}} member",
@@ -123,6 +122,27 @@
   "optional": "(optional)",
   "verified": "Verified",
   "notNow": "Not now",
-  "monthsShort": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-  "weekdaysShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  "monthsShort": [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ],
+  "weekdaysShort": [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ]
 }

@@ -175,10 +175,26 @@ export class SessionsService {
           { previous_days: profile.currentStreak },
         );
       }
-      // Missed a day or first time → reset to 1
+      /**
+       * Reinício conta como recorde de 1 dia.
+       *
+       * Este ramo gravava só `currentStreak: 1` e não tocava em
+       * `longestStreak`. O efeito aparecia na tela do usuário como **"atual 1,
+       * maior 0"** — um recorde menor que o atual, que é impossível de ler como
+       * outra coisa senão defeito.
+       *
+       * E não era só cosmético: quem estuda um dia, falha, estuda outro, nunca
+       * passa pelo ramo de cima (o que faz `Math.max`), então o recorde ficava
+       * em 0 para sempre. O primeiro dia é uma sequência de um dia — o `max`
+       * aqui é o mesmo do outro ramo, pela mesma razão.
+       */
       await this.prisma.profile.update({
         where: { id: userId },
-        data: { currentStreak: 1, lastStudyDate: today },
+        data: {
+          currentStreak: 1,
+          longestStreak: Math.max(profile.longestStreak, 1),
+          lastStudyDate: today,
+        },
       });
     }
   }
