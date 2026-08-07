@@ -18,7 +18,7 @@ providers = ["node"]
 [phases.setup]
 # `openssl` é do Prisma, não do Node: sem ele o engine não sobe em runtime, e o
 # erro só aparece no primeiro acesso ao banco.
-nixPkgs = ["nodejs_22", "openssl"]
+nixPkgs = ["nodejs_22", "openssl", "git"]
 
 [phases.install]
 # `npm ci` na raiz instala todos os workspaces. É mais do que a API precisa, e é
@@ -33,6 +33,17 @@ cmds = ["npm ci"]
 cmds = [
   "npm run build -w packages/shared",
   "cd apps/api && npx prisma generate && npx nest build",
+  # O SHA é carimbado na imagem, e não numa variável de ambiente.
+  #
+  # Uma variável fixa é pior que não ter nada: `GIT_COMMIT_SHA=86068d6` continua
+  # respondendo `86068d6` depois do próximo deploy, mentindo com confiança. E o
+  # `/health` existe justamente para responder "meu conserto subiu?" durante um
+  # incidente — uma resposta errada ali custa mais caro que nenhuma.
+  #
+  # Escrito depois do `nest build` porque é ele que cria o `dist/`. Se o git não
+  # estiver disponível, o arquivo sai vazio e o `/health` cai em "desconhecido",
+  # que é a resposta honesta.
+  "git rev-parse --short HEAD > apps/api/dist/COMMIT 2>/dev/null || true",
 ]
 
 [start]
