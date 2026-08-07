@@ -40,9 +40,20 @@ cima. **No Tigris isso não existe:**
 - O `ACL: 'public-read'` por objeto que o `uploadPublic` sempre mandou **é
   ignorado** quando o bucket é privado — testado em 03/08 com um objeto real,
   que continuou dando 403 para quem não estava autenticado.
-- Lá o acesso público é **do bucket inteiro, ou nada** (`--acl public-read` na
-  criação). O caminho inverso existe — dentro de um bucket público dá para
-  marcar um objeto como privado — mas não serve aqui.
+- Lá o acesso público é **do bucket inteiro, ou nada**. O caminho inverso existe
+  — dentro de um bucket público dá para marcar um objeto como privado — mas não
+  serve aqui.
+
+> **Correção de 06/08, vista no painel.** Este arquivo dizia que o acesso público
+> só se define **na criação**, via `--acl public-read`. Não é verdade: em
+> *Bucket Settings › Access and Sharing* há um seletor **Public / Private
+> Access** que muda um bucket existente, com um botão `Update`. Ou seja, não é
+> preciso criar bucket novo nem migrar objeto nenhum — dá para promover o
+> `quibly-uploads`, que já existe e hoje só contém `room-posts/`.
+>
+> Na mesma tela há **Disable Directory Listing**, ligado por padrão: os objetos
+> ficam legíveis por URL direta, mas ninguém lista o conteúdo do bucket. É o que
+> se quer aqui, e não estava documentado.
 
 Confirmado na documentação do Tigris e no fórum da Fly, onde a resposta oficial
 para "um bucket privado com um prefixo público" é exatamente a que está
@@ -87,6 +98,30 @@ teste (`storage.service.spec.ts`).
 **Na prática você só precisa criar e setar UMA variável.** `S3_BUCKET_PRIVATE`
 pode ficar de fora: a reserva já aponta para `nomads-uploads`, que é onde o
 material privado está hoje e onde deve continuar.
+
+## 4.1. O que trava hoje: cobrança, não permissão
+
+> **Tentado em 06/08, pelo painel, com a conta do dono logada.** As duas rotas
+> batem na mesma parede, e ela não é técnica:
+>
+> - **Criar bucket público** (`nomads-public`, toggle *Public* ligado): o botão
+>   `Create` fica inerte, e o diálogo traz a razão por escrito — *"A verified
+>   payment method is required to create public buckets."*
+> - **Promover o `quibly-uploads`**: o seletor aceita `Public` e o `Update`
+>   responde sem erro, mas ao recarregar a tela ele voltou para `Private`, e a
+>   sonda continuou em `403 AccessDenied`. Mesma trava, desta vez **silenciosa**
+>   — o que é pior, porque parece ter funcionado.
+>
+> Conclusão: **o Tigris exige método de pagamento verificado para qualquer bucket
+> público.** Enquanto isso não for resolvido na conta, nenhuma variável de
+> ambiente adianta, e a foto do feed continua em 403 por desenho do provedor.
+>
+> Sonda para reconferir sem abrir o painel:
+>
+> ```sh
+> curl -s "https://t3.storage.dev/quibly-uploads/sonda-$(date +%s)" | grep -o "<Code>[^<]*</Code>"
+> # AccessDenied → ainda privado.  NoSuchKey → público, pode seguir para a §5.
+> ```
 
 ## 5. O que rodar
 
