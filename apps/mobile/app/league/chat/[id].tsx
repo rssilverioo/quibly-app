@@ -21,6 +21,7 @@ import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
 import { useAuth } from '../../../contexts/AuthContext';
 import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
+import { autorDaMensagem, type ChatMessageComAutor } from '../../../lib/chat-messages';
 import { getMyRooms } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
@@ -43,21 +44,39 @@ export default function RoomChatScreen() {
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessageComAutor[]>([]);
   const [failed, setFailed] = useState<FailedMessage[]>([]);
   const [roomName, setRoomName] = useState('');
   const [inputText, setInputText] = useState('');
   const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
   const [loading, setLoading] = useState(true);
-  const listRef = useRef<FlatList<ChatMessage>>(null);
+  const [falhou, setFalhou] = useState(false);
+  const listRef = useRef<FlatList<ChatMessageComAutor>>(null);
 
   useEffect(() => {
     if (!roomId) return;
-    // Lista invertida: a mais nova em cima do array, embaixo na tela.
-    const unsubscribe = subscribeToMessages(roomId, (all) => {
-      setMessages([...all].reverse());
-      setLoading(false);
-    });
+    /**
+     * A API já entrega da mais nova para a mais velha, que é a ordem que a
+     * `FlatList inverted` quer — índice 0 desenha embaixo. O `.reverse()` que
+     * havia aqui foi escrito supondo o contrário, e nunca chegou a rodar: a
+     * chamada estourava antes, porque a resposta é `{ messages }` e não um
+     * array. Ver `lib/chat-messages.ts`.
+     */
+    const unsubscribe = subscribeToMessages(
+      roomId,
+      (all) => {
+        setMessages(all);
+        setFalhou(false);
+        setLoading(false);
+      },
+      (erro) => {
+        // O spinner tem que acabar mesmo quando dá errado. Sem isto o chat fica
+        // carregando para sempre, que é como ele estava.
+        console.warn('[chat] não deu para carregar as mensagens', erro);
+        setFalhou(true);
+        setLoading(false);
+      },
+    );
     return () => unsubscribe();
   }, [roomId]);
 
@@ -93,7 +112,7 @@ export default function RoomChatScreen() {
     hour: '2-digit', minute: '2-digit',
   }), [i18n.language]);
 
-  const renderMessage = useCallback(({ item, index }: { item: ChatMessage; index: number }) => {
+  const renderMessage = useCallback(({ item, index }: { item: ChatMessageComAutor; index: number }) => {
     if (item.message_type === 'system') {
       return <Text style={styles.stamp}>{item.content}</Text>;
     }
@@ -103,8 +122,9 @@ export default function RoomChatScreen() {
     const startsBlock = !previous
       || new Date(item.created_at).getTime() - new Date(previous.created_at).getTime() > TIME_BLOCK_MS;
     const mine = item.user_id === user?.uid;
-    const author = (item as { username?: string }).username ?? item.profile?.username ?? '';
-    const avatar = (item as { avatar_url?: string | null }).avatar_url ?? item.profile?.avatar_url ?? null;
+    // O autor vem em `user`, não em `profile` — os dois casts que havia aqui
+    // liam campos que a resposta nunca teve, e o nome saía sempre vazio.
+    const { nome: author, avatar } = autorDaMensagem(item);
 
     return (
       <View>
@@ -171,6 +191,17 @@ export default function RoomChatScreen() {
           )}
         />
 
+        {/* Sem isto, uma busca que falha desenha a tela de "nenhuma mensagem
+            ainda" — o chat afirmaria que a sala está vazia quando na verdade
+            não conseguiu perguntar. O `subscribeToMessages` continua tentando a
+            cada 3s, então o aviso some sozinho quando a rede voltar; não há
+            botão de repetir porque não há nada para o dedo acelerar. */}
+        {falhou ? (
+          <View style={styles.offline}>
+            <Text style={styles.offlineText}>{t('rooms.chatOffline')}</Text>
+          </View>
+        ) : null}
+
         {/* As que não chegaram vivem fora da lista invertida, logo acima da
             barra de composição: são as mais novas e a lista não as conhece. */}
         {failed.map((item) => (
@@ -234,6 +265,10 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   textMine: { ...text.body, color: c.fgOnAccent },
   textOther: { ...text.body, color: c.fg },
   retry: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  // Faixa fina acima da barra de composição, e não um bloco no meio da conversa:
+  // é um estado da conexão, não uma mensagem.
+  offline: { paddingHorizontal: space.lg, paddingVertical: space.xs, backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border },
+  offlineText: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
   emptyBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ scaleY: -1 }] },
   emptyTitle: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
   emptyBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.sm },

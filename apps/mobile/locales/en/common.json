@@ -110,7 +110,8 @@
     "yourRank": "You are #{{rank}} of {{count}}",
     "durationCustom": "Other",
     "durationEndsOn": "Ends on {{date}}",
-    "timeNow": "for {{time}}"
+    "timeNow": "for {{time}}",
+    "chatOffline": "Can't reach the room. Retrying…"
   },
   "members": "Members",
   "members_one": "{{count}} member",

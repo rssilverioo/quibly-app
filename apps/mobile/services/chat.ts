@@ -1,5 +1,6 @@
 import { api } from '../lib/api';
 import type { ChatMessage } from '@quibly/shared';
+import { mensagensDaResposta, type ChatMessageComAutor } from '../lib/chat-messages';
 
 export async function sendMessage(
   leagueId: string,
@@ -9,38 +10,59 @@ export async function sendMessage(
   return api.post<ChatMessage>(`/chat/${leagueId}`, { content });
 }
 
+/**
+ * As mensagens da sala, da mais nova para a mais velha.
+ *
+ * O tipo do `api.get` é `unknown` de propósito: era exatamente aqui que um
+ * `api.get<ChatMessage[]>` afirmava um array que a API nunca mandou (ela devolve
+ * `{ messages, hasMore }`), e o compilador não tinha como discordar. Quem
+ * conhece o formato é `mensagensDaResposta`, que é testado.
+ */
 export async function getMessages(
   leagueId: string,
   limitCount = 50
-): Promise<ChatMessage[]> {
-  return api.get<ChatMessage[]>(`/chat/${leagueId}?limit=${limitCount}`);
+): Promise<ChatMessageComAutor[]> {
+  return mensagensDaResposta(
+    await api.get<unknown>(`/chat/${leagueId}?limit=${limitCount}`),
+  );
 }
 
-// Polling-based replacement for real-time Firestore listener
-let pollingIntervals: Record<string, ReturnType<typeof setInterval>> = {};
+const INTERVALO_MS = 3000;
 
+/**
+ * Busca as mensagens agora e a cada 3s. Devolve como cancelar.
+ *
+ * `onErro` não é opcional por capricho. A versão anterior engolia **toda** falha
+ * — inclusive a da primeira busca —, e como quem chama só desligava o
+ * "carregando" dentro do callback de sucesso, uma API fora do ar deixava o chat
+ * num spinner eterno, sem uma linha no console. Era indistinguível de "a sala
+ * está demorando", e foi assim que o chat passou por quebrado.
+ *
+ * A falha do *polling* é diferente da falha da primeira busca: já há mensagem na
+ * tela, e uma rede que oscila não deve apagá-la. Por isso o erro é reportado,
+ * mas a lista anterior fica de pé — quem chama decide o que fazer com o aviso.
+ */
 export function subscribeToMessages(
   leagueId: string,
-  callback: (messages: ChatMessage[]) => void
+  onMensagens: (messages: ChatMessageComAutor[]) => void,
+  onErro: (erro: unknown) => void,
 ): () => void {
-  // Initial fetch
-  getMessages(leagueId).then(callback).catch(() => {});
+  let vivo = true;
 
-  // Poll every 3 seconds
-  const interval = setInterval(async () => {
+  const buscar = async () => {
     try {
-      const messages = await getMessages(leagueId);
-      callback(messages);
-    } catch {
-      // Silently fail on polling errors
+      const mensagens = await getMessages(leagueId);
+      if (vivo) onMensagens(mensagens);
+    } catch (erro) {
+      if (vivo) onErro(erro);
     }
-  }, 3000);
+  };
 
-  pollingIntervals[leagueId] = interval;
+  void buscar();
+  const intervalo = setInterval(() => void buscar(), INTERVALO_MS);
 
-  // Return unsubscribe function
   return () => {
-    clearInterval(interval);
-    delete pollingIntervals[leagueId];
+    vivo = false;
+    clearInterval(intervalo);
   };
 }

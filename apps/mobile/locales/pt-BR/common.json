@@ -110,7 +110,8 @@
     "yourRank": "Você está em #{{rank}} de {{count}}",
     "durationCustom": "Outro",
     "durationEndsOn": "Termina em {{date}}",
-    "timeNow": "há {{time}}"
+    "timeNow": "há {{time}}",
+    "chatOffline": "Sem conexão com a sala. Tentando de novo…"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
