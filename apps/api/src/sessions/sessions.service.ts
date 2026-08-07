@@ -86,12 +86,62 @@ export class SessionsService {
   }
 
   /** Local-day window used by both the streak and the daily cap. */
+  /**
+   * O dia civil de uma instante — **em UTC**.
+   *
+   * Era `setHours(0,0,0,0)`, que é hora local do processo. O mapa de constância
+   * e o calendário já usavam UTC (ver `getStudyHeatmap`), então o produto tinha
+   * **duas convenções de dia** que só coincidiam por acaso: o servidor roda em
+   * UTC no Railway. Uma mudança de região, ou uma máquina de desenvolvimento
+   * com outro fuso, faria a sequência discordar do calendário sem que nada no
+   * código tivesse mudado.
+   *
+   * **Dívida conhecida, e ela continua:** agrupar por UTC significa que quem
+   * estuda às 22h em UTC−3 é contado no dia seguinte. Consertar isso exige o
+   * `Profile.timezone`; unificar aqui não resolve o fuso do usuário, mas remove
+   * a discordância entre telas, que era um segundo problema em cima do primeiro.
+   */
   private todayWindow(now = new Date()): { start: Date; end: Date } {
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
+    const start = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
     const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+    end.setUTCDate(end.getUTCDate() + 1);
     return { start, end };
+  }
+
+  /**
+   * Se houve **algum** estudo creditado em todo dia entre duas datas.
+   *
+   * Serve à regra do dia leve: 20 minutos não ganham o dia, mas também não
+   * podem custar a corrente. Sem isto, um dia curto entre dois dias cheios
+   * deixava `lastStudyDate` para trás, e o dia seguinte via uma data que não era
+   * "ontem" e reiniciava a sequência em 1 — enquanto o calendário pintava o dia
+   * curto de azul, como se tivesse contado.
+   *
+   * `de` e `ate` são meia-noite UTC, exclusivos: verifica só o miolo do intervalo.
+   */
+  private async diasSemFalha(userId: string, de: Date, ate: Date): Promise<boolean> {
+    const faltam = Math.round((ate.getTime() - de.getTime()) / 86_400_000) - 1;
+    if (faltam <= 0) return true;
+
+    const sessoes = await this.prisma.studySession.findMany({
+      where: {
+        userId,
+        ...CREDITED_SESSION_FILTER,
+        endedAt: { gt: de, lt: ate },
+      },
+      select: { endedAt: true },
+    });
+
+    const diasComAlgo = new Set(
+      sessoes
+        .filter((s) => s.endedAt)
+        .map((s) => s.endedAt!.toISOString().slice(0, 10)),
+    );
+
+    // Todo dia do miolo precisa ter alguma coisa. Um único vazio quebra.
+    return diasComAlgo.size >= faltam;
   }
 
   /** Minutes this user has already banked today, across completed sessions. */
@@ -144,15 +194,36 @@ export class SessionsService {
     const lastDate = profile.lastStudyDate
       ? new Date(profile.lastStudyDate)
       : null;
-    if (lastDate) lastDate.setHours(0, 0, 0, 0);
+    // UTC, como `todayWindow` — comparar meia-noite local com meia-noite UTC
+    // deslocaria a comparação em três horas e faria "ontem" virar "anteontem".
+    if (lastDate) {
+      lastDate.setUTCHours(0, 0, 0, 0);
+    }
 
     // Already counted today
     if (lastDate && lastDate.getTime() === today.getTime()) return;
 
     const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-    if (lastDate && lastDate.getTime() === yesterday.getTime()) {
+    /**
+     * A corrente continua se o último dia ganho foi ontem **ou** se todo dia no
+     * meio teve algum estudo.
+     *
+     * O segundo caso é a regra do dia leve: 20 minutos não ganham o dia, mas não
+     * podem custar a sequência. Antes, um dia curto entre dois cheios saía pelo
+     * `return` do piso sem atualizar `lastStudyDate`, e o dia seguinte via uma
+     * data que não era "ontem" e reiniciava em 1 — com o calendário pintando o
+     * dia curto de azul, como se tivesse contado. Era essa contradição entre as
+     * duas telas que fazia a sequência parecer quebrada.
+     */
+    const continua = Boolean(
+      lastDate &&
+        (lastDate.getTime() === yesterday.getTime() ||
+          (await this.diasSemFalha(userId, lastDate, today))),
+    );
+
+    if (continua) {
       // Studied yesterday → continue streak
       const newStreak = profile.currentStreak + 1;
       await this.prisma.profile.update({
