@@ -799,3 +799,62 @@ describe('SessionsService.getStudyHeatmap', () => {
     expect(filtro.endedAt).toBeDefined();
   });
 });
+
+/**
+ * O recorde de sequência é gravado em dois ramos, e um deles esquecia.
+ *
+ * O sintoma chegou por print da tela do perfil: **"atual 1, maior 0"**. Um
+ * recorde menor que o atual não é ambíguo — é defeito, e o usuário lê como tal.
+ */
+describe('updateUserStreak — o recorde nunca fica abaixo do atual', () => {
+  const DIA = new Date('2026-08-06T14:00:00.000Z');
+
+  /** Prisma mínimo para o caminho da sequência. */
+  function prismaDaSequencia(profile: any) {
+    return {
+      profile: {
+        findUnique: jest.fn().mockResolvedValue({ plan: 'FREE', ...profile }),
+        update: jest.fn(),
+      },
+      studySession: {
+        // Acima do mínimo diário, senão o método volta antes de contar o dia.
+        aggregate: jest.fn().mockResolvedValue({ _sum: { totalDurationMinutes: 90 } }),
+      },
+    };
+  }
+
+  const chamar = async (prisma: any) => {
+    const service = new SessionsService(
+      prisma as any, {} as any, {} as any, { track: jest.fn() } as any, {} as any,
+    );
+    await (service as any).updateUserStreak('user-1', DIA);
+    return prisma.profile.update.mock.calls[0][0].data;
+  };
+
+  it('registra o primeiro dia como recorde de 1, em vez de deixar em 0', async () => {
+    // `lastStudyDate: null` é o primeiro dia qualificado da conta. Este ramo
+    // gravava só `currentStreak: 1` — e como ele nunca passa pelo `Math.max` do
+    // outro ramo, o recorde ficava em 0 para sempre.
+    const dados = await chamar(
+      prismaDaSequencia({ lastStudyDate: null, currentStreak: 0, longestStreak: 0 }),
+    );
+
+    expect(dados.currentStreak).toBe(1);
+    expect(dados.longestStreak).toBe(1);
+  });
+
+  it('não rebaixa um recorde já conquistado quando a sequência quebra', async () => {
+    // Estudou 12 dias, sumiu uma semana, voltou hoje: o atual volta a 1 e o
+    // recorde tem que continuar 12.
+    const dados = await chamar(
+      prismaDaSequencia({
+        lastStudyDate: new Date('2026-07-20T14:00:00.000Z'),
+        currentStreak: 12,
+        longestStreak: 12,
+      }),
+    );
+
+    expect(dados.currentStreak).toBe(1);
+    expect(dados.longestStreak).toBe(12);
+  });
+});

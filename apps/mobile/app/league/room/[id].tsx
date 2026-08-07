@@ -16,6 +16,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { cacheFeedPost } from '../../../lib/feed-detail-cache';
 import { feedDayLabel, feedPagePosts, roomFeedPostToCardPost, startsNewFeedDay } from '../../../lib/feed-post';
 import { challengeTimeLeft } from '../../../lib/rooms-home';
+import { formatarTempoDeEstudo } from '../../../lib/study-time';
 import { getLiveMembers, type LiveMember } from '../../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
@@ -199,7 +200,7 @@ export default function RoomFeedScreen() {
       {live.map((member) => (
         <View key={member.session_id} style={styles.livePerson}>
           <Avatar uri={member.avatar_url} name={member.display_name} size={36} />
-          <View style={{ flex: 1 }}><Text style={styles.liveName}>{member.display_name}</Text><Text style={styles.liveMeta}>{member.subject_name} · {t('rooms.minutesNow', { count: member.elapsed_minutes })}</Text></View>
+          <View style={{ flex: 1 }}><Text style={styles.liveName}>{member.display_name}</Text><Text style={styles.liveMeta}>{member.subject_name} · {t('rooms.timeNow', { time: formatarTempoDeEstudo(member.elapsed_minutes) })}</Text></View>
         </View>
       ))}
     </View>

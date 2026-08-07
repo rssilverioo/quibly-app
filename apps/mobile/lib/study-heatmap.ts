@@ -111,9 +111,16 @@ export interface RotuloDeMes {
  * O mês é marcado na coluna em que ele **aparece pela primeira vez**, e não na
  * que o contém em maioria: o olho procura o começo do mês, não o seu centro.
  *
- * `MIN_COLUNAS` existe porque a primeira e a última coluna quase sempre trazem
- * um mês pela metade. Sem o corte, "jul" e "ago" sairiam colados a dois pixels
- * um do outro nas bordas — dois rótulos ilegíveis valem menos que um só.
+ * `MIN_COLUNAS` governa a distância **entre** rótulos: um mês que começa a menos
+ * de três colunas do anterior toma o lugar dele em vez de se espremer ao lado.
+ * A primeira coluna quase sempre traz um mês pela metade, e dois nomes colados
+ * a dois pixels um do outro valem menos que um só.
+ *
+ * O mês corrente é exceção e **sempre aparece**, mesmo ocupando uma coluna só.
+ * A regra antiga o descartava por falta de espaço, e o efeito era perverso: a
+ * grade abre justamente no fim, então o único mês que o olho encontra de cara
+ * era o que ficava sem nome. A largura é problema de quem desenha — `StudyHeatmap`
+ * encosta o rótulo na borda para ele caber.
  */
 const MIN_COLUNAS = 3;
 
@@ -139,9 +146,29 @@ export function rotulosDeMes(semanas: DiaDoMapa[][]): RotuloDeMes[] {
     rotulos.push({ coluna, mes });
   });
 
-  // O último rótulo não pode nascer sem espaço para ser lido.
-  const ultimo = rotulos.at(-1);
-  if (ultimo && semanas.length - ultimo.coluna < MIN_COLUNAS) rotulos.pop();
+  /**
+   * O mês em que a janela termina, garantido.
+   *
+   * A regra acima nomeia um mês pela coluna que **começa** nele, e um mês que
+   * nasce no meio da semana e acaba antes do domingo seguinte nunca começa
+   * coluna nenhuma — some sem deixar rastro. Acontece justamente com o mês
+   * corrente nos primeiros dias dele, que é o pedaço da grade que o usuário vê
+   * primeiro, porque ela abre no fim.
+   */
+  const ultimaSemana = semanas.at(-1);
+  const ultimoDia = ultimaSemana?.at(-1);
+  if (ultimoDia) {
+    const mesFinal = doTexto(ultimoDia.data).getMonth();
+    const ultimo = rotulos.at(-1);
+    if (!ultimo || ultimo.mes !== mesFinal) {
+      const coluna = semanas.length - 1;
+      if (ultimo && coluna - ultimo.coluna < MIN_COLUNAS) {
+        rotulos[rotulos.length - 1] = { coluna, mes: mesFinal };
+      } else {
+        rotulos.push({ coluna, mes: mesFinal });
+      }
+    }
+  }
 
   return rotulos;
 }

@@ -95,6 +95,17 @@ export class UsersService {
     return {
       ...profile,
       verifiedHours: Number(profile.verifiedHours),
+      /**
+       * O recorde nunca é menor que a sequência atual.
+       *
+       * A gravação já foi consertada (`sessions.service`, ramo de reinício), mas
+       * as contas que passaram pelo defeito têm `longestStreak: 0` com
+       * `currentStreak: 1` no banco, e sem isto continuariam mostrando
+       * "atual 1, maior 0" até a próxima sequência. Corrigir na leitura acerta
+       * essas linhas hoje, sem migração. `achievements.service` já usa o mesmo
+       * `max` pela mesma razão.
+       */
+      longestStreak: Math.max(profile.longestStreak, profile.currentStreak),
     };
   }
 

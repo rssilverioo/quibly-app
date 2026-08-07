@@ -69,13 +69,26 @@ struct StudyTimerLiveActivity: Widget {
         CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
           .frame(width: 22, height: 22)
       } compactTrailing: {
+        /*
+         Nada de `minWidth` aqui.
+
+         Havia um `.frame(minWidth: 52)` para o contador não truncar depois de
+         uma hora. O efeito colateral era o defeito relatado: a área compacta da
+         Dynamic Island **cresce para caber o que se pede**, então 52pt fixos de
+         um lado, mais o castelo do outro, esticavam a ilha numa faixa preta
+         muito mais larga que a área nativa.
+
+         O `minWidth` resolvia o sintoma errado. Quem decide a largura da ilha é
+         o sistema; o nosso trabalho é caber nela. A fonte menor e o
+         `lineLimit(1)` dão ao contador a chance de caber por mérito — e se uma
+         sessão de três dígitos de hora truncar, ainda é melhor que uma faixa
+         atravessando a tela inteira.
+         */
         TimerText(state: context.state)
-          .font(.system(size: 14, weight: .semibold, design: .rounded))
+          .font(.system(size: 13, weight: .semibold, design: .rounded))
           .monospacedDigit()
+          .lineLimit(1)
           .foregroundStyle(Color.quiblyLime)
-          // Sem isto o texto é truncado quando a sessão passa de uma hora e o
-          // contador ganha um dígito.
-          .frame(minWidth: 52)
       } minimal: {
         CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
           .frame(width: 20, height: 20)
@@ -92,25 +105,44 @@ private struct LockScreenView: View {
   let context: ActivityViewContext<StudyTimerAttributes>
 
   var body: some View {
-    HStack(spacing: 14) {
-      CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
-        .frame(width: 52, height: 52)
+    /*
+     Três blocos, e uma hierarquia só: o que estou estudando, há quanto tempo,
+     e o que posso fazer a respeito.
 
-      VStack(alignment: .leading, spacing: 2) {
+     O nome da matéria virou **sobrancelha** — caixa alta, pequena, com tracking
+     — em vez de um texto de 13pt logo acima do cronômetro. Dois textos
+     empilhados de pesos parecidos competiam, e o olho não sabia qual dos dois
+     era o assunto e qual era o dado. Em caixa alta ele deixa de competir e
+     passa a rotular, que é o papel dele.
+
+     O mascote fica em 44pt e não em 52: ele é a assinatura da marca no card, não
+     o protagonista. Quem manda no espaço é o cronômetro.
+     */
+    HStack(spacing: 12) {
+      CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
+        .frame(width: 44, height: 44)
+
+      VStack(alignment: .leading, spacing: 3) {
         Text(context.attributes.subjectName.isEmpty
-             ? "Estudando"
-             : context.attributes.subjectName)
-          .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(.white.opacity(0.6))
+             ? "ESTUDANDO"
+             : context.attributes.subjectName.uppercased())
+          .font(.system(size: 11, weight: .semibold))
+          .tracking(0.8)
+          .foregroundStyle(.white.opacity(0.55))
           .lineLimit(1)
 
         TimerText(state: context.state)
-          .font(.system(size: 34, weight: .semibold, design: .rounded))
+          .font(.system(size: 38, weight: .semibold, design: .rounded))
           .monospacedDigit()
+          // A 38pt, uma sessão que passa de 10 horas ganha dígito e empurraria
+          // os controles para fora. Encolher a fonte é melhor que truncar o
+          // tempo ou espremer os botões.
+          .lineLimit(1)
+          .minimumScaleFactor(0.8)
           .foregroundStyle(.white)
       }
 
-      Spacer(minLength: 8)
+      Spacer(minLength: 12)
 
       VStack(spacing: 8) {
         LinkButton(
@@ -121,7 +153,7 @@ private struct LockScreenView: View {
       }
     }
     .padding(.horizontal, 16)
-    .padding(.vertical, 14)
+    .padding(.vertical, 12)
   }
 }
 
@@ -163,10 +195,13 @@ private struct LinkButton: View {
   var body: some View {
     Link(destination: URL(string: url)!) {
       Image(systemName: systemName)
-        .font(.system(size: 13, weight: .bold))
+        .font(.system(size: 14, weight: .bold))
         .foregroundStyle(tint)
-        .frame(width: 34, height: 26)
-        .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+        // 40×30 e não 34×26: são os dois controles reais do card, e na tela
+        // bloqueada o dedo chega sem mira. O ganho de área não custa altura,
+        // porque quem define a altura do card é o cronômetro ao lado.
+        .frame(width: 40, height: 30)
+        .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
     }
   }
 }

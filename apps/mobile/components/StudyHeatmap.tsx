@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { getStudyHeatmap } from '../services/sessions';
 import { diasComEstudo, montarSemanas, rotulosDeMes, type DiaDoMapa } from '../lib/study-heatmap';
+import Press from './ui/Press';
 import { useTheme, type Palette, radius, space, text } from '../theme';
 
 /** Lado do quadradinho, e o respiro entre eles. */
@@ -15,6 +16,14 @@ const PASSO = CELULA + VAO;
 const ALTURA_MES = 15;
 /** Coluna fixa dos dias da semana, à esquerda. */
 const LARGURA_DIAS = 28;
+/**
+ * Largura reservada a um nome de mês abreviado (3 letras a 10pt).
+ *
+ * Serve para encostar o último rótulo na borda em vez de deixá-lo transbordar:
+ * o mês corrente costuma ocupar uma coluna só, e sem esse recuo "ago" sairia
+ * metade para fora da área que rola.
+ */
+const LARGURA_ROTULO_MES = 24;
 
 /**
  * Só seg/qua/sex ganham nome, como no GitHub. Os sete caberiam — em 12pt de
@@ -57,30 +66,65 @@ export default function StudyHeatmap() {
   const [carregando, setCarregando] = useState(true);
   const [falhou, setFalhou] = useState(false);
 
+  /**
+   * `vivo` mora fora do efeito de busca para que o retry possa descartar a
+   * resposta de uma tentativa anterior que chegue atrasada.
+   *
+   * O `vivo.current = true` na entrada não é redundante: em StrictMode o React
+   * monta, desmonta e remonta: sem ele a limpeza do primeiro ciclo deixaria a
+   * flag em `false` para sempre, e o mapa nunca sairia de "carregando" — some
+   * da tela em dev e aparece em produção, que é o pior tipo de bug.
+   */
+  const vivo = useRef(true);
   useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const mapa = await getStudyHeatmap();
-        if (!vivo) return;
-        const porDia = Object.fromEntries(mapa.days.map((d) => [d.date, d.minutes]));
-        setSemanas(montarSemanas(mapa.from, mapa.to, porDia));
-        setFalhou(false);
-      } catch (erro) {
-        // Nunca em silêncio: mapa vazio e mapa quebrado não podem desenhar
-        // igual — foi assim que o feed passou semanas parecendo vazio.
-        console.warn('[mapa de constância] não deu para carregar', erro);
-        if (vivo) setFalhou(true);
-      } finally {
-        if (vivo) setCarregando(false);
-      }
-    })();
-    return () => { vivo = false; };
+    vivo.current = true;
+    return () => { vivo.current = false; };
   }, []);
 
-  if (carregando || falhou || semanas.length === 0) {
-    // Sem dado, o bloco inteiro some. Um esqueleto permanente no perfil seria
-    // ruído; e quem nunca estudou não precisa de um mapa vazio para saber.
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const mapa = await getStudyHeatmap();
+      if (!vivo.current) return;
+      const porDia = Object.fromEntries(mapa.days.map((d) => [d.date, d.minutes]));
+      setSemanas(montarSemanas(mapa.from, mapa.to, porDia));
+      setFalhou(false);
+    } catch (erro) {
+      console.warn('[mapa de constância] não deu para carregar', erro);
+      if (vivo.current) setFalhou(true);
+    } finally {
+      if (vivo.current) setCarregando(false);
+    }
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  /**
+   * **O mapa não some quando a busca falha.**
+   *
+   * Este bloco já devolveu `null` para os três estados de uma vez, com o
+   * comentário de que "sem dado o bloco some". Só que sem dado ele **não** some:
+   * `montarSemanas` só devolve vazio com a janela invertida (`study-heatmap.ts`),
+   * e a API sempre manda `from` ≤ `to`. Conta sem nenhum estudo desenha a grade
+   * cinza dizendo "0 dias" — que é a resposta certa para "nunca estudei".
+   *
+   * Ou seja, o único caminho até o invisível era a falha, e ela desenhava igual
+   * a "não existe mapa". O `console.warn` continua, mas ninguém lê console num
+   * device: era o mesmo defeito que fez o feed passar semanas parecendo vazio.
+   */
+  if (falhou) {
+    return (
+      <Press haptic="light" scale={0.98} onPress={carregar} style={[styles.bloco, styles.blocoErro]}>
+        <Text style={styles.erro}>{t('heatmapError')}</Text>
+        <Text style={styles.tentar}>{tc('retry')}</Text>
+      </Press>
+    );
+  }
+
+  // Carregando devolve nada de propósito: um esqueleto que pisca a cada abertura
+  // do perfil é ruído, e a espera aqui é curta. `semanas` vazio fica como rede —
+  // janela invertida não deve desenhar uma grade que mente.
+  if (carregando || semanas.length === 0) {
     return null;
   }
 
@@ -129,7 +173,21 @@ export default function StudyHeatmap() {
                 layout de fluxo ele empurraria a grade para fora do alinhamento. */}
             <View style={[styles.faixaDeMeses, { width: semanas.length * PASSO }]}>
               {meses.map(({ coluna, mes }) => (
-                <Text key={`${coluna}-${mes}`} style={[styles.rotuloMes, { left: coluna * PASSO }]}>
+                <Text
+                  key={`${coluna}-${mes}`}
+                  style={[
+                    styles.rotuloMes,
+                    {
+                      // O último rótulo cede alguns pontos para a esquerda em vez
+                      // de transbordar. Desalinha um pouco da coluna, e é o preço
+                      // de o mês corrente sempre aparecer.
+                      left: Math.min(
+                        coluna * PASSO,
+                        semanas.length * PASSO - LARGURA_ROTULO_MES,
+                      ),
+                    },
+                  ]}
+                >
                   {nomesDeMes[mes]}
                 </Text>
               ))}
@@ -195,6 +253,15 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     padding: space.lg,
     gap: space.md,
   },
+  /**
+   * O estado de falha herda a moldura do bloco para o perfil não pular de
+   * altura quando a rede volta — o mapa aparece no lugar onde o aviso estava.
+   * Não usa `c.danger`: um mapa que não carregou é menos grave que uma sessão
+   * perdida, e gastar o vermelho aqui o desvaloriza onde ele importa.
+   */
+  blocoErro: { gap: space.xs, alignItems: 'center' },
+  erro: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
+  tentar: { ...text.caption, color: c.accent, textAlign: 'center' },
   cabecalho: { flexDirection: 'row', alignItems: 'baseline', gap: space.xs },
   titulo: { ...text.bodyStrong, color: c.fg },
   periodo: { ...text.caption, color: c.fgMuted },

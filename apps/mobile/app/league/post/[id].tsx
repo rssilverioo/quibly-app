@@ -1,5 +1,18 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  InputAccessoryView,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera, ImageIcon, X } from 'lucide-react-native';
@@ -12,6 +25,16 @@ import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
 /** Retrato máximo: 3/4. Acima disso a foto some com o resto da tela. */
 const PORTRAIT_LIMIT = 3 / 4;
+
+/**
+ * Âncora da barra "Concluir" acima do teclado.
+ *
+ * A legenda é `multiline`: Enter tem de quebrar linha, não fechar o teclado —
+ * 280 caracteres pedem parágrafo. Sem `returnKeyType` para fechar, o iOS não
+ * oferece saída nenhuma, e é isso que prende o usuário. A barra devolve a saída
+ * explícita sem tirar a quebra de linha.
+ */
+const ACESSORIO_LEGENDA = 'legenda-do-post';
 
 export default function RoomPhotoPostScreen() {
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +99,24 @@ export default function RoomPhotoPostScreen() {
         <View style={styles.close} />
       </View>
 
-      <View style={styles.body}>
+      <KeyboardAvoidingView
+        style={styles.fill}
+        // O botão de publicar mora no rodapé. Sem isto o teclado sobe por cima
+        // dele e a tela fica sem ação possível — o mesmo beco do teclado preso.
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+      <ScrollView
+        contentContainerStyle={styles.rolagem}
+        // `handled` e não `always`: tirar e escolher foto continuam respondendo
+        // ao primeiro toque com o teclado aberto, que era o risco de fechar o
+        // teclado no toque de fora.
+        keyboardShouldPersistTaps="handled"
+        // Arrastar a tela fecha o teclado acompanhando o dedo.
+        keyboardDismissMode="interactive"
+      >
+        {/* Toque em qualquer área vazia fecha o teclado. `Pressable` sem estilo
+            de toque: isto é uma área de descarte, não um botão. */}
+        <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.body}>
         {photo ? (
           <View style={styles.previewWrap}>
             <Press onPress={choosePhoto}>
@@ -107,8 +147,10 @@ export default function RoomPhotoPostScreen() {
           multiline
           maxLength={280}
           style={styles.caption}
+          inputAccessoryViewID={Platform.OS === 'ios' ? ACESSORIO_LEGENDA : undefined}
         />
-      </View>
+        </Pressable>
+      </ScrollView>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Press onPress={publish} disabled={!photo || submitting} style={[styles.publish, (!photo || submitting) && styles.disabled]}>
@@ -116,6 +158,17 @@ export default function RoomPhotoPostScreen() {
           ? <ActivityIndicator color={c.fgOnAccent} />
           : <Text style={styles.publishText}>{t(error ? 'rooms.tryAgain' : 'rooms.publishPhoto')}</Text>}
       </Press>
+      </KeyboardAvoidingView>
+
+      {Platform.OS === 'ios' ? (
+        <InputAccessoryView nativeID={ACESSORIO_LEGENDA}>
+          <View style={styles.barraTeclado}>
+            <Press onPress={Keyboard.dismiss} style={styles.concluir}>
+              <Text style={styles.concluirTexto}>{t('done')}</Text>
+            </Press>
+          </View>
+        </InputAccessoryView>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -125,7 +178,21 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   header: { height: 56, paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...text.bodyStrong, color: c.fg },
+  fill: { flex: 1 },
+  // `flexGrow` e não `flex`: dentro de um ScrollView o conteúdo precisa poder
+  // crescer além da tela quando o teclado sobe, senão a legenda fica sem para
+  // onde rolar e o campo some atrás do teclado.
+  rolagem: { flexGrow: 1 },
   body: { flex: 1, padding: space.lg, gap: space.lg },
+  barraTeclado: {
+    backgroundColor: c.surface,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+    alignItems: 'flex-end',
+    paddingHorizontal: space.lg,
+  },
+  concluir: { height: 44, justifyContent: 'center', paddingHorizontal: space.sm },
+  concluirTexto: { ...text.bodyStrong, color: c.accent },
   photoActions: { flexDirection: 'row', gap: space.md },
   photoChoice: { flex: 1, aspectRatio: 1, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', gap: space.md },
   choiceText: { ...text.label, color: c.fg },

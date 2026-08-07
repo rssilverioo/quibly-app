@@ -24,6 +24,26 @@ describe('nivelDeEstudo', () => {
 });
 
 describe('montarSemanas', () => {
+  /**
+   * A premissa que decide o que "mapa invisível" significa.
+   *
+   * O componente já tratava grade vazia como "esta conta nunca estudou" e sumia.
+   * Não é isso: sem nenhum dia estudado a grade sai **inteira**, só cinza. O
+   * único jeito de ela sair vazia é a janela vir invertida, que é defeito de
+   * servidor — nunca "usuário novo". Se este teste cair, a regra de visibilidade
+   * do `StudyHeatmap` perde o chão.
+   */
+  it('desenha a grade inteira mesmo sem nenhum dia de estudo', () => {
+    const semanas = montarSemanas('2025-08-01', '2026-08-06', {});
+
+    expect(semanas.length).toBeGreaterThan(50);
+    expect(diasComEstudo(semanas)).toBe(0);
+  });
+
+  it('só devolve vazio quando a janela vem invertida', () => {
+    expect(montarSemanas('2026-08-06', '2026-08-01', {})).toEqual([]);
+  });
+
   it('starts every column on a Sunday, padding the first week', () => {
     // 2026-08-05 é uma quarta-feira. A primeira coluna precisa recuar até
     // domingo 02/08, senão as linhas deixam de ser dias da semana.
@@ -87,11 +107,12 @@ describe('rotulosDeMes', () => {
     }
   });
 
-  it('drops a trailing label with no room to be read', () => {
-    // A janela acaba no dia 2 de setembro: "set" nasceria na última coluna,
-    // espremido contra a borda. Melhor não existir.
+  it('always labels the last month, even in a single column', () => {
+    // A janela acaba no dia 2 de setembro, então "set" ocupa uma coluna só. A
+    // grade abre no fim: é o primeiro mês que o olho encontra, e era justamente
+    // o que a regra antiga descartava por falta de espaço.
     const semanas = montarSemanas('2026-06-01', '2026-09-02', {});
-    expect(rotulosDeMes(semanas).map((r) => r.mes)).not.toContain(8);
+    expect(rotulosDeMes(semanas).map((r) => r.mes)).toContain(8);
   });
 
   it('does not stack two labels on top of each other at the left edge', () => {
