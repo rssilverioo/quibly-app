@@ -9,26 +9,67 @@ export class FirebaseService implements OnModuleInit {
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
+    const storageBucket = this.configService.get<string>('FIREBASE_STORAGE_BUCKET');
+
+    /**
+     * **Três variáveis simples vencem uma variável complicada.**
+     *
+     * Esta é a saída de emergência para o JSON num campo de painel, que já
+     * quebrou de duas formas diferentes: aspas escapadas e `\n` expandido em
+     * quebra de linha real. Nenhuma delas é culpa de quem configurou — é o
+     * editor mexendo no valor.
+     *
+     * `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` e `FIREBASE_PRIVATE_KEY`
+     * são strings curtas e sem estrutura, então não há o que um editor estrague.
+     * Só a chave privada tem `\n`, e ela é normalizada aqui — é a convenção que
+     * o resto do ecossistema já usa por esta mesma razão.
+     *
+     * Tem precedência sobre o JSON: quem setou as três está corrigindo um JSON
+     * que não funcionou, e o conserto tem que ganhar do que estava quebrado.
+     */
+    const contaPorPartes = this.contaDeVariaveisSeparadas();
+    if (contaPorPartes) {
+      this.app = admin.initializeApp({
+        credential: admin.credential.cert(contaPorPartes),
+        storageBucket,
+      });
+      return;
+    }
+
     const serviceAccountJson = this.configService.get<string>(
       'FIREBASE_SERVICE_ACCOUNT_JSON',
     );
 
     if (serviceAccountJson) {
-      const serviceAccount = this.lerContaDeServico(serviceAccountJson);
       this.app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        storageBucket: this.configService.get<string>(
-          'FIREBASE_STORAGE_BUCKET',
-        ),
+        credential: admin.credential.cert(this.lerContaDeServico(serviceAccountJson)),
+        storageBucket,
       });
     } else {
       this.app = admin.initializeApp({
         credential: admin.credential.applicationDefault(),
-        storageBucket: this.configService.get<string>(
-          'FIREBASE_STORAGE_BUCKET',
-        ),
+        storageBucket,
       });
     }
+  }
+
+  /** A conta montada de `FIREBASE_PROJECT_ID` + `CLIENT_EMAIL` + `PRIVATE_KEY`. */
+  private contaDeVariaveisSeparadas(): admin.ServiceAccount | null {
+    const projectId = this.configService.get<string>('FIREBASE_PROJECT_ID')?.trim();
+    const clientEmail = this.configService.get<string>('FIREBASE_CLIENT_EMAIL')?.trim();
+    const privateKeyBruta = this.configService.get<string>('FIREBASE_PRIVATE_KEY');
+
+    if (!projectId || !clientEmail || !privateKeyBruta) return null;
+
+    const privateKey = privateKeyBruta
+      .trim()
+      // Aspas que o painel embrulha em volta do valor.
+      .replace(/^['"]|['"]$/g, '')
+      // `\n` literal vira quebra de verdade: o PEM precisa das linhas, e é
+      // assim que a chave sobrevive a um campo de uma linha só.
+      .replace(/\\n/g, '\n');
+
+    return { projectId, clientEmail, privateKey };
   }
 
   /**
@@ -49,29 +90,60 @@ export class FirebaseService implements OnModuleInit {
   private lerContaDeServico(bruto: string): admin.ServiceAccount {
     const texto = bruto.trim();
 
+    const semAspasSoltas = texto.replace(/^['"]|['"]$/g, '');
+    /**
+     * Quebras de linha **reais** dentro do JSON.
+     *
+     * Foi o que derrubou o deploy de 07/08: o editor do Dokploy expande os `\n`
+     * da chave privada em newlines de verdade, e JSON não aceita caractere de
+     * controle cru dentro de string. O valor chega começando certo
+     * (`{"type":"service_account"…`) e estoura no meio do PEM — que é o pior
+     * lugar para procurar, porque o começo parece perfeito.
+     *
+     * Reescapar devolve exatamente o que o `JSON.stringify` tinha produzido.
+     */
+    const comQuebrasReescapadas = semAspasSoltas
+      .replace(/\r\n/g, '\\n')
+      .replace(/\r/g, '\\n')
+      .replace(/\n/g, '\\n');
+
     const tentativas = [
       texto,
+      semAspasSoltas,
       // Aspas escapadas: desfaz `\"` → `"` e `\\n` → `\n`, nesta ordem — o
       // inverso desfaria o escape das aspas dentro da chave privada.
-      texto.replace(/\\"/g, '"').replace(/\\\\n/g, '\\n'),
-      // Aspas simples em volta do valor inteiro, que alguns painéis adicionam.
-      texto.replace(/^'|'$/g, ''),
+      semAspasSoltas.replace(/\\"/g, '"').replace(/\\\\n/g, '\\n'),
+      comQuebrasReescapadas,
+      // As duas patologias juntas: aspas escapadas E quebras expandidas.
+      comQuebrasReescapadas.replace(/\\"/g, '"'),
     ];
 
+    let ultimoErro = '';
     for (const tentativa of tentativas) {
       try {
         const conta = JSON.parse(tentativa);
         if (conta && typeof conta === 'object' && conta.project_id) return conta;
-      } catch {
-        // Próxima forma.
+      } catch (erro) {
+        ultimoErro = erro instanceof Error ? erro.message : String(erro);
       }
     }
 
+    /**
+     * A mensagem carrega o diagnóstico, não só a reclamação.
+     *
+     * A versão anterior mostrava 40 caracteres do começo — e o começo estava
+     * certo, então ela escondeu exatamente a informação que resolvia. Agora vai
+     * o tamanho (denuncia truncamento), se há quebra de linha crua, e o erro do
+     * `JSON.parse`, que aponta a posição.
+     */
     throw new Error(
       'FIREBASE_SERVICE_ACCOUNT_JSON não é um JSON válido. Deve ser o arquivo da ' +
-        'conta de serviço inteiro, numa linha, com aspas normais (`{"type":...`) e ' +
-        'os `\\n` da chave privada preservados como dois caracteres. ' +
-        `Recebido: ${texto.slice(0, 40)}…`,
+        'conta de serviço inteiro, com aspas normais e os `\\n` da chave privada ' +
+        'preservados como dois caracteres. ' +
+        `[${texto.length} caracteres, ` +
+        `${/[\n\r]/.test(texto) ? 'CONTÉM quebra de linha crua' : 'sem quebra de linha'}, ` +
+        `começa com "${texto.slice(0, 30)}"] ` +
+        `Último erro do parser: ${ultimoErro}`,
     );
   }
 
