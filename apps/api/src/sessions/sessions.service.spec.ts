@@ -819,6 +819,9 @@ describe('updateUserStreak — o recorde nunca fica abaixo do atual', () => {
       studySession: {
         // Acima do mínimo diário, senão o método volta antes de contar o dia.
         aggregate: jest.fn().mockResolvedValue({ _sum: { totalDurationMinutes: 90 } }),
+        // Os dias do miolo, para a regra do dia leve. Vazio = houve dia sem
+        // nenhum estudo, que é o que quebra a corrente.
+        findMany: jest.fn().mockResolvedValue(profile.diasDoMiolo ?? []),
       },
     };
   }
@@ -856,5 +859,112 @@ describe('updateUserStreak — o recorde nunca fica abaixo do atual', () => {
 
     expect(dados.currentStreak).toBe(1);
     expect(dados.longestStreak).toBe(12);
+  });
+});
+
+/**
+ * A regra do dia leve.
+ *
+ * Vinte minutos não ganham o dia — o piso de 25 continua valendo para *ganhar*.
+ * Mas eles também não podiam custar a corrente, e custavam: o dia curto saía
+ * pelo `return` do piso sem atualizar `lastStudyDate`, e o dia seguinte via uma
+ * data que não era "ontem" e reiniciava em 1. O calendário, que não tem piso,
+ * pintava o dia curto de azul — então a tela mostrava quatro dias estudados e
+ * sequência 1 ao mesmo tempo.
+ */
+describe('updateUserStreak — dia leve não quebra a sequência', () => {
+  const DIA = new Date('2026-08-06T14:00:00.000Z');
+
+  function prismaDoCiclo(profile: any, diasDoMiolo: { endedAt: Date }[] = []) {
+    return {
+      profile: {
+        findUnique: jest.fn().mockResolvedValue({ plan: 'FREE', ...profile }),
+        update: jest.fn(),
+      },
+      studySession: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { totalDurationMinutes: 90 } }),
+        findMany: jest.fn().mockResolvedValue(diasDoMiolo),
+      },
+    };
+  }
+
+  const chamar = async (p: any) => {
+    const service = new SessionsService(
+      p as any, {} as any, {} as any, { track: jest.fn() } as any, {} as any,
+    );
+    await (service as any).updateUserStreak('user-1', DIA);
+    return p.profile.update.mock.calls[0]?.[0]?.data;
+  };
+
+  it('continua a corrente quando o dia do meio teve algum estudo', async () => {
+    // Ganhou 04/08, dia curto em 05/08, ganha de novo hoje 06/08.
+    const dados = await chamar(
+      prismaDoCiclo(
+        { lastStudyDate: new Date('2026-08-04T10:00:00.000Z'), currentStreak: 4, longestStreak: 4 },
+        [{ endedAt: new Date('2026-08-05T18:00:00.000Z') }],
+      ),
+    );
+
+    expect(dados.currentStreak).toBe(5);
+    expect(dados.longestStreak).toBe(5);
+  });
+
+  it('quebra quando o dia do meio foi vazio de verdade', async () => {
+    const dados = await chamar(
+      prismaDoCiclo(
+        { lastStudyDate: new Date('2026-08-04T10:00:00.000Z'), currentStreak: 4, longestStreak: 4 },
+        [],
+      ),
+    );
+
+    expect(dados.currentStreak).toBe(1);
+    // O recorde conquistado não é rebaixado pela quebra.
+    expect(dados.longestStreak).toBe(4);
+  });
+
+  it('um único dia vazio no meio de vários curtos já quebra', async () => {
+    // Ganhou 02/08; 03 e 05 tiveram algo, 04 não. Faltam 3 dias no miolo.
+    const dados = await chamar(
+      prismaDoCiclo(
+        { lastStudyDate: new Date('2026-08-02T10:00:00.000Z'), currentStreak: 9, longestStreak: 9 },
+        [
+          { endedAt: new Date('2026-08-03T18:00:00.000Z') },
+          { endedAt: new Date('2026-08-05T18:00:00.000Z') },
+        ],
+      ),
+    );
+
+    expect(dados.currentStreak).toBe(1);
+  });
+
+  it('o caminho de ontem não vai ao banco atrás do miolo', async () => {
+    const p = prismaDoCiclo({
+      lastStudyDate: new Date('2026-08-05T10:00:00.000Z'),
+      currentStreak: 2,
+      longestStreak: 2,
+    });
+
+    const dados = await chamar(p);
+
+    expect(dados.currentStreak).toBe(3);
+    // Ontem é o caso comum: uma consulta a mais por sessão encerrada, todo dia,
+    // para responder algo que a data já responde.
+    expect(p.studySession.findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * O produto tinha duas convenções de dia: a sequência usava hora local do
+ * processo (`setHours`), e o mapa e o calendário usavam UTC. Só coincidiam
+ * porque o servidor roda em UTC.
+ */
+describe('todayWindow — uma convenção de dia só', () => {
+  it('recorta o dia em UTC, e não no fuso do processo', () => {
+    const service = new SessionsService({} as any, {} as any, {} as any, {} as any, {} as any);
+
+    const { start, end } = (service as any).todayWindow(new Date('2026-08-06T02:30:00.000Z'));
+
+    expect(start.toISOString()).toBe('2026-08-06T00:00:00.000Z');
+    expect(end.toISOString()).toBe('2026-08-07T00:00:00.000Z');
   });
 });

@@ -1,0 +1,42 @@
+# Como o Dokploy (nixpacks) constrói e inicia a **API**.
+#
+# Sem este arquivo o nixpacks adivinha, e adivinhou errado duas vezes:
+#
+# 1. **"No start command could be found."** Ele procura um `start` no
+#    `package.json` da raiz. Aqui a raiz é só o monorepo — quem tem `start` é o
+#    `apps/api`, e o nixpacks não entra em workspace atrás disso. O comando de
+#    início vive no `railway.toml`, que o nixpacks não lê.
+#
+# 2. **Node 18.** O CI roda em 22 (`.github/workflows/ci.yml`), e 18 já saiu de
+#    suporte. O build passaria e o comportamento divergiria do que os testes
+#    provaram — o pior dos dois desfechos.
+#
+# Mantido em espelho com o `railway.toml`. Se um comando mudar aqui, tem que
+# mudar lá: os dois descrevem o mesmo serviço para provedores diferentes.
+providers = ["node"]
+
+[phases.setup]
+# `openssl` é do Prisma, não do Node: sem ele o engine não sobe em runtime, e o
+# erro só aparece no primeiro acesso ao banco.
+nixPkgs = ["nodejs_22", "openssl"]
+
+[phases.install]
+# `npm ci` na raiz instala todos os workspaces. É mais do que a API precisa, e é
+# o preço de um lockfile só — que é o que garante que o deploy usa exatamente as
+# versões que o CI testou.
+cmds = ["npm ci"]
+
+[phases.build]
+# Só o que a API precisa. O `turbo run build` que o nixpacks tinha adivinhado
+# construiria o `apps/web` junto — trabalho e superfície de falha para um pacote
+# que este serviço não serve.
+cmds = [
+  "npm run build -w packages/shared",
+  "cd apps/api && npx prisma generate && npx nest build",
+]
+
+[start]
+# `migrate deploy` antes do processo subir. Aplica só migrações já commitadas,
+# nunca gera nenhuma — é a forma segura em produção, e é o que garante que uma
+# coluna nova exista antes do primeiro pedido que a use.
+cmd = "cd apps/api && npx prisma migrate deploy && node dist/main.js"

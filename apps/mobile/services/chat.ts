@@ -1,5 +1,6 @@
 import { api } from '../lib/api';
 import type { ChatMessage } from '@quibly/shared';
+import { mensagensDaResposta, type ChatMessageComAutor } from '../lib/chat-messages';
 
 export async function sendMessage(
   leagueId: string,
@@ -9,38 +10,19 @@ export async function sendMessage(
   return api.post<ChatMessage>(`/chat/${leagueId}`, { content });
 }
 
+/**
+ * As mensagens da sala, da mais nova para a mais velha.
+ *
+ * O tipo do `api.get` é `unknown` de propósito: era exatamente aqui que um
+ * `api.get<ChatMessage[]>` afirmava um array que a API nunca mandou (ela devolve
+ * `{ messages, hasMore }`), e o compilador não tinha como discordar. Quem
+ * conhece o formato é `mensagensDaResposta`, que é testado.
+ */
 export async function getMessages(
   leagueId: string,
   limitCount = 50
-): Promise<ChatMessage[]> {
-  return api.get<ChatMessage[]>(`/chat/${leagueId}?limit=${limitCount}`);
-}
-
-// Polling-based replacement for real-time Firestore listener
-let pollingIntervals: Record<string, ReturnType<typeof setInterval>> = {};
-
-export function subscribeToMessages(
-  leagueId: string,
-  callback: (messages: ChatMessage[]) => void
-): () => void {
-  // Initial fetch
-  getMessages(leagueId).then(callback).catch(() => {});
-
-  // Poll every 3 seconds
-  const interval = setInterval(async () => {
-    try {
-      const messages = await getMessages(leagueId);
-      callback(messages);
-    } catch {
-      // Silently fail on polling errors
-    }
-  }, 3000);
-
-  pollingIntervals[leagueId] = interval;
-
-  // Return unsubscribe function
-  return () => {
-    clearInterval(interval);
-    delete pollingIntervals[leagueId];
-  };
+): Promise<ChatMessageComAutor[]> {
+  return mensagensDaResposta(
+    await api.get<unknown>(`/chat/${leagueId}?limit=${limitCount}`),
+  );
 }

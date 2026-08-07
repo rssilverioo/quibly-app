@@ -1,7 +1,7 @@
 import { ChallengesService } from './challenges.service';
 
 describe('ChallengesService.leaderboard', () => {
-  it('ranks server-calculated minutes and includes the caller position', async () => {
+  it('ranqueia por DIAS de presença, e os minutos viram o desempate', async () => {
     const prisma = {
       leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'member' }) },
       league: {
@@ -12,10 +12,19 @@ describe('ChallengesService.leaderboard', () => {
           startDate: new Date('2026-08-01'),
           endDate: new Date('2026-08-08'),
           members: [
-            { userId: 'me', displayName: 'Eu', user: { handle: 'eu', avatarUrl: null } },
-            { userId: 'friend', displayName: 'Bia', user: { handle: 'bia', avatarUrl: null } },
+            { userId: 'me', displayName: 'Eu', user: { handle: 'eu', avatarUrl: null, timezone: 'UTC' } },
+            { userId: 'friend', displayName: 'Bia', user: { handle: 'bia', avatarUrl: null, timezone: 'UTC' } },
           ],
         }),
+      },
+      // Eu apareci em dois dias; a Bia num só, e com mais minutos. Antes ela
+      // liderava por causa dos 50 minutos; agora o que conta é ter aparecido.
+      feedPost: {
+        findMany: jest.fn().mockResolvedValue([
+          { userId: 'me', createdAt: new Date('2026-08-02T10:00:00.000Z') },
+          { userId: 'me', createdAt: new Date('2026-08-04T10:00:00.000Z') },
+          { userId: 'friend', createdAt: new Date('2026-08-03T10:00:00.000Z') },
+        ]),
       },
       studySession: {
         findMany: jest.fn().mockResolvedValue([
@@ -36,10 +45,13 @@ describe('ChallengesService.leaderboard', () => {
     );
 
     expect(result.entries.map((entry) => [entry.rank, entry.userId, entry.metricValue])).toEqual([
-      [1, 'friend', 50],
-      [2, 'me', 30],
+      [1, 'me', 2],
+      [2, 'friend', 1],
     ]);
-    expect(result.me).toEqual({ rank: 2, metricValue: 30 });
+    expect(result.me).toEqual({ rank: 1, metricValue: 2 });
+    // Os minutos não somem: deixam de ser a métrica e viram informação.
+    expect(result.entries[0]).toEqual(expect.objectContaining({ minutes: 30, activeDays: 2 }));
+    expect(result.challenge.metric).toBe('days');
     expect(result.entries).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -167,8 +179,10 @@ describe('ChallengesService.details', () => {
     });
     expect(result.challenge.elapsedFraction).toBe(0.5);
     expect(result.rankings).toEqual([
-      expect.objectContaining({ rank: 1, userId: 'b-user', activeDays: 1 }),
-      expect.objectContaining({ rank: 2, userId: 'a-user', activeDays: 2 }),
+      // Antes a Bia liderava com 50 minutos contra 30. Agora lidera quem
+      // apareceu em mais dias, que é o que a sala mede.
+      expect.objectContaining({ rank: 1, userId: 'a-user', activeDays: 2 }),
+      expect.objectContaining({ rank: 2, userId: 'b-user', activeDays: 1 }),
     ]);
     expect(result.groupStats).toEqual(
       expect.objectContaining({
@@ -252,5 +266,90 @@ describe('ChallengesService.details', () => {
       expect.objectContaining({ userId: 'b-user', activeDays: 1 }),
     ]);
     jest.useRealTimers();
+  });
+});
+
+/**
+ * No modo estudo o dia não sai de foto nenhuma: sai do timer, com o mesmo piso
+ * de 25 minutos que a sequência usa. Três réguas diferentes para "dia estudado"
+ * era o que fazia o perfil dizer "4 dias" e "sequência 1" ao mesmo tempo.
+ */
+describe('ChallengesService.leaderboard — modo estudo', () => {
+  const membro = (userId: string, timezone = 'UTC') => ({
+    userId,
+    displayName: userId,
+    user: { handle: userId, avatarUrl: null, timezone },
+  });
+
+  const prismaDoModoEstudo = (sessions: any[]) => ({
+    leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'member' }) },
+    league: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'c1',
+        name: 'Room',
+        description: 'Sprint',
+        participationMode: 'study',
+        startDate: new Date('2026-08-01'),
+        endDate: new Date('2026-08-08'),
+        members: [membro('me'), membro('friend')],
+      }),
+    },
+    feedPost: { findMany: jest.fn() },
+    studySession: { findMany: jest.fn().mockResolvedValue(sessions) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
+  });
+
+  it('conta o dia por 25 minutos de timer, e ignora o feed', async () => {
+    const prisma = prismaDoModoEstudo([
+      // Eu: dois dias válidos.
+      { userId: 'me', totalDurationMinutes: 30, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') },
+      { userId: 'me', totalDurationMinutes: 40, isVerified: false, endedAt: new Date('2026-08-03T10:00:00Z') },
+      // Bia: um dia longo só.
+      { userId: 'friend', totalDurationMinutes: 300, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') },
+    ]);
+
+    const result = await new ChallengesService(prisma as any).leaderboard('c1', 'me', 1, 20);
+
+    expect(result.entries.map((e) => [e.rank, e.userId, e.metricValue])).toEqual([
+      [1, 'me', 2],
+      [2, 'friend', 1],
+    ]);
+    // Modo estudo não pergunta ao feed.
+    expect(prisma.feedPost.findMany).not.toHaveBeenCalled();
+  });
+
+  it('o piso é do DIA, não da sessão', async () => {
+    const prisma = prismaDoModoEstudo([
+      // Três blocos de 10 no mesmo dia fazem o dia; 10 sozinhos não fazem.
+      { userId: 'me', totalDurationMinutes: 10, isVerified: false, endedAt: new Date('2026-08-02T08:00:00Z') },
+      { userId: 'me', totalDurationMinutes: 10, isVerified: false, endedAt: new Date('2026-08-02T12:00:00Z') },
+      { userId: 'me', totalDurationMinutes: 10, isVerified: false, endedAt: new Date('2026-08-02T20:00:00Z') },
+      { userId: 'friend', totalDurationMinutes: 10, isVerified: false, endedAt: new Date('2026-08-02T08:00:00Z') },
+    ]);
+
+    const result = await new ChallengesService(prisma as any).leaderboard('c1', 'me', 1, 20);
+
+    expect(result.entries.map((e) => [e.userId, e.metricValue])).toEqual([
+      ['me', 1],
+      ['friend', 0],
+    ]);
+  });
+
+  it('o dia é o do fuso de quem estudou', async () => {
+    const prisma = prismaDoModoEstudo([
+      // 02:00 UTC do dia 3 é ainda dia 2 em São Paulo. Contado em UTC daria
+      // dois dias; contado no fuso da pessoa, é um só.
+      { userId: 'me', totalDurationMinutes: 30, isVerified: false, endedAt: new Date('2026-08-02T20:00:00Z') },
+      { userId: 'me', totalDurationMinutes: 30, isVerified: false, endedAt: new Date('2026-08-03T02:00:00Z') },
+    ]);
+    prisma.league.findUnique = jest.fn().mockResolvedValue({
+      id: 'c1', name: 'Room', description: 'Sprint', participationMode: 'study',
+      startDate: new Date('2026-08-01'), endDate: new Date('2026-08-08'),
+      members: [membro('me', 'America/Sao_Paulo')],
+    });
+
+    const result = await new ChallengesService(prisma as any).leaderboard('c1', 'me', 1, 20);
+
+    expect(result.entries[0].metricValue).toBe(1);
   });
 });

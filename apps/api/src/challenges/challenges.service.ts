@@ -8,6 +8,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { Prisma } from '@prisma/client';
+// O mesmo piso que a sequência usa para ganhar um dia. Duas constantes
+// diferentes para "dia estudado" era o que fazia as telas se contradizerem.
+import { SCORING } from '@quibly/shared';
 
 @Injectable()
 export class ChallengesService {
@@ -80,7 +83,10 @@ export class ChallengesService {
         members: {
           include: {
             user: {
-              select: { id: true, handle: true, avatarUrl: true },
+              // `timezone` entra porque o ranking passa a contar DIAS, e dia é
+              // uma noção local. Contar em UTC faria quem estuda às 22h em
+              // UTC−3 ganhar o dia seguinte, e às vezes dois dias numa noite.
+              select: { id: true, handle: true, avatarUrl: true, timezone: true },
             },
           },
         },
@@ -153,6 +159,85 @@ export class ChallengesService {
       totals.set(session.userId, total);
     }
 
+    /**
+     * **O ranking conta DIAS, e o que valida o dia é o modo do desafio.**
+     *
+     * Antes `metricValue` era sempre `Math.round(total.minutes)` — inclusive em
+     * desafio de foto, que passava a ser ranqueado por minutos de timer que ele
+     * nunca pediu. O `participationMode` existia e o ranking o ignorava.
+     *
+     * Minuto como métrica também achata o desafio: num desafio de 30 dias, quem
+     * estuda 4h por dia dispara e a disputa acaba na primeira semana. Contado em
+     * dias, o teto é 30 para todo mundo e o que separa é aparecer — que é o que
+     * a sala mede. Os minutos continuam no payload, como informação e como
+     * desempate.
+     *
+     * ## Como o dia é validado
+     *
+     * - **`photo`**: um check-in de foto no dia. É o que o modo promete, e o
+     *   freio contra a foto da parede branca é social — ela vai para o feed da
+     *   sala, com nome e rosto.
+     * - **`study`**: 25 minutos de timer no dia, a mesma régua que a sequência
+     *   usa para ganhar um dia. Três réguas diferentes para "dia estudado" era
+     *   exatamente o que fazia o perfil dizer "4 dias" e "sequência 1".
+     *
+     * ## Por que `Set` de data local, e não contador
+     *
+     * Quem posta três fotos numa terça apareceu uma vez, não três. E "dia" é do
+     * fuso de quem estudou: contar em UTC daria o dia seguinte para quem estuda
+     * à noite no Brasil. Sem fuso declarado cai em UTC, que é o mesmo default do
+     * resto do produto.
+     */
+    const porFoto = (league.participationMode ?? 'photo') === 'photo';
+
+    const checkIns = porFoto
+      ? await this.prisma.feedPost.findMany({
+          where: {
+            leagueId: challengeId,
+            userId: { in: memberIds },
+            createdAt: { gte: league.startDate, lt: league.endDate },
+          },
+          select: { userId: true, createdAt: true },
+        })
+      : [];
+
+    const fusoDe = new Map(
+      league.members.map((m) => [m.userId, m.user.timezone ?? 'UTC']),
+    );
+    const diaLocal = (at: Date, userId: string) =>
+      this.localDateAndHour(at, fusoDe.get(userId) ?? 'UTC')?.date
+        ?? at.toISOString().slice(0, 10);
+
+    const diasPorUsuario = new Map<string, Set<string>>();
+    const marcar = (userId: string, dia: string) => {
+      const dias = diasPorUsuario.get(userId) ?? new Set<string>();
+      dias.add(dia);
+      diasPorUsuario.set(userId, dias);
+    };
+
+    if (porFoto) {
+      for (const checkIn of checkIns) {
+        marcar(checkIn.userId, diaLocal(checkIn.createdAt, checkIn.userId));
+      }
+    } else {
+      // No modo estudo o piso é diário, não por sessão: três blocos de 10
+      // minutos fazem o dia, e uma sessão de 10 sozinha não faz.
+      const minutosPorDia = new Map<string, number>();
+      for (const session of sessions) {
+        if (!session.endedAt) continue;
+        const chave = `${session.userId}|${diaLocal(session.endedAt, session.userId)}`;
+        minutosPorDia.set(
+          chave,
+          (minutosPorDia.get(chave) ?? 0) + Number(session.totalDurationMinutes),
+        );
+      }
+      for (const [chave, minutos] of minutosPorDia) {
+        if (minutos < SCORING.MIN_DAILY_MINUTES) continue;
+        const [usuario, dia] = chave.split('|');
+        marcar(usuario, dia);
+      }
+    }
+
     const ranked = league.members
       .map((member) => {
         const total = totals.get(member.userId) ?? {
@@ -166,7 +251,8 @@ export class ChallengesService {
           displayName: member.displayName,
           handle: member.user.handle,
           avatarUrl: member.user.avatarUrl,
-          metricValue: Math.round(total.minutes),
+          metricValue: diasPorUsuario.get(member.userId)?.size ?? 0,
+          activeDays: diasPorUsuario.get(member.userId)?.size ?? 0,
           minutes: Math.round(total.minutes),
           sessions: total.sessions,
           verifiedMinutes: Math.round(total.verifiedMinutes),
@@ -177,6 +263,10 @@ export class ChallengesService {
       .sort(
         (a, b) =>
           b.metricValue - a.metricValue ||
+          // Num desafio de 30 dias todo mundo empata em 30 no fim, e é aí que o
+          // ranking mais precisa ordenar. Os minutos decidem — a informação que
+          // deixou de ser a métrica continua sendo o critério.
+          b.minutes - a.minutes ||
           b.verifiedMinutes - a.verifiedMinutes ||
           (a.lastActivityAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
             (b.lastActivityAt?.getTime() ?? Number.MAX_SAFE_INTEGER) ||
@@ -199,8 +289,11 @@ export class ChallengesService {
         id: league.id,
         roomId: league.id,
         title: league.description ?? league.name,
-        metric: 'minutes',
-        metricUnit: 'min',
+        metric: 'days',
+        // Token, e não palavra pronta: o cliente traduz. `'min'` passava despercebido
+        // porque é igual nas duas línguas — "days" apareceria em inglês num app
+        // em português.
+        metricUnit: 'days',
         participationMode: league.participationMode,
         status,
         startsAt: league.startDate,

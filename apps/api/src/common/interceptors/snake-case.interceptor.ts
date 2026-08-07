@@ -15,7 +15,15 @@ function isDecimal(obj: any): boolean {
   return typeof obj === 'object' && obj !== null && typeof obj.toNumber === 'function' && typeof obj.toFixed === 'function';
 }
 
-function transformKeys(obj: any): any {
+/**
+ * Exportada porque o WebSocket precisa da **mesma** conversão.
+ *
+ * O interceptor só roda em resposta HTTP. Sem reaproveitar isto, a mesma
+ * mensagem chegaria como `created_at` pelo REST e `createdAt` pelo socket, e o
+ * cliente teria que conhecer dois formatos do mesmo objeto — divergência que
+ * ninguém nota até uma bolha aparecer sem hora.
+ */
+export function transformKeys(obj: any): any {
   if (obj === null || obj === undefined) return obj;
   if (obj instanceof Date) return obj.toISOString();
   if (isDecimal(obj)) return Number(obj);
