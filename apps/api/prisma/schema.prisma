@@ -409,11 +409,24 @@ model ChatMessage {
   messageType ChatMessageType @default(text) @map("message_type")
   createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz()
 
+  /// Quando o autor apagou. A linha fica: some da conversa, continua para
+  /// moderação. Apagar de verdade levava a prova junto com a mensagem.
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  /// Quando o conteúdo foi expurgado pelo prazo de retenção.
+  ///
+  /// O expurgo esvazia `content` e **preserva autor, data e hora**: é o que
+  /// sustenta uma investigação de abuso sem guardar texto de usuário para
+  /// sempre, que é justamente o que a LGPD manda justificar.
+  purgedAt DateTime? @map("purged_at") @db.Timestamptz()
+
   league    League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   user      Profile?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   reactions ChatReaction[]
 
   @@index([leagueId, createdAt(sort: Desc)])
+  /// O expurgo varre por "apagadas há mais de N dias, ainda com conteúdo".
+  @@index([deletedAt])
   @@map("chat_messages")
 }
 

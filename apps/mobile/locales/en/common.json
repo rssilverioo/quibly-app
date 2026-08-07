@@ -111,7 +111,13 @@
     "durationCustom": "Other",
     "durationEndsOn": "Ends on {{date}}",
     "timeNow": "for {{time}}",
-    "chatOffline": "Can't reach the room. Retrying…"
+    "chatOffline": "Can't reach the room. Retrying…",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "someoneTyping": "someone is typing",
+    "oneTyping": "{{name}} is typing",
+    "manyTyping": "{{count}} people are typing",
+    "messageDeleted": "Message deleted"
   },
   "members": "Members",
   "members_one": "{{count}} member",

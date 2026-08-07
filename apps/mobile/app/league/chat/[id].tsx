@@ -13,16 +13,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, RotateCcw, Send } from 'lucide-react-native';
-import type { ChatMessage } from '@quibly/shared';
 
 import { Mascot } from '../../../components/mascot';
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
 import RoomTabBar from '../../../components/rooms/RoomTabBar';
+import TypingDots from '../../../components/chat/TypingDots';
 import { useAuth } from '../../../contexts/AuthContext';
-import { subscribeToMessages, sendMessage as sendChatMessage } from '../../../services/chat';
-import { autorDaMensagem, type ChatMessageComAutor } from '../../../lib/chat-messages';
+import { getMessages, sendMessage as sendChatMessage } from '../../../services/chat';
+import {
+  conectarAoChat,
+  TYPING_PING_MS,
+  TYPING_TTL_MS,
+  type ConexaoDoChat,
+} from '../../../services/chat-realtime';
 import { getMyRooms } from '../../../services/rooms';
+import { autorDaMensagem } from '../../../lib/chat-messages';
+import { abreDia, rotuloDoDia } from '../../../lib/chat-day';
+import {
+  bolhaOtimista,
+  confirmar,
+  inserir,
+  marcarApagada,
+  marcarFalha,
+  reconciliar,
+  type MensagemNaTela,
+} from '../../../lib/chat-list';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 
 const MIN_INPUT_HEIGHT = 40;
@@ -30,11 +46,15 @@ const MAX_INPUT_HEIGHT = MIN_INPUT_HEIGHT + 20 * 3;
 /** Um carimbo de hora a cada bloco de conversa, não a cada bolha. */
 const TIME_BLOCK_MS = 60 * 60 * 1000;
 
-/** Mensagem que não chegou ao servidor. Fica na tela, apagada, com um ↻. */
-interface FailedMessage {
-  localId: string;
-  content: string;
-}
+/**
+ * Rede de segurança: só roda enquanto o socket está caído.
+ *
+ * Existe porque WebSocket é bloqueado em algumas redes corporativas e de hotel,
+ * e ali o chat não pode simplesmente deixar de funcionar. Dez segundos são
+ * lentos de propósito — é fallback, não o caminho normal, e competir com o
+ * socket seria pagar as duas contas.
+ */
+const FALLBACK_MS = 10_000;
 
 export default function RoomChatScreen() {
   const { t, i18n } = useTranslation('common');
@@ -44,41 +64,88 @@ export default function RoomChatScreen() {
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
 
-  const [messages, setMessages] = useState<ChatMessageComAutor[]>([]);
-  const [failed, setFailed] = useState<FailedMessage[]>([]);
+  const [messages, setMessages] = useState<MensagemNaTela[]>([]);
   const [roomName, setRoomName] = useState('');
   const [inputText, setInputText] = useState('');
   const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
   const [loading, setLoading] = useState(true);
   const [falhou, setFalhou] = useState(false);
-  const listRef = useRef<FlatList<ChatMessageComAutor>>(null);
+  const [conectado, setConectado] = useState(false);
+  /** userId → instante em que o "digitando" vence. */
+  const [digitando, setDigitando] = useState<Record<string, number>>({});
+  const [agora, setAgora] = useState(() => Date.now());
 
+  const listRef = useRef<FlatList<MensagemNaTela>>(null);
+  const conexao = useRef<ConexaoDoChat | null>(null);
+  const ultimoPing = useRef(0);
+  const meuId = user?.uid;
+
+  /** A busca inicial, e a de recuperação quando o socket está fora. */
+  const buscar = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      const doServidor = await getMessages(roomId);
+      // `reconciliar` porque a busca não conhece as bolhas pendentes: escrever
+      // o resultado cru faria a mensagem recém-digitada sumir e voltar.
+      setMessages((atual) => reconciliar(doServidor, atual));
+      setFalhou(false);
+    } catch (erro) {
+      console.warn('[chat] não deu para carregar as mensagens', erro);
+      setFalhou(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [roomId]);
+
+  useEffect(() => { void buscar(); }, [buscar]);
+
+  // ─── Tempo real ───
   useEffect(() => {
     if (!roomId) return;
-    /**
-     * A API já entrega da mais nova para a mais velha, que é a ordem que a
-     * `FlatList inverted` quer — índice 0 desenha embaixo. O `.reverse()` que
-     * havia aqui foi escrito supondo o contrário, e nunca chegou a rodar: a
-     * chamada estourava antes, porque a resposta é `{ messages }` e não um
-     * array. Ver `lib/chat-messages.ts`.
-     */
-    const unsubscribe = subscribeToMessages(
-      roomId,
-      (all) => {
-        setMessages(all);
-        setFalhou(false);
-        setLoading(false);
-      },
-      (erro) => {
-        // O spinner tem que acabar mesmo quando dá errado. Sem isto o chat fica
-        // carregando para sempre, que é como ele estava.
-        console.warn('[chat] não deu para carregar as mensagens', erro);
-        setFalhou(true);
-        setLoading(false);
-      },
-    );
-    return () => unsubscribe();
-  }, [roomId]);
+
+    conexao.current = conectarAoChat(roomId, {
+      onMensagem: (nova) => setMessages((atual) => inserir(atual, nova, meuId)),
+      onApagada: (id) => setMessages((atual) => marcarApagada(atual, id)),
+      onDigitando: (userId, ativo) =>
+        setDigitando((atual) => {
+          if (!ativo) {
+            const { [userId]: _, ...resto } = atual;
+            return resto;
+          }
+          return { ...atual, [userId]: Date.now() + TYPING_TTL_MS };
+        }),
+      onConectado: setConectado,
+    });
+
+    return () => {
+      conexao.current?.desconectar();
+      conexao.current = null;
+    };
+  }, [roomId, meuId]);
+
+  /**
+   * Só busca quando o socket está fora. Com ele de pé, a mensagem chega sozinha
+   * e uma busca periódica seria trabalho puro.
+   */
+  useEffect(() => {
+    if (conectado) return;
+    const id = setInterval(() => void buscar(), FALLBACK_MS);
+    return () => clearInterval(id);
+  }, [conectado, buscar]);
+
+  /**
+   * Um tique de um segundo só quando há alguém digitando.
+   *
+   * O "está digitando" vence sozinho: se o socket de quem digitava cair sem
+   * avisar, o aviso tem que sumir. Sem este tique o componente não teria motivo
+   * para redesenhar e o texto ficaria congelado na tela.
+   */
+  const alguemDigitando = Object.keys(digitando).length > 0;
+  useEffect(() => {
+    if (!alguemDigitando) return;
+    const id = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [alguemDigitando]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -87,62 +154,143 @@ export default function RoomChatScreen() {
       .catch(() => {});
   }, [roomId]);
 
-  const deliver = useCallback(async (content: string, localId?: string) => {
-    if (!roomId || !user) return;
+  /** Quem ainda está digitando agora, sem mim e sem os vencidos. */
+  const digitandoAgora = useMemo(
+    () => Object.entries(digitando)
+      .filter(([id, vence]) => vence > agora && id !== meuId)
+      .map(([id]) => id),
+    [digitando, agora, meuId],
+  );
+
+  const nomeDe = useCallback((userId: string) => {
+    const dele = messages.find((m) => m.user_id === userId);
+    return dele ? autorDaMensagem(dele).nome : '';
+  }, [messages]);
+
+  const avisoDeDigitacao = useMemo(() => {
+    if (digitandoAgora.length === 0) return null;
+    const nomes = digitandoAgora.map(nomeDe).filter(Boolean);
+    // Sem nome conhecido — quem digita ainda não falou nesta sala — o aviso
+    // vira impessoal em vez de sumir: a informação útil é que ALGUÉM digita.
+    if (nomes.length === 0) return t('rooms.someoneTyping');
+    if (nomes.length === 1) return t('rooms.oneTyping', { name: nomes[0] });
+    return t('rooms.manyTyping', { count: nomes.length });
+  }, [digitandoAgora, nomeDe, t]);
+
+  // ─── Envio ───
+  const entregar = useCallback(async (conteudo: string, bolha: MensagemNaTela) => {
+    if (!roomId || !meuId) return;
     try {
-      await sendChatMessage(roomId, user.uid, content);
-      if (localId) setFailed((current) => current.filter((item) => item.localId !== localId));
+      const real = await sendChatMessage(roomId, meuId, conteudo);
+      setMessages((atual) => confirmar(atual, bolha.id, real as MensagemNaTela));
     } catch {
-      // Nunca `Alert.alert`: a bolha fica na tela, apagada, com um ↻.
-      setFailed((current) => localId
-        ? current
-        : [...current, { localId: `local:${Date.now()}`, content }]);
+      // Nunca `Alert.alert`: a bolha fica na tela, apagada, com um ↻ — e com o
+      // texto, que é o que não pode se perder.
+      setMessages((atual) => marcarFalha(atual, bolha.id));
     }
-  }, [roomId, user]);
+  }, [roomId, meuId]);
 
   const onSend = useCallback(() => {
-    const trimmed = inputText.trim();
-    if (!trimmed) return;
+    const conteudo = inputText.trim();
+    if (!conteudo || !roomId || !meuId) return;
+
     setInputText('');
     setInputHeight(MIN_INPUT_HEIGHT);
-    void deliver(trimmed);
-  }, [deliver, inputText]);
+    conexao.current?.digitando(false);
 
-  const timeStamp = useCallback((iso: string) => new Date(iso).toLocaleTimeString(i18n.language, {
+    // A bolha entra ANTES da ida ao servidor. É isto que faz o chat parecer
+    // instantâneo mesmo numa rede ruim — o texto nunca fica preso no campo
+    // esperando resposta.
+    const bolha = bolhaOtimista(conteudo, meuId, roomId);
+    setMessages((atual) => inserir(atual, bolha, meuId));
+    void entregar(conteudo, bolha);
+  }, [entregar, inputText, meuId, roomId]);
+
+  const reenviar = useCallback((bolha: MensagemNaTela) => {
+    setMessages((atual) => atual.map((m) =>
+      m.id === bolha.id ? { ...m, falhou: false, pendente: true } : m,
+    ));
+    void entregar(bolha.content, bolha);
+  }, [entregar]);
+
+  const aoDigitar = useCallback((texto: string) => {
+    setInputText(texto);
+    // Reenviado a cada 1,5s enquanto se digita, e não a cada tecla: o TTL do
+    // aviso é de 4s, então um ping por tecla seria dezenas de eventos para
+    // dizer a mesma coisa.
+    const agoraMs = Date.now();
+    if (texto.length > 0 && agoraMs - ultimoPing.current > TYPING_PING_MS) {
+      ultimoPing.current = agoraMs;
+      conexao.current?.digitando(true);
+    }
+    if (texto.length === 0) conexao.current?.digitando(false);
+  }, []);
+
+  const hora = useCallback((iso: string) => new Date(iso).toLocaleTimeString(i18n.language, {
     hour: '2-digit', minute: '2-digit',
   }), [i18n.language]);
 
-  const renderMessage = useCallback(({ item, index }: { item: ChatMessageComAutor; index: number }) => {
+  const rotulosDeDia = useMemo(() => ({
+    hoje: t('rooms.today'),
+    ontem: t('rooms.yesterday'),
+    formatarData: (iso: string) => new Date(iso).toLocaleDateString(i18n.language, {
+      day: 'numeric', month: 'long',
+    }),
+  }), [i18n.language, t]);
+
+  const renderMessage = useCallback(({ item, index }: { item: MensagemNaTela; index: number }) => {
+    // `index + 1` é a mensagem ANTERIOR no tempo, porque a lista é invertida.
+    const anterior = messages[index + 1];
+    const separador = abreDia(item, anterior) ? rotuloDoDia(item.created_at, rotulosDeDia) : null;
+
     if (item.message_type === 'system') {
-      return <Text style={styles.stamp}>{item.content}</Text>;
+      return (
+        <View>
+          {separador ? <Text style={styles.diaSeparador}>{separador}</Text> : null}
+          <Text style={styles.stamp}>{item.content}</Text>
+        </View>
+      );
     }
 
-    // `index + 1` é a mensagem ANTERIOR no tempo, porque a lista é invertida.
-    const previous = messages[index + 1];
-    const startsBlock = !previous
-      || new Date(item.created_at).getTime() - new Date(previous.created_at).getTime() > TIME_BLOCK_MS;
-    const mine = item.user_id === user?.uid;
-    // O autor vem em `user`, não em `profile` — os dois casts que havia aqui
-    // liam campos que a resposta nunca teve, e o nome saía sempre vazio.
+    const abreBloco = !anterior
+      || new Date(item.created_at).getTime() - new Date(anterior.created_at).getTime() > TIME_BLOCK_MS;
+    const mine = item.user_id === meuId;
     const { nome: author, avatar } = autorDaMensagem(item);
+    const apagada = Boolean(item.deleted_at);
 
     return (
       <View>
-        {startsBlock ? <Text style={styles.stamp}>{timeStamp(item.created_at)}</Text> : null}
-        <View style={[styles.row, mine ? styles.rowMine : styles.rowOther]}>
-          {/* Avatar alinhado ao PÉ da bolha, como na referência. */}
+        {separador ? <Text style={styles.diaSeparador}>{separador}</Text> : null}
+        {abreBloco && !separador ? <Text style={styles.stamp}>{hora(item.created_at)}</Text> : null}
+
+        <View style={[styles.row, mine ? styles.rowMine : styles.rowOther, item.falhou && styles.rowFailed]}>
           {!mine ? <View style={styles.avatar}><Avatar uri={avatar} name={author} size={28} /></View> : null}
           <View style={styles.column}>
-            {/* A referência repete o nome em toda bolha, mesmo em sequência. */}
             {!mine && author ? <Text style={styles.author}>{author}</Text> : null}
-            <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
-              <Text style={mine ? styles.textMine : styles.textOther}>{item.content}</Text>
+            <View style={[
+              styles.bubble,
+              mine ? styles.bubbleMine : styles.bubbleOther,
+              apagada && styles.bubbleApagada,
+              // A bolha pendente é a mesma, um pouco apagada: trocar a cor faria
+              // a mensagem "piscar" de aparência ao ser confirmada.
+              item.pendente && styles.bubblePendente,
+            ]}>
+              {apagada ? (
+                <Text style={styles.textoApagado}>{t('rooms.messageDeleted')}</Text>
+              ) : (
+                <Text style={mine ? styles.textMine : styles.textOther}>{item.content}</Text>
+              )}
             </View>
           </View>
+          {item.falhou ? (
+            <Press onPress={() => reenviar(item)} style={styles.retry}>
+              <RotateCcw size={16} color={c.danger} />
+            </Press>
+          ) : null}
         </View>
       </View>
     );
-  }, [messages, styles, timeStamp, user?.uid]);
+  }, [c.danger, hora, meuId, messages, reenviar, rotulosDeDia, styles, t]);
 
   const canSend = inputText.trim().length > 0;
 
@@ -191,36 +339,31 @@ export default function RoomChatScreen() {
           )}
         />
 
-        {/* Sem isto, uma busca que falha desenha a tela de "nenhuma mensagem
-            ainda" — o chat afirmaria que a sala está vazia quando na verdade
-            não conseguiu perguntar. O `subscribeToMessages` continua tentando a
-            cada 3s, então o aviso some sozinho quando a rede voltar; não há
-            botão de repetir porque não há nada para o dedo acelerar. */}
+        {/* Fica ACIMA da barra de composição e fora da lista: dentro dela, numa
+            `inverted`, o aviso apareceria de cabeça para baixo e rolaria junto
+            com a conversa. */}
+        {avisoDeDigitacao ? (
+          <View style={styles.digitando}>
+            <TypingDots color={c.fgMuted} />
+            <Text style={styles.digitandoTexto}>{avisoDeDigitacao}</Text>
+          </View>
+        ) : null}
+
+        {/* Só quando a busca falhou. A queda do socket sozinha não vira aviso:
+            o fallback de 10s assume, a conversa continua andando, e alarmar
+            seria mentir sobre o que o usuário perde. */}
         {falhou ? (
           <View style={styles.offline}>
             <Text style={styles.offlineText}>{t('rooms.chatOffline')}</Text>
           </View>
         ) : null}
 
-        {/* As que não chegaram vivem fora da lista invertida, logo acima da
-            barra de composição: são as mais novas e a lista não as conhece. */}
-        {failed.map((item) => (
-          <View key={item.localId} style={[styles.row, styles.rowMine, styles.rowFailed, styles.failedRow]}>
-            <View style={[styles.bubble, styles.bubbleMine]}>
-              <Text style={styles.textMine}>{item.content}</Text>
-            </View>
-            <Press onPress={() => void deliver(item.content, item.localId)} style={styles.retry}>
-              <RotateCcw size={16} color={c.danger} />
-            </Press>
-          </View>
-        ))}
-
         <View style={styles.inputBar}>
           <View style={styles.inputWrapper}>
             <TextInput
               style={[styles.input, { height: inputHeight }]}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={aoDigitar}
               placeholder={t('rooms.chatPlaceholder')}
               placeholderTextColor={c.fgSubtle}
               multiline
@@ -249,29 +392,33 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   headerTitle: { ...text.bodyStrong, color: c.fg, flex: 1, textAlign: 'center' },
   list: { paddingHorizontal: space.lg, paddingVertical: space.sm, flexGrow: 1 },
   stamp: { ...text.caption, color: c.fgMuted, textAlign: 'center', height: 32, lineHeight: 32 },
+  // O separador de dia pesa mais que o carimbo de hora: ele divide a conversa,
+  // e o de hora só a pontua.
+  diaSeparador: { ...text.caption, color: c.fgMuted, fontWeight: '600', textAlign: 'center', marginVertical: space.md },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginVertical: 3 },
   rowMine: { justifyContent: 'flex-end' },
   rowOther: { justifyContent: 'flex-start' },
   rowFailed: { opacity: 0.4 },
-  failedRow: { paddingHorizontal: space.lg },
   avatar: { alignSelf: 'flex-end' },
   column: { maxWidth: '78%' },
   author: { ...text.caption, color: c.fgMuted, marginBottom: 4 },
-  // 34 com uma linha, +20 por linha extra — o `minHeight` mais o padding
-  // vertical produzem os dois números sozinhos. REF 33,4 / 52,8.
   bubble: { minHeight: 34, paddingVertical: space.sm, paddingHorizontal: 14, borderRadius: radius.md, justifyContent: 'center' },
   bubbleMine: { backgroundColor: c.accent },
   bubbleOther: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  bubblePendente: { opacity: 0.6 },
+  // A lápide não usa a cor da marca: ela não é mais uma fala, é a ausência de uma.
+  bubbleApagada: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
   textMine: { ...text.body, color: c.fgOnAccent },
   textOther: { ...text.body, color: c.fg },
+  textoApagado: { ...text.body, color: c.fgMuted, fontStyle: 'italic' },
   retry: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  // Faixa fina acima da barra de composição, e não um bloco no meio da conversa:
-  // é um estado da conexão, não uma mensagem.
-  offline: { paddingHorizontal: space.lg, paddingVertical: space.xs, backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border },
-  offlineText: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
   emptyBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ scaleY: -1 }] },
   emptyTitle: { ...text.title2, color: c.fg, textAlign: 'center', marginTop: space.lg },
   emptyBody: { ...text.body, color: c.fgMuted, textAlign: 'center', marginTop: space.sm },
+  digitando: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg, paddingBottom: space.xs },
+  digitandoTexto: { ...text.caption, color: c.fgMuted },
+  offline: { paddingHorizontal: space.lg, paddingVertical: space.xs, backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border },
+  offlineText: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
   inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.bg },
   inputWrapper: { flex: 1, backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, paddingHorizontal: space.lg, justifyContent: 'center' },
   input: { ...text.body, color: c.fg, maxHeight: MAX_INPUT_HEIGHT, textAlignVertical: 'center' },

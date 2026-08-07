@@ -78,30 +78,55 @@ const tela = readFileSync(
   'utf8',
 );
 
+/** O código da tela, sem comentários — eles citam as formas já removidas. */
+const codigoDaTela = tela.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
 describe('chat — a falha não pode ficar invisível', () => {
-  it('o serviço reporta erro em vez de engolir', () => {
+  it('o serviço não engole erro', () => {
     // A forma que causou o defeito: `catch {}` sem nada dentro.
     expect(servico).not.toMatch(/catch\s*\{\s*\}/);
-    expect(servico).toContain('onErro');
   });
 
-  it('a tela desliga o "carregando" também no caminho de erro', () => {
-    const trecho = tela.slice(tela.indexOf('subscribeToMessages('), tela.indexOf('return () => unsubscribe()'));
-    // Duas vezes: uma no sucesso, uma no erro. Só no sucesso era o defeito.
-    expect(trecho.match(/setLoading\(false\)/g)).toHaveLength(2);
+  it('a busca desliga o "carregando" em qualquer saída', () => {
+    // `finally` e não duas chamadas: o defeito original era o `setLoading` viver
+    // só no caminho de sucesso, e um `finally` torna isso impossível de repetir.
+    expect(codigoDaTela).toMatch(/finally\s*\{\s*setLoading\(false\)/);
   });
 
   it('não reordena o que a API já entrega na ordem certa', () => {
-    // Sem os comentários: eles explicam o `.reverse()` que foi removido, e uma
-    // busca crua acusaria a própria explicação.
-    const codigo = tela.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-
     // `inverted` desenha o índice 0 embaixo, e a API manda `createdAt desc`.
-    expect(codigo).not.toContain('.reverse()');
-    expect(codigo).toContain('setMessages(all)');
+    // Quem garante a ordem agora é `reconciliar`, que é testado à parte.
+    expect(codigoDaTela).not.toContain('.reverse()');
+    expect(codigoDaTela).toContain('reconciliar(');
   });
 
   it('avisa na tela, em vez de fingir sala vazia', () => {
     expect(tela).toContain("t('rooms.chatOffline')");
+  });
+});
+
+describe('chat — tempo real', () => {
+  it('a bolha aparece antes da ida ao servidor', () => {
+    const envio = codigoDaTela.slice(codigoDaTela.indexOf('const onSend'));
+    const otimista = envio.indexOf('bolhaOtimista');
+    const entrega = envio.indexOf('entregar(');
+
+    // A ordem é o ponto: montar a bolha depois da entrega devolveria o chat ao
+    // comportamento de esperar a rede para mostrar o próprio texto.
+    expect(otimista).toBeGreaterThan(-1);
+    expect(otimista).toBeLessThan(entrega);
+  });
+
+  it('a sala é reconectada, e o polling só existe como rede de segurança', () => {
+    expect(codigoDaTela).toContain('conectarAoChat(');
+    // A busca periódica sai de cena quando o socket está de pé.
+    expect(codigoDaTela).toMatch(/if\s*\(conectado\)\s*return;/);
+  });
+
+  it('para de anunciar digitação ao enviar', () => {
+    const envio = codigoDaTela.slice(codigoDaTela.indexOf('const onSend'));
+    // Sem isto o "está digitando" fica na tela dos outros depois da mensagem
+    // já ter chegado — o aviso desmentido pela própria bolha.
+    expect(envio).toContain('digitando(false)');
   });
 });

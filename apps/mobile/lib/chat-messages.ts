@@ -22,6 +22,11 @@ export interface AutorDaMensagem {
 
 export interface ChatMessageComAutor extends ChatMessage {
   user?: AutorDaMensagem;
+  /**
+   * Quando o autor apagou. O servidor manda a marca e **não manda o texto** —
+   * é o cliente que desenha a lápide. Ausente nas mensagens vivas.
+   */
+  deleted_at?: string | null;
 }
 
 export interface RespostaDeMensagens {

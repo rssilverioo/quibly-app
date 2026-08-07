@@ -111,7 +111,13 @@
     "durationCustom": "Outro",
     "durationEndsOn": "Termina em {{date}}",
     "timeNow": "há {{time}}",
-    "chatOffline": "Sem conexão com a sala. Tentando de novo…"
+    "chatOffline": "Sem conexão com a sala. Tentando de novo…",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "someoneTyping": "alguém está digitando",
+    "oneTyping": "{{name}} está digitando",
+    "manyTyping": "{{count}} pessoas estão digitando",
+    "messageDeleted": "Mensagem apagada"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
