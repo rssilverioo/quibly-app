@@ -15,7 +15,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
  * o delete precisam concordar: se um grava no bucket público e o outro apaga no
  * privado, o objeto fica órfão para sempre e ninguém percebe.
  */
-const PREFIXOS_PUBLICOS = ['avatars/', 'room-posts/', 'audio-clips/'] as const;
+const PREFIXOS_PUBLICOS = ['avatars/', 'room-posts/', 'audio-clips/', 'room-covers/'] as const;
 
 @Injectable()
 export class StorageService implements OnModuleInit {

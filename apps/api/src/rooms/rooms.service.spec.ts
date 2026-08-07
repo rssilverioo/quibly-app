@@ -250,3 +250,116 @@ describe('RoomsService.create', () => {
     expect(prisma.league.update).not.toHaveBeenCalled();
   });
 });
+
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+
+/**
+ * Editar sala é a única superfície onde um membro pode estragar o que é de
+ * outro. A checagem de dono é o que separa "o app não tem a tela" de "qualquer
+ * um apaga a sala de qualquer um".
+ */
+describe('RoomsService — só o dono edita a sala', () => {
+  const SALA = 'sala-1';
+  const DONO = 'user-dono';
+
+  const storage = () => ({
+    uploadPublic: jest.fn().mockResolvedValue('https://cdn.tryquibly.com/room-covers/sala-1/1.jpg'),
+    chaveDaUrl: jest.fn((url: string) => (url.includes('cdn.tryquibly.com') ? 'room-covers/antiga.jpg' : null)),
+    deleteObject: jest.fn().mockResolvedValue(undefined),
+  });
+
+  const prismaCom = (league: any) => ({
+    league: {
+      findUnique: jest.fn().mockResolvedValue(league),
+      update: jest.fn().mockImplementation(({ data }) => ({ id: SALA, ...data })),
+      delete: jest.fn().mockResolvedValue({}),
+    },
+  });
+
+  const service = (prisma: any, st: any = storage()) =>
+    new RoomsService(prisma as any, {} as any, {} as any, st as any);
+
+  const arquivo = { buffer: Buffer.from('x'), mimetype: 'image/jpeg', originalname: 'capa.jpg' };
+
+  it('renomeia quando é o dono', async () => {
+    const prisma = prismaCom({ id: SALA, ownerId: DONO, coverUrl: null });
+
+    const r = await service(prisma).update(DONO, SALA, { name: '  Sala nova  ' });
+
+    // O nome vai aparado: espaço nas pontas é erro de digitação, não escolha.
+    expect(prisma.league.update.mock.calls[0][0].data.name).toBe('Sala nova');
+    expect(r.id).toBe(SALA);
+  });
+
+  it.each([
+    ['update', (s: RoomsService) => s.update('intruso', SALA, { name: 'x' })],
+    ['updateCover', (s: RoomsService) => s.updateCover('intruso', SALA, arquivo)],
+    ['remove', (s: RoomsService) => s.remove('intruso', SALA)],
+  ])('recusa %s de quem não é dono', async (_caso, acao) => {
+    const prisma = prismaCom({ id: SALA, ownerId: DONO, coverUrl: null });
+
+    await expect(acao(service(prisma))).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.league.update).not.toHaveBeenCalled();
+    expect(prisma.league.delete).not.toHaveBeenCalled();
+  });
+
+  it('recusa sala que não existe', async () => {
+    const prisma = prismaCom(null);
+
+    await expect(service(prisma).update(DONO, SALA, { name: 'x' })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  /**
+   * A ordem importa: apagar antes de gravar deixaria a sala sem capa nenhuma se
+   * o upload falhasse. Órfão custa bytes; apagado custa a imagem do usuário.
+   */
+  it('grava a capa nova antes de apagar a antiga', async () => {
+    const st = storage();
+    const prisma = prismaCom({
+      id: SALA, ownerId: DONO, coverUrl: 'https://cdn.tryquibly.com/room-covers/antiga.jpg',
+    });
+
+    await service(prisma, st).updateCover(DONO, SALA, arquivo);
+
+    const gravou = prisma.league.update.mock.invocationCallOrder[0];
+    const apagou = st.deleteObject.mock.invocationCallOrder[0];
+    expect(gravou).toBeLessThan(apagou);
+  });
+
+  it('não apaga URL que não é nossa', async () => {
+    const st = storage();
+    const prisma = prismaCom({
+      id: SALA, ownerId: DONO, coverUrl: 'https://exemplo.com/foto.jpg',
+    });
+
+    await service(prisma, st).updateCover(DONO, SALA, arquivo);
+
+    // `chaveDaUrl` devolve null para URL de terceiro; apagar às cegas ali
+    // miraria uma chave que não é nossa.
+    expect(st.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it('a capa vai para o prefixo público, sob o id da sala', async () => {
+    const st = storage();
+    const prisma = prismaCom({ id: SALA, ownerId: DONO, coverUrl: null });
+
+    await service(prisma, st).updateCover(DONO, SALA, arquivo);
+
+    expect(st.uploadPublic.mock.calls[0][0]).toMatch(/^room-covers\/sala-1\/\d+\.jpg$/);
+  });
+
+  it('apagar a sala leva a capa junto', async () => {
+    const st = storage();
+    const prisma = prismaCom({
+      id: SALA, ownerId: DONO, coverUrl: 'https://cdn.tryquibly.com/room-covers/antiga.jpg',
+    });
+
+    await service(prisma, st).remove(DONO, SALA);
+
+    // O cascade do banco não alcança o storage.
+    expect(st.deleteObject).toHaveBeenCalledWith('room-covers/antiga.jpg');
+    expect(prisma.league.delete).toHaveBeenCalledWith({ where: { id: SALA } });
+  });
+});

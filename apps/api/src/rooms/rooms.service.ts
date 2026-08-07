@@ -1,8 +1,14 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaguesService } from '../leagues/leagues.service';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { UpdateRoomDto } from './dto/update-room.dto';
 import { ChallengesService } from '../challenges/challenges.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -146,6 +152,106 @@ export class RoomsService {
     };
   }
 
+
+  /**
+   * Só o dono mexe na sala. Devolve a liga quando pode, lança quando não.
+   *
+   * Confere `ownerId` e não `role: 'owner'` do membro: são duas fontes para a
+   * mesma verdade, e a coluna da liga é a que manda — um membro promovido a
+   * `admin` não vira dono, e a checagem por papel deixaria essa porta aberta.
+   */
+  private async exigirDono(roomId: string, userId: string) {
+    const league = await this.prisma.league.findUnique({
+      where: { id: roomId },
+      select: { id: true, ownerId: true, coverUrl: true },
+    });
+
+    if (!league) throw new NotFoundException('Room not found');
+    if (league.ownerId !== userId) {
+      throw new ForbiddenException('Only the room owner can do that');
+    }
+    return league;
+  }
+
+  /**
+   * Renomear e redescrever. A data fica de fora de propósito — ver
+   * `UpdateRoomDto`.
+   */
+  async update(userId: string, roomId: string, dto: UpdateRoomDto) {
+    await this.exigirDono(roomId, userId);
+
+    const league = await this.prisma.league.update({
+      where: { id: roomId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.description !== undefined ? { description: dto.description.trim() } : {}),
+      },
+      select: { id: true, name: true, description: true, coverUrl: true },
+    });
+
+    return league;
+  }
+
+  /**
+   * Troca a capa da sala.
+   *
+   * A anterior é apagada **depois** de a nova estar gravada e o banco apontar
+   * para ela: se a ordem fosse a inversa, uma falha no upload deixaria a sala
+   * sem capa nenhuma. Falhar em apagar deixa um objeto órfão, que custa alguns
+   * bytes; falhar tendo apagado custa a imagem do usuário.
+   */
+  async updateCover(
+    userId: string,
+    roomId: string,
+    file: { buffer: Buffer; mimetype: string; originalname: string },
+  ) {
+    const league = await this.exigirDono(roomId, userId);
+
+    const extensao = (file.originalname.split('.').pop() ?? 'jpg').toLowerCase();
+    const url = await this.storageService.uploadPublic(
+      `room-covers/${roomId}/${Date.now()}.${extensao}`,
+      file.buffer,
+      file.mimetype || 'image/jpeg',
+    );
+
+    const atualizada = await this.prisma.league.update({
+      where: { id: roomId },
+      data: { coverUrl: url },
+      select: { id: true, coverUrl: true },
+    });
+
+    if (league.coverUrl) {
+      const chave = this.storageService.chaveDaUrl(league.coverUrl);
+      // Só apaga o que **nós** montamos. `chaveDaUrl` devolve `null` para URL de
+      // terceiro, e apagar às cegas ali miraria uma chave que não é nossa.
+      if (chave) await this.storageService.deleteObject(chave).catch(() => {});
+    }
+
+    return atualizada;
+  }
+
+  /**
+   * Apaga a sala inteira.
+   *
+   * É o caminho oficial para "errei a data": a janela do desafio não é
+   * editável, então quem precisa de outra recria. Por isso o destrutivo existe
+   * — sem ele, um erro de data seria permanente.
+   *
+   * O `onDelete: Cascade` do schema leva membros, posts e mensagens junto. A
+   * capa é apagada aqui porque o storage não participa do cascade do banco.
+   */
+  async remove(userId: string, roomId: string) {
+    const league = await this.exigirDono(roomId, userId);
+
+    if (league.coverUrl) {
+      const chave = this.storageService.chaveDaUrl(league.coverUrl);
+      if (chave) await this.storageService.deleteObject(chave).catch(() => {});
+    }
+
+    await this.prisma.league.delete({ where: { id: roomId } });
+    return { deleted: true };
+  }
+
   async listForUser(userId: string) {
     const now = new Date();
     const memberships = await this.prisma.leagueMember.findMany({
@@ -180,6 +286,10 @@ export class RoomsService {
       return {
         id: league.id,
         name: league.name,
+        // `null` aqui não é ausência de dado: é o app caindo no desenho gerado
+        // a partir do id, que é o padrão bom. Toda sala mostrava o coelho porque
+        // esta coluna não existia até 07/08.
+        coverUrl: league.coverUrl,
         memberCount: league.members.length,
         totalSp: membership.totalSp,
         lastPostAt: league.feedPosts[0]?.createdAt ?? null,
