@@ -37,7 +37,7 @@ struct StudyTimerLiveActivity: Widget {
     ActivityConfiguration(for: StudyTimerAttributes.self) { context in
       LockScreenView(context: context)
         .activityBackgroundTint(Color.black.opacity(0.55))
-        .activitySystemActionForegroundColor(Color.quiblyLime)
+        .activitySystemActionForegroundColor(Color.quiblyAccent)
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -70,30 +70,38 @@ struct StudyTimerLiveActivity: Widget {
           .frame(width: 22, height: 22)
       } compactTrailing: {
         /*
-         Nada de `minWidth` aqui.
+         **A largura reservada é o defeito, e ela vem do intervalo.**
 
-         Havia um `.frame(minWidth: 52)` para o contador não truncar depois de
-         uma hora. O efeito colateral era o defeito relatado: a área compacta da
-         Dynamic Island **cresce para caber o que se pede**, então 52pt fixos de
-         um lado, mais o castelo do outro, esticavam a ilha numa faixa preta
-         muito mais larga que a área nativa.
+         Tirar o `minWidth` não bastou: num 17 Pro Max a ilha continuou esticada
+         numa faixa preta com um vão enorme entre o coelho e o contador.
 
-         O `minWidth` resolvia o sintoma errado. Quem decide a largura da ilha é
-         o sistema; o nosso trabalho é caber nela. A fonte menor e o
-         `lineLimit(1)` dão ao contador a chance de caber por mérito — e se uma
-         sessão de três dígitos de hora truncar, ainda é melhor que uma faixa
-         atravessando a tela inteira.
+         A causa é `Text(timerInterval:)`, que reserva a largura do **maior valor
+         possível do intervalo**. O intervalo terminava em `Date.distantFuture`,
+         então o maior valor era uma duração astronômica e o sistema reservava
+         espaço para algo como `8760:00:00`. A ilha crescia para caber um número
+         que nunca apareceria.
+
+         É um comportamento conhecido e sem correção da Apple até hoje
+         (developer.apple.com/forums/thread/723316). O contorno documentado é o
+         daqui: **limitar o intervalo** e dar uma largura fixa pequena, com
+         `minimumScaleFactor` para o caso raro em vez de expansão.
+
+         `JANELA_DO_CONTADOR` fecha o intervalo em 24h, e a largura é a de
+         `59:59` — a sessão que passa de uma hora encolhe alguns por cento em vez
+         de esticar a ilha, que é a troca certa.
          */
         TimerText(state: context.state)
           .font(.system(size: 13, weight: .semibold, design: .rounded))
           .monospacedDigit()
           .lineLimit(1)
-          .foregroundStyle(Color.quiblyLime)
+          .minimumScaleFactor(0.7)
+          .frame(width: 46)
+          .foregroundStyle(Color.quiblyAccent)
       } minimal: {
         CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
           .frame(width: 20, height: 20)
       }
-      .keylineTint(Color.quiblyLime)
+      .keylineTint(Color.quiblyAccent)
     }
   }
 }
@@ -168,11 +176,23 @@ private struct LockScreenView: View {
 private struct TimerText: View {
   let state: StudyTimerAttributes.ContentState
 
+  /**
+   Até onde o contador pode ir — e por que ele precisa de um teto.
+
+   `Date.distantFuture` fazia o SwiftUI reservar a largura de uma duração
+   astronômica, esticando a Dynamic Island (ver `compactTrailing`). Vinte e
+   quatro horas cobrem qualquer sessão real com folga: o servidor já limita os
+   minutos creditados por dia, então uma sessão que encostasse neste teto seria
+   um defeito de outro lugar, não um caso de uso.
+   */
+  private static let JANELA_DO_CONTADOR: TimeInterval = 24 * 60 * 60
+
   var body: some View {
     if state.isRunning {
       // A âncora: onde a sessão teria começado se tivesse corrido direto.
       let anchor = state.startedAt.addingTimeInterval(-Double(state.baseElapsedSeconds))
-      Text(timerInterval: anchor...Date.distantFuture, countsDown: false)
+      Text(timerInterval: anchor...anchor.addingTimeInterval(Self.JANELA_DO_CONTADOR),
+           countsDown: false)
     } else {
       Text(Self.format(state.baseElapsedSeconds))
     }
@@ -190,7 +210,7 @@ private struct TimerText: View {
 private struct LinkButton: View {
   let systemName: String
   let url: String
-  var tint: Color = .quiblyLime
+  var tint: Color = .quiblyAccent
 
   var body: some View {
     Link(destination: URL(string: url)!) {
@@ -218,7 +238,7 @@ private struct ActionRow: View {
           .foregroundStyle(.black)
           .frame(maxWidth: .infinity)
           .padding(.vertical, 9)
-          .background(Color.quiblyLime, in: Capsule())
+          .background(Color.quiblyAccent, in: Capsule())
       }
 
       Link(destination: URL(string: "quibly://session/end")!) {
@@ -235,8 +255,20 @@ private struct ActionRow: View {
 }
 
 extension Color {
-  /// `BRAND_LIME` de `theme/colors.ts` — a mesma cor no app e fora dele.
-  static let quiblyLime = Color(red: 0.784, green: 1.0, blue: 0.302)
+  /**
+   O accent do tema **escuro** de `theme/colors.ts` — `#4C9AFF`.
+
+   Escuro e não claro porque a Live Activity é sempre sobre fundo escuro: na
+   Dynamic Island é preto, e o card da tela bloqueada usa
+   `activityBackgroundTint` preto. O accent claro (`#0043BA`) é um azul fundo,
+   pensado para texto sobre branco — ali ele quase desaparece.
+
+   Isto estava em `BRAND_LIME` com um comentário dizendo "a mesma cor no app e
+   fora dele". O app trocou o accent pelo azul do coelho em 31/07 e a Live
+   Activity ficou para trás, então o comentário virou mentira e o cronômetro na
+   tela de bloqueio era a única superfície do produto ainda em verde-limão.
+   */
+  static let quiblyAccent = Color(red: 0.298, green: 0.604, blue: 1.0)
 }
 
 // MARK: - bundle da extensão
