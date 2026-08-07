@@ -53,6 +53,30 @@ describe('o contrato da Live Activity é o mesmo dos dois lados', () => {
    * mudança nenhuma. Enquanto as duas cópias existirem, elas têm que ser iguais,
    * para que o engano custe no máximo um `git diff`.
    */
+  /**
+   * `LiveActivityIntent` **roda no processo do app**, não no da extensão.
+   *
+   * A primeira versão do intent vivia só em `targets/widget/`, e o botão chamava
+   * um tipo que o app não conhecia: o dedo tocava e nada acontecia. Como o
+   * `perform()` falha em silêncio, não havia log, erro nem sintoma.
+   *
+   * A extensão precisa do tipo para **declarar** o botão; o app precisa dele
+   * para **executar**. As duas cópias têm que ser iguais, como as de
+   * `StudyTimerAttributes`.
+   */
+  it('o App Intent existe no app e na extensão, idênticos', () => {
+    expect(ler('../modules/study-timer/ios/SessionActionIntent.swift')).toBe(
+      ler('../targets/widget/SessionActionIntent.swift'),
+    );
+  });
+
+  it('cada caminho de falha do intent se identifica no log', () => {
+    // Quatro causas indistinguíveis num processo sem tela foi o que impediu o
+    // diagnóstico da primeira vez.
+    const intent = ler('../targets/widget/SessionActionIntent.swift');
+    expect((intent.match(/NSLog/g) ?? []).length).toBeGreaterThanOrEqual(5);
+  });
+
   it('mantém a cópia morta do widget idêntica à que compila', () => {
     expect(ler('../modules/study-timer/widget/StudyTimerLiveActivity.swift')).toBe(
       ler('../targets/widget/StudyTimerLiveActivity.swift'),
