@@ -125,7 +125,11 @@
     "countsForChallenge": "Counts for challenge",
     "doesNotCount": "Does not count",
     "checkInTime": "Check-in time",
-    "done": "Done"
+    "done": "Done",
+    "daysUnit_one": "day",
+    "daysUnit_other": "days",
+    "minutesUnit_one": "min",
+    "minutesUnit_other": "min"
   },
   "members": "Members",
   "members_one": "{{count}} member",

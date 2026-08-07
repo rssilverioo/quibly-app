@@ -125,7 +125,11 @@
     "countsForChallenge": "Conta no desafio",
     "doesNotCount": "Não conta no desafio",
     "checkInTime": "Horário",
-    "done": "Concluir"
+    "done": "Concluir",
+    "daysUnit_one": "dia",
+    "daysUnit_other": "dias",
+    "minutesUnit_one": "min",
+    "minutesUnit_other": "min"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

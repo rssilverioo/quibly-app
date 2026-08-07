@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { unidadeDaMetrica } from '../../../lib/metrica';
+import { formatarTempoDeEstudo } from '../../../lib/study-time';
 
 import { Mascot } from '../../../components/mascot';
 import Avatar from '../../../components/ui/Avatar';
@@ -175,7 +177,7 @@ export default function ChallengeLeaderboardScreen() {
                   avatar: item.avatar_url ?? '',
                   rank: String(item.rank),
                   value: String(item.metric_value),
-                  unit: data.challenge.metric_unit,
+                  unit: unidadeDaMetrica(data.challenge.metric_unit, item.metric_value, t),
                 },
               })}
               style={[styles.rowWrap, index === 0 && styles.rowFirst, last && styles.rowLast, isMe && styles.meRow]}
@@ -185,7 +187,15 @@ export default function ChallengeLeaderboardScreen() {
                 <Avatar uri={item.avatar_url} name={item.display_name} size={40} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name} numberOfLines={1}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>
-                  <Text style={styles.metric}>{item.metric_value} {data.challenge.metric_unit}</Text>
+                  {/* A métrica é o dia; as horas viram a linha de baixo. O
+                      número que ordena e o número que informa não podem
+                      competir pelo mesmo peso. */}
+                  <Text style={styles.metric}>
+                    {item.metric_value} {unidadeDaMetrica(data.challenge.metric_unit, item.metric_value, t)}
+                  </Text>
+                  {item.minutes > 0 ? (
+                    <Text style={styles.metricSecundaria}>{formatarTempoDeEstudo(item.minutes)}</Text>
+                  ) : null}
                 </View>
                 <Text style={styles.rank}>{digits}<Text style={styles.rankSuffix}>{suffix}</Text></Text>
                 <ChevronRight size={17} color={c.fgSubtle} />
@@ -241,6 +251,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   meBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: c.accent, zIndex: 1 },
   name: { ...text.bodyStrong, color: c.fg },
   metric: { ...text.caption, color: c.fgMuted, marginTop: 2 },
+  // Mais apagada que a métrica: as horas informam, os dias ordenam. Dar o mesmo
+  // peso às duas devolveria a dúvida de qual número vale.
+  metricSecundaria: { ...text.caption, color: c.fgSubtle },
   rank: { ...text.title3, color: c.fg },
   rankSuffix: { ...text.label, color: c.fg },
   winnerBlock: { alignItems: 'center', paddingBottom: space.xl },
