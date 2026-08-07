@@ -40,4 +40,136 @@ describe('o contrato da Live Activity é o mesmo dos dois lados', () => {
     expect(contrato).toContain('struct StudyTimerAttributes');
     expect(contrato).toContain('ContentState');
   });
+
+  /**
+   * A UI também está duplicada, e essa cópia é pior que a do contrato.
+   *
+   * `modules/study-timer/widget/` **não é compilado**: o `source_files` do
+   * podspec varre recursivamente a partir de `ios/`, então a pasta irmã fica de
+   * fora. É resto do plugin caseiro que o `@bacons/apple-targets` substituiu.
+   *
+   * O perigo não é o arquivo morto — é ele parecer vivo. Quem abrir o módulo
+   * para ajustar o widget edita o arquivo errado, compila, instala, e não vê
+   * mudança nenhuma. Enquanto as duas cópias existirem, elas têm que ser iguais,
+   * para que o engano custe no máximo um `git diff`.
+   */
+  it('mantém a cópia morta do widget idêntica à que compila', () => {
+    expect(ler('../modules/study-timer/widget/StudyTimerLiveActivity.swift')).toBe(
+      ler('../targets/widget/StudyTimerLiveActivity.swift'),
+    );
+  });
+});
+
+/**
+ * O defeito visto num 17 Pro Max: a Ilha compacta esticava numa faixa preta com
+ * um vão enorme entre o mascote e o contador.
+ *
+ * `Text(timerInterval:)` reserva a largura do **maior valor do intervalo**, e o
+ * intervalo terminava em `Date.distantFuture` — largura de uma duração
+ * astronômica. É comportamento conhecido e sem correção da Apple
+ * (developer.apple.com/forums/thread/723316), então o teto tem que vir de nós.
+ */
+describe('a Dynamic Island compacta não pode reservar largura infinita', () => {
+  const widget = ler('../targets/widget/StudyTimerLiveActivity.swift');
+  /**
+   * Sem comentários: eles explicam o `distantFuture` e o `quiblyLime` que foram
+   * removidos, e uma busca crua acusaria a própria explicação. O que está sob
+   * teste é o código.
+   */
+  const codigo = widget.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+  it('não ancora o contador em distantFuture', () => {
+    expect(codigo).not.toContain('Date.distantFuture');
+  });
+
+  it('fecha o intervalo numa janela finita', () => {
+    expect(codigo).toContain('JANELA_DO_CONTADOR');
+  });
+
+  /**
+   * O app conta para baixo dentro do bloco; a Ilha contava para cima na sessão
+   * inteira. Dois números diferentes lado a lado, sem pista de qual valia.
+   */
+  it('conta para baixo quando há bloco, como a tela do app', () => {
+    expect(codigo).toContain('countsDown: true');
+    expect(codigo).toContain('phaseStartedAt...state.phaseEndsAt');
+  });
+
+  it('a barra é do sistema, não calculada por nós', () => {
+    // Uma barra que nós calculássemos ficaria congelada na fração do último
+    // heartbeat — 30 segundos de atraso, com o app suspenso.
+    expect(codigo).toContain('ProgressView(timerInterval:');
+  });
+
+  it('usa o accent azul do app, e não o lime aposentado em 31/07', () => {
+    // O cronômetro na tela de bloqueio era a última superfície do produto ainda
+    // em verde-limão.
+    expect(codigo).not.toContain('quiblyLime');
+    expect(codigo).toContain('quiblyAccent');
+  });
+});
+
+/**
+ * Os botões do widget disparavam `quibly://session/pause` e o app mostrava
+ * **"Unmatched Route"** — visto num print de aparelho. Os controles da tela de
+ * bloqueio nunca funcionaram no iOS.
+ *
+ * Este é o caminho de quem está em iOS 16, onde `Button(intent:)` não existe em
+ * Live Activity.
+ */
+describe('o deep link da Live Activity tem que cair em algum lugar', () => {
+  const layout = ler('../app/_layout.tsx');
+  const widget = ler('../targets/widget/StudyTimerLiveActivity.swift');
+
+  it('o app entende as três ações que o widget dispara', () => {
+    for (const acao of ['pause', 'resume', 'end']) {
+      expect(widget).toContain(`quibly://session/${acao}`);
+    }
+    expect(layout).toContain("path?.startsWith('session/')");
+  });
+
+  it('aplica no mesmo store dos controles em tela', () => {
+    // Um segundo caminho para pausar seria um segundo jeito de as duas
+    // superfícies discordarem.
+    expect(layout).toContain('useSessionStore.getState()');
+    expect(layout).toMatch(/store\.pause\(\)/);
+    expect(layout).toMatch(/store\.resume\(\)/);
+    expect(layout).toMatch(/store\.endSession\(\)/);
+  });
+
+  it('não age quando não há sessão viva', () => {
+    // O widget pode sobreviver ao fim da sessão; agir ali recriaria estado que
+    // o servidor já encerrou.
+    expect(layout).toContain('if (!store.currentSession) return;');
+  });
+});
+
+/**
+ * Swift aceita comentário de bloco **aninhado**.
+ *
+ * Um `/` seguido de `*` dentro de um comentário — escrevendo uma rota como
+ * `quibly://session/` com curinga, por exemplo — abre um bloco novo que nunca
+ * fecha e engole o resto do arquivo. O compilador então reclama de símbolos
+ * "não encontrados" que estão logo ali, e o erro real fica a dezenas de linhas
+ * de distância.
+ *
+ * Custou um build inteiro da EAS. O teste é uma contagem, e paga por si.
+ */
+describe('os comentários do Swift não podem engolir o arquivo', () => {
+  const arquivos = [
+    '../targets/widget/StudyTimerLiveActivity.swift',
+    '../targets/widget/SessionActionIntent.swift',
+    '../targets/widget/StudyTimerAttributes.swift',
+    '../targets/widget/CasteloMark.swift',
+    '../modules/study-timer/ios/StudyTimerModule.swift',
+    '../modules/study-timer/ios/StudyTimerAttributes.swift',
+  ];
+
+  it.each(arquivos)('%s tem blocos de comentário balanceados', (caminho) => {
+    const fonte = ler(caminho);
+    const abre = (fonte.match(/\/\*/g) ?? []).length;
+    const fecha = (fonte.match(/\*\//g) ?? []).length;
+
+    expect({ arquivo: caminho, abre, fecha }).toEqual({ arquivo: caminho, abre, fecha: abre });
+  });
 });

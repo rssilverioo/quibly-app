@@ -315,6 +315,8 @@ model League {
   participationMode String  @default("photo") @map("participation_mode")
   status      LeagueStatus  @default(upcoming)
   inviteCode  String        @unique @map("invite_code")
+  /// Capa escolhida pelo dono. `null` cai no desenho gerado a partir do id.
+  coverUrl    String?       @map("cover_url")
   maxMembers  Int           @default(50) @map("max_members")
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt   DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()

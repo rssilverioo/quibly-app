@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, CalendarDays, Plus } from 'lucide-react-native';
+import { ArrowLeft, CalendarDays, Pencil, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import FeedRow from '../../../components/feed/FeedRow';
@@ -208,7 +208,32 @@ export default function RoomFeedScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.backRow}><Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press></View>
+      {/* O lápis aparece **só para o dono**. Mostrá-lo a todo mundo e recusar
+          no toque seria pior que escondê-lo: prometeria uma ação que não
+          existe. A API confere a posse de novo — esta linha é conveniência, não
+          segurança. */}
+      <View style={styles.backRow}>
+        <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+        {room.my_membership?.role === 'owner' ? (
+          <Press
+            onPress={() => router.push({
+              // `as any` na rota: o typegen do expo-router só conhece arquivos
+              // que já existiam quando rodou, e este é novo. Some no próximo
+              // `expo start`.
+              pathname: '/league/room/edit/[id]' as any,
+              params: {
+                id: room.id,
+                name: room.name,
+                description: room.description ?? '',
+                cover: room.cover_url ?? '',
+              },
+            })}
+            style={styles.back}
+          >
+            <Pencil size={19} color={c.fg} />
+          </Press>
+        ) : null}
+      </View>
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
@@ -261,7 +286,7 @@ export default function RoomFeedScreen() {
 const makeStyles = (c: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg, paddingHorizontal: space.lg },
-  backRow: { height: 44, paddingHorizontal: space.md },
+  backRow: { height: 44, paddingHorizontal: space.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   // Margem lateral de 16 (`space.lg`) em toda a tela, como a referência. Era
   // 24, e era ela que obrigava a capa a se desfazer do recuo com margem

@@ -195,16 +195,18 @@ export default function RoomPhotoPostScreen() {
                 <Text style={styles.ladoValor} numberOfLines={2}>{sala?.name ?? '—'}</Text>
               </View>
 
-              {/* A mídia. O quadro existe desde o início, vazio. */}
-              <View>
-                <Press onPress={choosePhoto} style={[styles.quadro, { aspectRatio: photo ? ratio : PORTRAIT_LIMIT }]}>
+              {/* A mídia. O quadro existe desde o início, vazio.
+                  **Tocar o quadro tira foto; o lápis escolhe da galeria.**
+                  Antes os dois abriam a galeria quando já havia foto, e o
+                  toque no quadro nunca chamava a câmera — o gesto grande da
+                  tela servia a ação secundária. */}
+              <View style={styles.midia}>
+                <Press onPress={takePhoto} style={[styles.quadro, { aspectRatio: photo ? ratio : PORTRAIT_LIMIT }]}>
                   {photo
                     ? <Image source={{ uri: photo.uri }} style={styles.foto} />
                     : <Text style={styles.semFoto}>{t('rooms.noMedia')}</Text>}
                 </Press>
-                {/* O lápis monta sobre a borda de baixo, como na referência:
-                    pertence ao quadro, não à coluna. */}
-                <Press onPress={photo ? choosePhoto : takePhoto} style={styles.lapis}>
+                <Press onPress={choosePhoto} style={styles.lapis}>
                   <Pencil size={18} color={c.fg} />
                 </Press>
               </View>
@@ -285,6 +287,12 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   ladoRotulo: { ...text.caption, color: c.fgSubtle, textAlign: 'center' },
   ladoValor: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
 
+  /**
+   * O lápis pendura 18pt abaixo do quadro, e sem esta folga o card da legenda
+   * — desenhado depois, portanto por cima — cobria metade dele. No aparelho o
+   * botão simplesmente não recebia o toque: parecia estar lá e não estava.
+   */
+  midia: { paddingBottom: 22 },
   quadro: {
     width: LARGURA_MIDIA,
     borderRadius: radius.md,

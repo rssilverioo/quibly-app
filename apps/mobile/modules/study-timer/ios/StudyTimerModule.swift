@@ -41,9 +41,37 @@ public class StudyTimerModule: Module {
   public func definition() -> ModuleDefinition {
     Name("StudyTimer")
 
+    /**
+     Guarda no App Group o que o App Intent da extensão precisa saber.
+
+     A extensão não enxerga o `UserDefaults.standard` do app, então este é o
+     único jeito de o botão da Live Activity descobrir **qual** sessão pausar e
+     **com que** credencial. Chamado no start da sessão e limpo no fim.
+
+     Sem isto o intent não tem o que fazer e o widget cai no deep link, que abre
+     o app — funciona, e é o caminho lento.
+     */
+    Function("setActionContext") { (sessionId: String, token: String, apiBaseUrl: String) in
+      guard let defaults = UserDefaults(suiteName: "group.com.quibly.app") else {
+        NSLog("[StudyTimer] App Group indisponível — os botões vão abrir o app.")
+        return
+      }
+      defaults.set(sessionId, forKey: "quibly.session.id")
+      defaults.set(token, forKey: "quibly.session.actionToken")
+      defaults.set(apiBaseUrl, forKey: "quibly.api.baseUrl")
+    }
+
+    /// Apaga a credencial quando a sessão acaba. Token vivo sem sessão é
+    /// superfície de ataque sem função.
+    Function("clearActionContext") {
+      guard let defaults = UserDefaults(suiteName: "group.com.quibly.app") else { return }
+      defaults.removeObject(forKey: "quibly.session.id")
+      defaults.removeObject(forKey: "quibly.session.actionToken")
+    }
+
     Events("onNotificationAction")
 
-    AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool) in
+    AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in
       #if canImport(ActivityKit)
       guard #available(iOS 16.2, *) else {
         NSLog("[StudyTimer] iOS < 16.2: sem Live Activity neste aparelho.")
@@ -71,7 +99,8 @@ public class StudyTimerModule: Module {
       // Only one session can be live at a time (the server enforces it with a
       // 409), so adopt any existing activity rather than stacking a second.
       if let existing = Activity<StudyTimerAttributes>.activities.first {
-        await Self.update(existing, elapsedSeconds: elapsedSeconds, isRunning: isRunning)
+        await Self.update(existing, elapsedSeconds: elapsedSeconds, isRunning: isRunning,
+                          phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel)
         return
       }
 
@@ -79,7 +108,10 @@ public class StudyTimerModule: Module {
       let state = StudyTimerAttributes.ContentState(
         startedAt: Date(),
         baseElapsedSeconds: elapsedSeconds,
-        isRunning: isRunning
+        isRunning: isRunning,
+        phaseRemainingSeconds: phaseRemaining,
+        phaseTotalSeconds: phaseTotal,
+        phaseLabel: phaseLabel
       )
 
       do {
@@ -95,11 +127,12 @@ public class StudyTimerModule: Module {
       #endif
     }
 
-    AsyncFunction("update") { (subject: String, elapsedSeconds: Int, isRunning: Bool) in
+    AsyncFunction("update") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in
       #if canImport(ActivityKit)
       guard #available(iOS 16.2, *) else { return }
       guard let activity = Activity<StudyTimerAttributes>.activities.first else { return }
-      await Self.update(activity, elapsedSeconds: elapsedSeconds, isRunning: isRunning)
+      await Self.update(activity, elapsedSeconds: elapsedSeconds, isRunning: isRunning,
+                        phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel)
       #endif
     }
 
@@ -132,7 +165,10 @@ public class StudyTimerModule: Module {
   private static func update(
     _ activity: Activity<StudyTimerAttributes>,
     elapsedSeconds: Int,
-    isRunning: Bool
+    isRunning: Bool,
+    phaseRemaining: Int,
+    phaseTotal: Int,
+    phaseLabel: String
   ) async {
     // Re-anchoring `startedAt` to now on every update is what keeps the
     // lock-screen timer honest: the system counts forward from this instant,
@@ -141,7 +177,10 @@ public class StudyTimerModule: Module {
     let state = StudyTimerAttributes.ContentState(
       startedAt: Date(),
       baseElapsedSeconds: elapsedSeconds,
-      isRunning: isRunning
+      isRunning: isRunning,
+      phaseRemainingSeconds: phaseRemaining,
+      phaseTotalSeconds: phaseTotal,
+      phaseLabel: phaseLabel
     )
     await activity.update(.init(state: state, staleDate: nil))
   }

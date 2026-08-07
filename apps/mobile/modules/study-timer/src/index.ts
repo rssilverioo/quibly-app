@@ -31,9 +31,26 @@ export type StudyTimerEvents = {
 };
 
 declare class StudyTimerModuleType extends NativeModule<StudyTimerEvents> {
-  start(subject: string, elapsedSeconds: number, isRunning: boolean): Promise<void>;
-  update(subject: string, elapsedSeconds: number, isRunning: boolean): Promise<void>;
+  start(
+    subject: string,
+    elapsedSeconds: number,
+    isRunning: boolean,
+    phaseRemainingSeconds: number,
+    phaseTotalSeconds: number,
+    phaseLabel: string,
+  ): Promise<void>;
+  update(
+    subject: string,
+    elapsedSeconds: number,
+    isRunning: boolean,
+    phaseRemainingSeconds: number,
+    phaseTotalSeconds: number,
+    phaseLabel: string,
+  ): Promise<void>;
   stop(): Promise<void>;
+  /** iOS: guarda no App Group o que o App Intent da extensão precisa. */
+  setActionContext(sessionId: string, token: string, apiBaseUrl: string): void;
+  clearActionContext(): void;
   isBatteryOptimizationIgnored(): boolean;
   openBatterySettings(): Promise<void>;
   getManufacturer(): string;

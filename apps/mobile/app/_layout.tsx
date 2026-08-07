@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { LogBox, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -70,6 +70,28 @@ function extractJoinPath(url: string | null): string | null {
   }
 
   return null;
+}
+
+
+/**
+ * A ação que a Live Activity pediu, ou `null`.
+ *
+ * Os botões do widget disparam `quibly://session/pause|resume|end`. Até aqui
+ * ninguém tratava essas rotas: o app abria e o Expo Router mostrava
+ * **"Unmatched Route"** — os controles da tela de bloqueio nunca funcionaram no
+ * iOS, e o defeito só apareceu num print de aparelho.
+ *
+ * Este é o caminho de quem está em **iOS 16**, onde `Button(intent:)` não
+ * existe em Live Activity. No 17+ o App Intent age sem abrir o app; aqui o app
+ * abre e o store faz o resto — mais lento, e melhor que não funcionar.
+ */
+function acaoDaLiveActivity(url: string | null): 'pause' | 'resume' | 'end' | null {
+  if (!url) return null;
+  const { path } = Linking.parse(url);
+  if (!path?.startsWith('session/')) return null;
+
+  const acao = path.slice('session/'.length);
+  return acao === 'pause' || acao === 'resume' || acao === 'end' ? acao : null;
 }
 
 function RootLayoutNav() {
@@ -158,11 +180,30 @@ function RootLayoutNav() {
     return () => subscription.remove();
   }, [router]);
 
+  /**
+   * Aplica pause/resume/end no **mesmo store** que os controles em tela usam.
+   *
+   * É o que garante que as duas superfícies não possam discordar: não há um
+   * segundo caminho para pausar, só um segundo jeito de pedir.
+   */
+  const aplicarAcao = useCallback((acao: 'pause' | 'resume' | 'end' | null) => {
+    if (!acao) return;
+    const store = useSessionStore.getState();
+    // Sem sessão viva não há o que pausar — o widget pode ter sobrevivido ao
+    // fim dela, e agir aqui recriaria estado que o servidor já encerrou.
+    if (!store.currentSession) return;
+
+    if (acao === 'pause') void store.pause();
+    else if (acao === 'resume') void store.resume();
+    else void store.endSession();
+  }, []);
+
   // Capture deep links
   useEffect(() => {
     Linking.getInitialURL().then((url) => {
       const joinPath = extractJoinPath(url);
       if (joinPath) pendingDeepLink.current = joinPath;
+      aplicarAcao(acaoDaLiveActivity(url));
     });
 
     const subscription = Linking.addEventListener('url', ({ url }) => {
@@ -174,6 +215,7 @@ function RootLayoutNav() {
           pendingDeepLink.current = joinPath;
         }
       }
+      aplicarAcao(acaoDaLiveActivity(url));
     });
 
     return () => subscription.remove();

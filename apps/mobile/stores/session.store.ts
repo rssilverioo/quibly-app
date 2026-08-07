@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { TimerMode, StudySession } from '@quibly/shared';
+import i18n from '../lib/i18n';
 import { TIMER_PRESETS } from '@quibly/shared/constants';
 import * as sessionsService from '../services/sessions';
 import type { LiveSession } from '../services/sessions';
@@ -8,6 +9,8 @@ import {
   startLiveTimer,
   updateLiveTimer,
   stopLiveTimer,
+  setLiveActionContext,
+  clearLiveActionContext,
 } from '../services/study-timer';
 import {
   schedulePhaseEndNotification,
@@ -41,6 +44,38 @@ import {
 
 /** Phases are a client-side UX concept; the server only sees active/paused. */
 type Phase = 'work' | 'break';
+
+/**
+ * O bloco atual, no formato que a Live Activity precisa.
+ *
+ * Existe para as duas superfícies mostrarem **o mesmo número**. A tela conta
+ * para baixo dentro do bloco de pomodoro; a Live Activity contava para cima na
+ * sessão inteira, e as duas se contradiziam lado a lado.
+ *
+ * No cronômetro livre não há bloco: devolve zeros, e o widget volta a contar
+ * para cima — que ali é a única leitura possível.
+ */
+function faseParaOWidget(estado: {
+  timerMode: TimerMode;
+  phase: Phase;
+  phaseElapsedSeconds: number;
+  workDuration: number;
+  breakDuration: number;
+}) {
+  if (estado.timerMode === 'stopwatch') {
+    return { remainingSeconds: 0, totalSeconds: 0, label: '' };
+  }
+
+  const totalSeconds = (estado.phase === 'work' ? estado.workDuration : estado.breakDuration) * 60;
+  return {
+    remainingSeconds: Math.max(0, totalSeconds - estado.phaseElapsedSeconds),
+    totalSeconds,
+    // Traduzido aqui: a extensão de widget não carrega i18n, e mandar a chave
+    // faria a chave aparecer na tela de bloqueio.
+    label: i18n.t(estado.phase === 'work' ? 'session:active.work' : 'session:active.break'),
+  };
+}
+
 
 interface SessionState {
   currentSession: StudySession | null;
@@ -177,6 +212,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
           get().subjectName ?? '',
           snapshot.elapsedSeconds,
           snapshot.status === 'active',
+          faseParaOWidget(get()),
         );
       },
       onGraceExpired: () => {
@@ -185,12 +221,14 @@ export const useSessionStore = create<SessionState>((set, get) => {
         // now would be a lie, on screen or on the lock screen.
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
-        void stopLiveTimer();
+        clearLiveActionContext();
+      void stopLiveTimer();
       },
       onSessionGone: () => {
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
-        void stopLiveTimer();
+        clearLiveActionContext();
+      void stopLiveTimer();
       },
     });
     heartbeat.start();
@@ -293,10 +331,19 @@ export const useSessionStore = create<SessionState>((set, get) => {
       // Raise the lock-screen surface: the foreground service on Android (which
       // keeps the process, and therefore the heartbeat, alive) and the Live
       // Activity on iOS (which cannot, and only displays).
+      // O token nasce com a sessão e vai para o App Group, onde o App Intent
+      // da extensão o encontra. Sem ele os botões caem no deep link.
+      setLiveActionContext(
+        session.id,
+        (session as { live_action_token?: string | null }).live_action_token,
+        process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com',
+      );
+
       void startLiveTimer(
         get().subjectName ?? '',
         session.elapsed_seconds ?? 0,
         !isPaused,
+        faseParaOWidget(get()),
       );
     },
 
@@ -310,6 +357,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     endSession: async () => {
       cancelSessionNotifications().catch(() => {});
       stopHeartbeat();
+      clearLiveActionContext();
       void stopLiveTimer();
 
       const state = get();
@@ -377,7 +425,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
       const { currentSession } = get();
       // Flip locally first so the UI responds instantly; the request follows.
       set({ isRunning: false, isPaused: true });
-      void updateLiveTimer(get().subjectName ?? '', get().serverElapsedSeconds, false);
+      void updateLiveTimer(get().subjectName ?? '', get().serverElapsedSeconds, false, faseParaOWidget(get()));
       if (!currentSession) return;
       try {
         await sessionsService.pauseSession(currentSession.id);
@@ -399,7 +447,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
       }
 
       set({ isRunning: true, isPaused: false });
-      void updateLiveTimer(get().subjectName ?? '', get().serverElapsedSeconds, true);
+      void updateLiveTimer(get().subjectName ?? '', get().serverElapsedSeconds, true, faseParaOWidget(get()));
       if (!state.currentSession) return;
       try {
         await sessionsService.resumeSession(state.currentSession.id);
@@ -453,6 +501,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     reset: () => {
       cancelSessionNotifications().catch(() => {});
       stopHeartbeat();
+      clearLiveActionContext();
       void stopLiveTimer();
       set(initialState);
     },

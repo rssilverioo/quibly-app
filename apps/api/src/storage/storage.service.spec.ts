@@ -94,6 +94,10 @@ describe('StorageService', () => {
       ['avatars/usuario/avatar.png', 'nomads-public'],
       ['room-posts/sala/usuario/post.jpg', 'nomads-public'],
       ['audio-clips/hash.mp3', 'nomads-public'],
+      // A capa da sala é servida direto ao `<Image>`, como avatar e foto de post.
+      // Fora desta lista, apagá-la miraria o bucket privado e o objeto ficaria
+      // órfão — o mesmo defeito silencioso que a lista existe para evitar.
+      ['room-covers/sala/capa.jpg', 'nomads-public'],
       ['documents/usuario/uuid-arquivo.pdf', 'nomads-uploads'],
       ['lessons/usuario/uuid-aula.m4a', 'nomads-uploads'],
       ['proof-photos/usuario/prova.jpg', 'nomads-uploads'],

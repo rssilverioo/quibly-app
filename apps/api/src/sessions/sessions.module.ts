@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { SessionsController } from './sessions.controller';
+import { LiveActivityController } from './live-activity.controller';
 import { SessionsService } from './sessions.service';
 import { SessionsSweeper } from './sessions.sweeper';
 import { AchievementsModule } from '../achievements/achievements.module';
@@ -8,7 +9,7 @@ import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 @Module({
   imports: [AchievementsModule, AnalyticsModule, EntitlementsModule],
-  controllers: [SessionsController],
+  controllers: [SessionsController, LiveActivityController],
   providers: [SessionsService, SessionsSweeper],
   exports: [SessionsService],
 })

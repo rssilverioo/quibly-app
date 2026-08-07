@@ -26,6 +26,25 @@ describe('check-in — estrutura', () => {
     expect(codigo).toContain("t('rooms.noMedia')");
   });
 
+  /**
+   * O gesto grande serve a ação principal.
+   *
+   * Antes, tocar o quadro abria a galeria e o lápis abria a câmera só quando
+   * não havia foto — com foto, os dois faziam a mesma coisa. A área maior da
+   * tela servia a ação secundária, e a câmera ficava sem gesto próprio.
+   */
+  it('o quadro tira foto e o lápis escolhe da galeria', () => {
+    expect(codigo).toMatch(/onPress=\{takePhoto\}\s+style=\{\[styles\.quadro/);
+    expect(codigo).toMatch(/onPress=\{choosePhoto\}\s+style=\{styles\.lapis/);
+  });
+
+  it('o lápis tem folga para não ser coberto pelo card seguinte', () => {
+    // Ele pendura 18pt abaixo do quadro; sem a folga o card da legenda desenha
+    // por cima e o botão deixa de receber o toque — parece estar lá e não está.
+    expect(codigo).toContain('midia:');
+    expect(codigo).toMatch(/midia:\s*\{\s*paddingBottom:/);
+  });
+
   it('publicar mora no cabeçalho, e não num bloco fixo no rodapé', () => {
     const cabecalho = codigo.indexOf('styles.header');
     const acao = codigo.indexOf('onPress={publish}');
