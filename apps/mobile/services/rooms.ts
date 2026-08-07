@@ -15,6 +15,10 @@ export interface ActiveChallenge {
 export interface RoomSummary {
   id: string;
   name: string;
+  /** O texto do desafio. O servidor sempre mandou; o tipo não declarava. */
+  description?: string | null;
+  /** Papel de quem pediu — `owner` destrava a edição da sala. */
+  my_membership?: { role: string; display_name: string };
   member_count: number;
   total_sp: number;
   last_post_at: string | null;
@@ -244,6 +248,32 @@ export interface CreatedRoomPost {
   caption: string | null;
   photo_url: string | null;
   created_at: string;
+}
+
+/** O que o dono pode mudar. A data não entra — ver `UpdateRoomDto` na API. */
+export function updateRoom(roomId: string, data: { name?: string; description?: string }) {
+  return api.patch<{ id: string; name: string; description: string | null; cover_url: string | null }>(
+    `/rooms/${roomId}`,
+    data,
+  );
+}
+
+/**
+ * Troca a capa da sala.
+ *
+ * Mesmo formato do post de foto: `FormData` com o arquivo, porque é upload e
+ * não JSON. O campo se chama `cover` — é o nome que o `FileInterceptor` da API
+ * espera, e errar aqui produz um 400 sem pista nenhuma.
+ */
+export function updateRoomCover(roomId: string, photo: PostPhotoFile) {
+  const formData = new FormData();
+  formData.append('cover', photo as any);
+  return api.upload<{ id: string; cover_url: string | null }>(`/rooms/${roomId}/cover`, formData);
+}
+
+/** Apaga a sala. Irreversível, e é o caminho oficial para trocar a data. */
+export function deleteRoom(roomId: string) {
+  return api.delete<{ deleted: boolean }>(`/rooms/${roomId}`);
 }
 
 export function createRoomPost(roomId: string, photo: PostPhotoFile, caption: string) {
