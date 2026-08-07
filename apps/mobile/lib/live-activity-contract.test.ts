@@ -143,3 +143,33 @@ describe('o deep link da Live Activity tem que cair em algum lugar', () => {
     expect(layout).toContain('if (!store.currentSession) return;');
   });
 });
+
+/**
+ * Swift aceita comentário de bloco **aninhado**.
+ *
+ * Um `/` seguido de `*` dentro de um comentário — escrevendo uma rota como
+ * `quibly://session/` com curinga, por exemplo — abre um bloco novo que nunca
+ * fecha e engole o resto do arquivo. O compilador então reclama de símbolos
+ * "não encontrados" que estão logo ali, e o erro real fica a dezenas de linhas
+ * de distância.
+ *
+ * Custou um build inteiro da EAS. O teste é uma contagem, e paga por si.
+ */
+describe('os comentários do Swift não podem engolir o arquivo', () => {
+  const arquivos = [
+    '../targets/widget/StudyTimerLiveActivity.swift',
+    '../targets/widget/SessionActionIntent.swift',
+    '../targets/widget/StudyTimerAttributes.swift',
+    '../targets/widget/CasteloMark.swift',
+    '../modules/study-timer/ios/StudyTimerModule.swift',
+    '../modules/study-timer/ios/StudyTimerAttributes.swift',
+  ];
+
+  it.each(arquivos)('%s tem blocos de comentário balanceados', (caminho) => {
+    const fonte = ler(caminho);
+    const abre = (fonte.match(/\/\*/g) ?? []).length;
+    const fecha = (fonte.match(/\*\//g) ?? []).length;
+
+    expect({ arquivo: caminho, abre, fecha }).toEqual({ arquivo: caminho, abre, fecha: abre });
+  });
+});

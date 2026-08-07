@@ -284,8 +284,8 @@ private struct TimerText: View {
 
  **iOS 16** não tem `Button(intent:)` em Live Activity, então cai no `Link`, que
  abre o app e deixa o store fazer o resto. Mais lento, e é o que existe — até
- este commit, esse caminho estava quebrado: nada tratava `quibly://session/*` e
- o app mostrava "Unmatched Route".
+ este commit, esse caminho estava quebrado: nada tratava as rotas
+ `quibly://session/…` e o app mostrava "Unmatched Route".
 
  Os dois terminam no **mesmo** serviço no servidor, então não há como as duas
  rotas produzirem estados diferentes.
