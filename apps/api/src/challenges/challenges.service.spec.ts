@@ -353,3 +353,92 @@ describe('ChallengesService.leaderboard — modo estudo', () => {
     expect(result.entries[0].metricValue).toBe(1);
   });
 });
+
+/**
+ * **A regressão de 07/08.**
+ *
+ * A primeira versão do ranking por dias contava só fotos no modo `photo` — e
+ * como nenhuma tela define o modo, *todo* desafio em produção é `photo`. Quem
+ * estudou vários dias seguidos com o timer apareceu com **zero**.
+ *
+ * Antes de trocar minutos por dias, estudar ao menos somava. A troca apagou o
+ * esforço de quem usa o produto exatamente como ele foi feito para ser usado.
+ */
+describe('ChallengesService.leaderboard — estudar conta como presença', () => {
+  const membro = (userId: string) => ({
+    userId,
+    displayName: userId,
+    user: { handle: userId, avatarUrl: null, timezone: 'UTC' },
+  });
+
+  const prismaDoModoFoto = (sessions: any[], checkIns: any[]) => ({
+    leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'm' }) },
+    league: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'c1', name: 'Room', description: 'Sprint',
+        participationMode: 'photo',
+        startDate: new Date('2026-08-01'), endDate: new Date('2026-08-08'),
+        members: [membro('estudioso'), membro('fotografo')],
+      }),
+    },
+    feedPost: { findMany: jest.fn().mockResolvedValue(checkIns) },
+    studySession: { findMany: jest.fn().mockResolvedValue(sessions) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
+  });
+
+  it('quem só estudou aparece com os dias que estudou, e não com zero', async () => {
+    const prisma = prismaDoModoFoto(
+      [
+        { userId: 'estudioso', totalDurationMinutes: 40, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') },
+        { userId: 'estudioso', totalDurationMinutes: 40, isVerified: false, endedAt: new Date('2026-08-03T10:00:00Z') },
+        { userId: 'estudioso', totalDurationMinutes: 40, isVerified: false, endedAt: new Date('2026-08-04T10:00:00Z') },
+      ],
+      [{ userId: 'fotografo', createdAt: new Date('2026-08-02T10:00:00Z') }],
+    );
+
+    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'estudioso', 1, 20);
+
+    expect(r.entries.map((e) => [e.userId, e.metricValue])).toEqual([
+      ['estudioso', 3],
+      ['fotografo', 1],
+    ]);
+  });
+
+  it('estudar e fotografar no mesmo dia é uma presença, não duas', async () => {
+    const prisma = prismaDoModoFoto(
+      [{ userId: 'estudioso', totalDurationMinutes: 40, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') }],
+      [{ userId: 'estudioso', createdAt: new Date('2026-08-02T18:00:00Z') }],
+    );
+
+    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'estudioso', 1, 20);
+
+    expect(r.entries[0].metricValue).toBe(1);
+  });
+
+  it('o dia curto continua não valendo — o piso é do dia', async () => {
+    const prisma = prismaDoModoFoto(
+      [{ userId: 'estudioso', totalDurationMinutes: 10, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') }],
+      [],
+    );
+
+    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'estudioso', 1, 20);
+
+    expect(r.entries[0].metricValue).toBe(0);
+  });
+
+  it('no modo estudo a foto NÃO ganha o dia', async () => {
+    // A assimetria é de propósito: um desafio de tempo não pode ser vencido
+    // fotografando.
+    const prisma = prismaDoModoFoto([], [{ userId: 'fotografo', createdAt: new Date('2026-08-02T10:00:00Z') }]);
+    prisma.league.findUnique = jest.fn().mockResolvedValue({
+      id: 'c1', name: 'Room', description: 'Sprint', participationMode: 'study',
+      startDate: new Date('2026-08-01'), endDate: new Date('2026-08-08'),
+      members: [membro('fotografo')],
+    });
+
+    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'fotografo', 1, 20);
+
+    expect(r.entries[0].metricValue).toBe(0);
+    expect(prisma.feedPost.findMany).not.toHaveBeenCalled();
+  });
+});

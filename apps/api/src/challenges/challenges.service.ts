@@ -215,26 +215,44 @@ export class ChallengesService {
       diasPorUsuario.set(userId, dias);
     };
 
+    /**
+     * **Estudar sempre conta como presença.**
+     *
+     * A primeira versão disto contava só fotos no modo `photo` — e como nenhuma
+     * tela define o modo, *todo* desafio em produção é `photo`. O efeito foi
+     * imediato e errado: quem estudou vários dias seguidos com o timer apareceu
+     * no ranking com **zero**. Antes de eu trocar minutos por dias, estudar ao
+     * menos somava.
+     *
+     * O modo diz do que o desafio **trata**, não o que apaga o esforço de
+     * alguém. Num app de estudo, tempo medido é a presença mais forte que
+     * existe — ignorá-la porque a pessoa não fotografou é indefensável.
+     *
+     * A assimetria que sobra é a certa: no modo `study` a foto **não** ganha o
+     * dia, senão um desafio de tempo seria vencido fotografando.
+     */
+    const minutosPorDia = new Map<string, number>();
+    for (const session of sessions) {
+      if (!session.endedAt) continue;
+      const chave = `${session.userId}|${diaLocal(session.endedAt, session.userId)}`;
+      minutosPorDia.set(
+        chave,
+        (minutosPorDia.get(chave) ?? 0) + Number(session.totalDurationMinutes),
+      );
+    }
+    // O piso é do dia, não da sessão: três blocos de 10 minutos fazem o dia, e
+    // uma sessão de 10 sozinha não faz.
+    for (const [chave, minutos] of minutosPorDia) {
+      if (minutos < SCORING.MIN_DAILY_MINUTES) continue;
+      const [usuario, dia] = chave.split('|');
+      marcar(usuario, dia);
+    }
+
+    // A foto entra só no modo que a pede. O `Set` cuida do dia que teve as duas
+    // coisas: quem estudou e fotografou na terça apareceu uma vez.
     if (porFoto) {
       for (const checkIn of checkIns) {
         marcar(checkIn.userId, diaLocal(checkIn.createdAt, checkIn.userId));
-      }
-    } else {
-      // No modo estudo o piso é diário, não por sessão: três blocos de 10
-      // minutos fazem o dia, e uma sessão de 10 sozinha não faz.
-      const minutosPorDia = new Map<string, number>();
-      for (const session of sessions) {
-        if (!session.endedAt) continue;
-        const chave = `${session.userId}|${diaLocal(session.endedAt, session.userId)}`;
-        minutosPorDia.set(
-          chave,
-          (minutosPorDia.get(chave) ?? 0) + Number(session.totalDurationMinutes),
-        );
-      }
-      for (const [chave, minutos] of minutosPorDia) {
-        if (minutos < SCORING.MIN_DAILY_MINUTES) continue;
-        const [usuario, dia] = chave.split('|');
-        marcar(usuario, dia);
       }
     }
 

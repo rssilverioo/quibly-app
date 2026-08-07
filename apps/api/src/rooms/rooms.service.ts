@@ -302,8 +302,9 @@ export class RoomsService {
               id: league.id,
               roomId: league.id,
               title: league.description ?? league.name,
-              metric: 'minutes',
-              metricUnit: 'min',
+              metric: 'days',
+              // Token, como o `leaderboard` já devolve — o cliente traduz.
+              metricUnit: 'days',
               participationMode: league.participationMode,
               status: 'active',
               startsAt: league.startDate,
@@ -314,6 +315,26 @@ export class RoomsService {
                 Math.floor((league.endDate.getTime() - now.getTime()) / 1000),
               ),
               participantCount: league.members.length,
+              /**
+               * O líder **nunca foi preenchido**.
+               *
+               * O campo existe no contrato desde sempre e chegava `null`: o
+               * `leaderboard` era buscado, e só o `me` era lido dele. Na tela
+               * isso virava um avatar "?" com zero ao lado — inclusive quando
+               * quem olhava era o próprio líder, com seis dias logo à direita.
+               *
+               * `entries[0]` porque o serviço já devolve ordenado e a busca é
+               * `limit: 1`. Lista vazia continua `null`, que é o certo: desafio
+               * sem ninguém pontuando não tem líder, e inventar um zerado seria
+               * pior que não ter.
+               */
+              leader: leaderboard?.entries?.[0]
+                ? {
+                    displayName: leaderboard.entries[0].displayName,
+                    metricValue: leaderboard.entries[0].metricValue,
+                    avatarUrl: leaderboard.entries[0].avatarUrl,
+                  }
+                : null,
               me: {
                 rank: leaderboard?.me?.rank ?? null,
                 metricValue: leaderboard?.me?.metricValue ?? 0,

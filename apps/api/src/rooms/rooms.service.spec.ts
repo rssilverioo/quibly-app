@@ -30,7 +30,12 @@ describe('RoomsService.listForUser', () => {
     };
 
     const challenges = {
-      leaderboard: jest.fn().mockResolvedValue({ me: { rank: 2, metricValue: 47 } }),
+      leaderboard: jest.fn().mockResolvedValue({
+        me: { rank: 2, metricValue: 47 },
+        entries: [
+          { userId: 'user-2', displayName: 'Bia', metricValue: 61, avatarUrl: 'bia.jpg' },
+        ],
+      }),
     };
     const [room] = await new RoomsService(
       prisma as any,
@@ -361,5 +366,61 @@ describe('RoomsService — só o dono edita a sala', () => {
     // O cascade do banco não alcança o storage.
     expect(st.deleteObject).toHaveBeenCalledWith('room-covers/antiga.jpg');
     expect(prisma.league.delete).toHaveBeenCalledWith({ where: { id: SALA } });
+  });
+});
+
+/**
+ * O líder chegava sempre `null`, e a tela mostrava um avatar "?" com zero ao
+ * lado — inclusive para quem **era** o líder, com os próprios dias logo à
+ * direita. O campo existia no contrato e ninguém o preenchia: o `leaderboard`
+ * era buscado e só o `me` era lido dele.
+ */
+describe('RoomsService.listForUser — o líder do desafio', () => {
+  const salaAtiva = (leaderboard: any) => {
+    const prisma = {
+      leagueMember: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            userId: 'eu', role: 'owner', displayName: 'Eu', totalSp: 10,
+            league: {
+              id: 'sala', name: 'Sala', description: 'x', coverUrl: null,
+              startDate: new Date('2026-08-01T00:00:00.000Z'),
+              endDate: new Date('2026-09-01T00:00:00.000Z'),
+              members: [{ userId: 'eu', totalSp: 10 }],
+              feedPosts: [],
+            },
+          },
+        ]),
+      },
+    };
+    return new RoomsService(
+      prisma as any, {} as any, { leaderboard: jest.fn().mockResolvedValue(leaderboard) } as any, {} as any,
+    ).listForUser('eu');
+  };
+
+  it('devolve quem está em primeiro', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-07T12:00:00.000Z'));
+
+    const [sala] = await salaAtiva({
+      me: { rank: 1, metricValue: 6 },
+      entries: [{ userId: 'eu', displayName: 'Eu', metricValue: 6, avatarUrl: null }],
+    });
+
+    // O caso do print: seis dias meus, e o líder aparecia zerado.
+    expect(sala.activeChallenge!.leader).toEqual({
+      displayName: 'Eu', metricValue: 6, avatarUrl: null,
+    });
+    jest.useRealTimers();
+  });
+
+  it('sem ninguém pontuando, não inventa um líder zerado', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-07T12:00:00.000Z'));
+
+    const [sala] = await salaAtiva({ me: { rank: null, metricValue: 0 }, entries: [] });
+
+    expect(sala.activeChallenge!.leader).toBeNull();
+    jest.useRealTimers();
   });
 });
