@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client,
@@ -19,6 +19,7 @@ const PREFIXOS_PUBLICOS = ['avatars/', 'room-posts/', 'audio-clips/'] as const;
 
 @Injectable()
 export class StorageService implements OnModuleInit {
+  private readonly logger = new Logger(StorageService.name);
   private s3: S3Client;
   private endpoint: string;
   /** Leitura anônima liberada. Avatar, foto de post e clipe de áudio. */
@@ -67,33 +68,48 @@ export class StorageService implements OnModuleInit {
     this.bucketPrivado = this.configService.get<string>('S3_BUCKET_PRIVATE', reserva);
     this.endpoint = this.configService.get<string>('S3_ENDPOINT', 'https://t3.storage.dev');
 
-    // Sem `S3_PUBLIC_BASE_URL` o comportamento é exatamente o de antes. Um
-    // deploy que não recebeu a variável continua montando a URL como sempre
-    // montou — errada, mas igual, e nada quebra por ordem de deploy.
-    const baseConfigurada = this.configService.get<string>('S3_PUBLIC_BASE_URL', '').trim();
+    /**
+     * Sem `S3_PUBLIC_BASE_URL` o comportamento é exatamente o de antes: um
+     * deploy que não recebeu a variável monta a URL como sempre montou.
+     *
+     * As aspas em volta são retiradas porque painéis de ambiente as adicionam:
+     * o mesmo editor que entregou o JSON do Firebase escapado entrega
+     * `"https://cdn.tryquibly.com"` aqui. O valor está certo, só chegou vestido.
+     */
+    const baseConfigurada = this.configService
+      .get<string>('S3_PUBLIC_BASE_URL', '')
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
+
+    const ehAbsoluta = /^https?:\/\/./.test(baseConfigurada);
 
     /**
-     * **Falhar no boot é de propósito.**
+     * **Um valor ruim aqui não derruba mais a API.**
      *
-     * Esta URL não é usada e descartada: ela é *gravada* em `profile.avatarUrl`
-     * e `feedPost.photoUrl`, e fica lá. Um valor sem esquema — `cdn.tryquibly.com`
-     * em vez de `https://cdn.tryquibly.com`, que é o erro de digitação natural
-     * num painel — não levanta exceção em lugar nenhum: o upload passa, a linha
-     * grava, e o `<Image>` do app apenas não mostra nada. O estrago é permanente
-     * e silencioso, uma linha por foto, até alguém reparar.
+     * Isto já foi um `throw`, e o argumento era bom: a URL é *gravada* em
+     * `profile.avatarUrl` e `feedPost.photoUrl`, então um valor sem esquema
+     * produz linha quebrada no banco — permanente e silenciosa. Falhar no boot
+     * parecia a única janela barata.
      *
-     * Recusar o boot troca isso por um deploy vermelho no Railway, antes da
-     * primeira linha escrita. É a única janela em que o erro ainda é barato.
+     * O argumento estava certo e a conclusão errada. Em produção esse `throw`
+     * derrubou a aplicação inteira num laço de reinício: login, feed, salas e
+     * sessões fora do ar por causa de uma variável de **storage**. A cura foi
+     * pior que a doença — trocou um defeito localizado por um apagão.
+     *
+     * Agora o valor ruim é recusado e o serviço cai no endereço antigo. As
+     * fotos voltam a ter a URL errada, que é exatamente o que acontecia antes
+     * desta variável existir, e o resto do produto segue de pé. O erro grita no
+     * log em vez de matar o processo.
      */
-    if (baseConfigurada && !/^https?:\/\/./.test(baseConfigurada)) {
-      throw new Error(
-        `S3_PUBLIC_BASE_URL precisa ser uma URL absoluta (https://...), e veio "${baseConfigurada}". ` +
-          'Sem esquema, a URL gravada no banco não carrega no app e o erro é silencioso.',
+    if (baseConfigurada && !ehAbsoluta) {
+      this.logger.error(
+        `S3_PUBLIC_BASE_URL ignorada: precisa ser uma URL absoluta (https://...) e veio "${baseConfigurada}". ` +
+          'A foto pública volta a usar o endpoint do S3, que responde 403 — corrija a variável para destravá-la.',
       );
     }
 
     this.baseUrlPublica = (
-      baseConfigurada || `${this.endpoint}/${this.bucketPublico}`
+      (ehAbsoluta ? baseConfigurada : '') || `${this.endpoint}/${this.bucketPublico}`
     ).replace(/\/+$/, '');
 
     this.s3 = new S3Client({
