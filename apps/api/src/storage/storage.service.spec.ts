@@ -152,6 +152,78 @@ describe('StorageService', () => {
   });
 
   /**
+   * O host da URL pública — a causa real de "a foto não aparece no feed".
+   *
+   * No Tigris o bucket público é servido por um domínio próprio, e o endpoint
+   * da API responde 403 **mesmo para objeto público**. Medido em 06/08/2026 com
+   * um objeto real: 200 por `cdn.tryquibly.com`, 403 por `t3.storage.dev`, o
+   * mesmo arquivo. O sintoma é idêntico ao de um bucket privado, e foi por isso
+   * que a investigação anterior parou no bucket.
+   */
+  describe('S3_PUBLIC_BASE_URL — de onde o app baixa', () => {
+    const COM_CDN = { ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: 'https://cdn.tryquibly.com' };
+
+    it('monta a URL pública no domínio, e não no endpoint do S3', async () => {
+      const { service, send } = makeService(COM_CDN);
+
+      const url = await service.uploadPublic(
+        'room-posts/sala/usuario/post.jpg',
+        Buffer.from('x'),
+        'image/jpeg',
+      );
+
+      // O arquivo continua indo para o mesmo bucket: o que muda é só o endereço
+      // pelo qual o app o busca.
+      expect(bucketDoUltimoComando(send)).toBe('nomads-public');
+      expect(url).toBe('https://cdn.tryquibly.com/room-posts/sala/usuario/post.jpg');
+    });
+
+    it('ignora barra sobrando no fim da variável', async () => {
+      const { service } = makeService({ ...COM_CDN, S3_PUBLIC_BASE_URL: 'https://cdn.tryquibly.com/' });
+
+      const url = await service.uploadPublic('avatars/u/a.png', Buffer.from('x'), 'image/png');
+
+      // `//avatars` daria 404 num CDN, e ninguém suspeitaria da variável.
+      expect(url).toBe('https://cdn.tryquibly.com/avatars/u/a.png');
+    });
+
+    /**
+     * O valor errado aqui não quebra nada na hora — ele grava. `avatarUrl` e
+     * `photoUrl` guardam a URL inteira, então uma base sem esquema vira linha no
+     * banco, uma por foto, e o único sintoma é um `<Image>` vazio.
+     */
+    it.each([
+      ['sem esquema', 'cdn.tryquibly.com'],
+      ['caminho relativo', '/uploads'],
+      ['só o esquema', 'https://'],
+    ])('recusa subir com S3_PUBLIC_BASE_URL %s', (_caso, valor) => {
+      expect(() => makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: valor })).toThrow(
+        /S3_PUBLIC_BASE_URL/,
+      );
+    });
+
+    it('não estorva quem não setou a variável', () => {
+      // A recusa vale só para valor presente e inválido. Vazio é o caminho de
+      // compatibilidade, e tem que continuar subindo.
+      expect(() => makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: '  ' })).not.toThrow();
+    });
+
+    it('ainda reconhece a URL antiga, gravada antes do domínio existir', () => {
+      const { service } = makeService(COM_CDN);
+
+      // O banco guarda a URL inteira. Se esta forma deixasse de ser reconhecida,
+      // apagar um avatar antigo devolveria `null` e o objeto ficaria órfão.
+      expect(
+        service.chaveDaUrl(`${ENDPOINT}/nomads-public/avatars/usuario/avatar.png`),
+      ).toBe('avatars/usuario/avatar.png');
+
+      expect(
+        service.chaveDaUrl('https://cdn.tryquibly.com/avatars/usuario/avatar.png'),
+      ).toBe('avatars/usuario/avatar.png');
+    });
+  });
+
+  /**
    * A ordem do deploy não pode quebrar nada: o código novo sobe antes de
    * alguém setar as variáveis novas no Railway, e nesse intervalo ele tem que
    * se comportar exatamente como o de um bucket só.

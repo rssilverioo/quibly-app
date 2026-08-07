@@ -25,6 +25,20 @@ export class StorageService implements OnModuleInit {
   private bucketPublico: string;
   /** Sem leitura anônima. Prova de sessão, documento e aula — só por URL assinada. */
   private bucketPrivado: string;
+  /**
+   * De onde o app baixa um arquivo público. **Não é o endpoint do S3.**
+   *
+   * No Tigris, o bucket público é servido por um domínio próprio
+   * (`cdn.tryquibly.com`), e o endpoint da API — `t3.storage.dev` — responde
+   * **403 mesmo para objeto público**. Medido em 06/08/2026 com um objeto real:
+   * 200 pelo domínio, 403 pelo endpoint, o mesmo arquivo.
+   *
+   * Era esse o defeito de "a foto não aparece no feed": o bucket sempre esteve
+   * público e a URL sempre apontou para o host errado. Ninguém achou porque o
+   * sintoma — 403 — é idêntico ao de um bucket privado, e a investigação parou
+   * na primeira explicação que servia.
+   */
+  private baseUrlPublica: string;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -52,6 +66,35 @@ export class StorageService implements OnModuleInit {
     this.bucketPublico = this.configService.get<string>('S3_BUCKET_PUBLIC', reserva);
     this.bucketPrivado = this.configService.get<string>('S3_BUCKET_PRIVATE', reserva);
     this.endpoint = this.configService.get<string>('S3_ENDPOINT', 'https://t3.storage.dev');
+
+    // Sem `S3_PUBLIC_BASE_URL` o comportamento é exatamente o de antes. Um
+    // deploy que não recebeu a variável continua montando a URL como sempre
+    // montou — errada, mas igual, e nada quebra por ordem de deploy.
+    const baseConfigurada = this.configService.get<string>('S3_PUBLIC_BASE_URL', '').trim();
+
+    /**
+     * **Falhar no boot é de propósito.**
+     *
+     * Esta URL não é usada e descartada: ela é *gravada* em `profile.avatarUrl`
+     * e `feedPost.photoUrl`, e fica lá. Um valor sem esquema — `cdn.tryquibly.com`
+     * em vez de `https://cdn.tryquibly.com`, que é o erro de digitação natural
+     * num painel — não levanta exceção em lugar nenhum: o upload passa, a linha
+     * grava, e o `<Image>` do app apenas não mostra nada. O estrago é permanente
+     * e silencioso, uma linha por foto, até alguém reparar.
+     *
+     * Recusar o boot troca isso por um deploy vermelho no Railway, antes da
+     * primeira linha escrita. É a única janela em que o erro ainda é barato.
+     */
+    if (baseConfigurada && !/^https?:\/\/./.test(baseConfigurada)) {
+      throw new Error(
+        `S3_PUBLIC_BASE_URL precisa ser uma URL absoluta (https://...), e veio "${baseConfigurada}". ` +
+          'Sem esquema, a URL gravada no banco não carrega no app e o erro é silencioso.',
+      );
+    }
+
+    this.baseUrlPublica = (
+      baseConfigurada || `${this.endpoint}/${this.bucketPublico}`
+    ).replace(/\/+$/, '');
 
     this.s3 = new S3Client({
       region: 'auto',
@@ -121,7 +164,7 @@ export class StorageService implements OnModuleInit {
       }),
     );
 
-    return `${this.endpoint}/${this.bucketPublico}/${filePath}`;
+    return `${this.baseUrlPublica}/${filePath}`;
   }
 
   /**
@@ -138,8 +181,23 @@ export class StorageService implements OnModuleInit {
    * conhecemos, e não um `split('/')` otimista.
    */
   chaveDaUrl(url: string): string | null {
-    for (const bucket of new Set([this.bucketPublico, this.bucketPrivado])) {
-      const prefixo = `${this.endpoint}/${bucket}/`;
+    /**
+     * As duas formas convivem, e isso não é transitório.
+     *
+     * O banco guarda a URL inteira, então tudo que subiu antes de
+     * `S3_PUBLIC_BASE_URL` existir está gravado como
+     * `t3.storage.dev/<bucket>/<chave>`. Se esta função só reconhecesse a forma
+     * nova, apagar um avatar antigo passaria a devolver `null` — o registro
+     * sumiria do banco e o objeto ficaria órfão no storage, em silêncio.
+     */
+    const prefixos = [
+      `${this.baseUrlPublica}/`,
+      ...[...new Set([this.bucketPublico, this.bucketPrivado])].map(
+        (bucket) => `${this.endpoint}/${bucket}/`,
+      ),
+    ];
+
+    for (const prefixo of prefixos) {
       if (url.startsWith(prefixo) && url.length > prefixo.length) {
         return url.slice(prefixo.length);
       }
