@@ -15,6 +15,14 @@ const PASSO = CELULA + VAO;
 const ALTURA_MES = 15;
 /** Coluna fixa dos dias da semana, à esquerda. */
 const LARGURA_DIAS = 28;
+/**
+ * Largura reservada a um nome de mês abreviado (3 letras a 10pt).
+ *
+ * Serve para encostar o último rótulo na borda em vez de deixá-lo transbordar:
+ * o mês corrente costuma ocupar uma coluna só, e sem esse recuo "ago" sairia
+ * metade para fora da área que rola.
+ */
+const LARGURA_ROTULO_MES = 24;
 
 /**
  * Só seg/qua/sex ganham nome, como no GitHub. Os sete caberiam — em 12pt de
@@ -129,7 +137,21 @@ export default function StudyHeatmap() {
                 layout de fluxo ele empurraria a grade para fora do alinhamento. */}
             <View style={[styles.faixaDeMeses, { width: semanas.length * PASSO }]}>
               {meses.map(({ coluna, mes }) => (
-                <Text key={`${coluna}-${mes}`} style={[styles.rotuloMes, { left: coluna * PASSO }]}>
+                <Text
+                  key={`${coluna}-${mes}`}
+                  style={[
+                    styles.rotuloMes,
+                    {
+                      // O último rótulo cede alguns pontos para a esquerda em vez
+                      // de transbordar. Desalinha um pouco da coluna, e é o preço
+                      // de o mês corrente sempre aparecer.
+                      left: Math.min(
+                        coluna * PASSO,
+                        semanas.length * PASSO - LARGURA_ROTULO_MES,
+                      ),
+                    },
+                  ]}
+                >
                   {nomesDeMes[mes]}
                 </Text>
               ))}

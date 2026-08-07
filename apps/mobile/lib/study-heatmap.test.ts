@@ -87,11 +87,12 @@ describe('rotulosDeMes', () => {
     }
   });
 
-  it('drops a trailing label with no room to be read', () => {
-    // A janela acaba no dia 2 de setembro: "set" nasceria na última coluna,
-    // espremido contra a borda. Melhor não existir.
+  it('always labels the last month, even in a single column', () => {
+    // A janela acaba no dia 2 de setembro, então "set" ocupa uma coluna só. A
+    // grade abre no fim: é o primeiro mês que o olho encontra, e era justamente
+    // o que a regra antiga descartava por falta de espaço.
     const semanas = montarSemanas('2026-06-01', '2026-09-02', {});
-    expect(rotulosDeMes(semanas).map((r) => r.mes)).not.toContain(8);
+    expect(rotulosDeMes(semanas).map((r) => r.mes)).toContain(8);
   });
 
   it('does not stack two labels on top of each other at the left edge', () => {
