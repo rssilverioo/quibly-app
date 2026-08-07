@@ -117,7 +117,15 @@
     "someoneTyping": "alguém está digitando",
     "oneTyping": "{{name}} está digitando",
     "manyTyping": "{{count}} pessoas estão digitando",
-    "messageDeleted": "Mensagem apagada"
+    "messageDeleted": "Mensagem apagada",
+    "newCheckIn": "Novo check-in",
+    "publish": "Publicar",
+    "noMedia": "Sem foto",
+    "postingTo": "Publicando em",
+    "countsForChallenge": "Conta no desafio",
+    "doesNotCount": "Não conta no desafio",
+    "checkInTime": "Horário",
+    "done": "Concluir"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
