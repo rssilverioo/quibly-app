@@ -108,3 +108,38 @@ describe('a Dynamic Island compacta não pode reservar largura infinita', () => 
     expect(codigo).toContain('quiblyAccent');
   });
 });
+
+/**
+ * Os botões do widget disparavam `quibly://session/pause` e o app mostrava
+ * **"Unmatched Route"** — visto num print de aparelho. Os controles da tela de
+ * bloqueio nunca funcionaram no iOS.
+ *
+ * Este é o caminho de quem está em iOS 16, onde `Button(intent:)` não existe em
+ * Live Activity.
+ */
+describe('o deep link da Live Activity tem que cair em algum lugar', () => {
+  const layout = ler('../app/_layout.tsx');
+  const widget = ler('../targets/widget/StudyTimerLiveActivity.swift');
+
+  it('o app entende as três ações que o widget dispara', () => {
+    for (const acao of ['pause', 'resume', 'end']) {
+      expect(widget).toContain(`quibly://session/${acao}`);
+    }
+    expect(layout).toContain("path?.startsWith('session/')");
+  });
+
+  it('aplica no mesmo store dos controles em tela', () => {
+    // Um segundo caminho para pausar seria um segundo jeito de as duas
+    // superfícies discordarem.
+    expect(layout).toContain('useSessionStore.getState()');
+    expect(layout).toMatch(/store\.pause\(\)/);
+    expect(layout).toMatch(/store\.resume\(\)/);
+    expect(layout).toMatch(/store\.endSession\(\)/);
+  });
+
+  it('não age quando não há sessão viva', () => {
+    // O widget pode sobreviver ao fim da sessão; agir ali recriaria estado que
+    // o servidor já encerrou.
+    expect(layout).toContain('if (!store.currentSession) return;');
+  });
+});

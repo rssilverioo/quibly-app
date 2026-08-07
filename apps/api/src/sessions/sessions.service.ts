@@ -13,6 +13,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { StartSessionDto } from './dto/start-session.dto';
+import { cunharTokenDeAcao } from './session-action-token';
 import {
   completedCycles,
   creditedDuration,
@@ -342,6 +343,23 @@ export class SessionsService {
       scheduled_proof_check_times: [],
       heartbeat_interval_seconds: HEARTBEAT_INTERVAL_SECONDS,
       heartbeat_grace_seconds: HEARTBEAT_GRACE_SECONDS,
+      /**
+       * A credencial que a Live Activity usa para pausar e encerrar sozinha.
+       *
+       * Cunhada aqui e só aqui: ela nasce com a sessão, autoriza três verbos
+       * nela, e não serve para mais nada. `null` quando não há
+       * `SESSION_ACTION_SECRET` no ambiente — e aí os botões do widget voltam a
+       * ser deep link, que abre o app.
+       *
+       * Lida de `process.env` em vez do `ConfigService` para não acrescentar
+       * uma sexta dependência ao construtor; é o mesmo caminho que
+       * `SESSION_SWEEPER_ENABLED` já usa neste módulo.
+       */
+      live_action_token: cunharTokenDeAcao(
+        session.id,
+        userId,
+        process.env.SESSION_ACTION_SECRET,
+      ),
     };
   }
 
