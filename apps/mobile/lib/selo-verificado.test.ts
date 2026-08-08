@@ -23,9 +23,35 @@ describe('o selo de verificado', () => {
    * pedir que a pessoa aprendesse um vocabulário para uma informação de meio
    * segundo.
    */
-  it('usa o azul do Instagram e o dourado do X', () => {
-    expect(selo).toContain('#1D9BF0');
-    expect(selo).toContain('#E8B923');
+  it('usa a arte da marca, e não uma cor inventada', () => {
+    expect(selo).toContain('#2F95E8');
+    // O ouro é degradê, não cor chapada: duas paradas viram amarelo, e é a
+    // alternância entre claro e escuro que faz metal parecer metal.
+    expect(selo).toContain('#FFF2A1');
+    expect(selo).toContain('#8A5600');
+  });
+
+  /**
+   * `feDropShadow` não é suportado no Android pelo `react-native-svg` e
+   * renderiza inconsistente no iOS — mesmo motivo pelo qual o mascote também
+   * abriu mão dela.
+   */
+  it('não usa sombra, que quebraria no Android', () => {
+    // Sem comentários: a nota que **explica** o descarte cita `feDropShadow`,
+    // e casar contra ela provaria o contrário do que se quer provar.
+    const codigo = semComentarios(selo);
+    expect(codigo).not.toContain('feDropShadow');
+    expect(codigo).not.toContain('filter=');
+  });
+
+  /**
+   * Ids de `Defs` já vazaram entre instâncias de `Svg` em versões do
+   * `react-native-svg`. O sintoma seria o ranking inteiro pintado com o
+   * degradê de uma linha só.
+   */
+  it('o degradê tem id único por instância', () => {
+    expect(selo).toContain('useId');
+    expect(selo).toMatch(/selo-ouro-\$\{id\}/);
   });
 
   /**
