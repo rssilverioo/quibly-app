@@ -41,7 +41,7 @@ struct StudyTimerLiveActivity: Widget {
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
+          CoelhoMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
             .frame(width: 46, height: 46)
             .padding(.leading, 4)
         }
@@ -75,7 +75,7 @@ struct StudyTimerLiveActivity: Widget {
         }
       } compactLeading: {
         // ~20pt. Sobra a silhueta e a bandeira — e é o suficiente.
-        CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
+        CoelhoMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
           .frame(width: 22, height: 22)
       } compactTrailing: {
         /*
@@ -107,7 +107,7 @@ struct StudyTimerLiveActivity: Widget {
           .frame(width: 46)
           .foregroundStyle(Color.quiblyAccent)
       } minimal: {
-        CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
+        CoelhoMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
           .frame(width: 20, height: 20)
       }
       .keylineTint(Color.quiblyAccent)
@@ -137,7 +137,7 @@ private struct LockScreenView: View {
      */
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 10) {
-        CasteloMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
+        CoelhoMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
           .frame(width: 34, height: 34)
 
         VStack(alignment: .leading, spacing: 1) {

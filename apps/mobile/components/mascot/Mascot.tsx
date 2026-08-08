@@ -1,6 +1,6 @@
 import { memo, useEffect, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -33,7 +33,7 @@ interface Variant {
   eyes: ReactNode;
   mouth: ReactNode;
   arms: ReactNode;
-  /** Sits on the battlements; suppresses the flag. */
+  /** Sits on the crown of the head; the ears pass over it. */
   worn?: (p: P.PartProps) => ReactNode;
   /** Held at the raised hand, drawn above the arm. */
   prop?: (p: P.PartProps) => ReactNode;
@@ -74,10 +74,6 @@ const VARIANTS: Record<MascotState, Variant> = {
   cheer:      { eyes: <P.EyesHappy />, mouth: <P.MouthGrin />, arms: <P.ArmsUp />, deco: P.DecoConfetti, motion: 'bounce' },
 };
 
-/** Hats occupy the same battlement as the flagpole. */
-type WornPart = NonNullable<Variant['worn']>;
-const HIDES_FLAG: ReadonlySet<WornPart> = new Set<WornPart>([P.Cap, P.Crown, P.PartyHat]);
-
 interface Props {
   state?: MascotState;
   /** Rendered square. 96–200 works for empty states; 40–64 for inline use. */
@@ -99,11 +95,10 @@ function MascotView({
   const { c } = useTheme();
   const v = VARIANTS[state];
 
-  // The accent tints the flag, held props and sparks — it's what makes the
-  // castle read as Quibly's rather than a stock mascot.
+  // O acento tinge os objetos na mão e as faíscas. No castelo ele também
+  // pintava a bandeira, que era o que o fazia ler como nosso; o coelho já é a
+  // marca por si, e o acento voltou a ser só destaque.
   const accent = c.accent;
-  const pole = plate ? '#4D3324' : '#5C5C68';
-  const flagFill = plate ? '#7A4E2F' : accent;
 
   const lift = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -164,67 +159,62 @@ function MascotView({
   }));
 
   const worn = v.worn?.({ accent });
-  const showFlag = !(v.worn && HIDES_FLAG.has(v.worn));
 
   return (
     <Animated.View style={[{ width: size, height: size }, animatedStyle, style]}>
       <Svg width={size} height={size} viewBox="0 0 1024 1024">
         <Defs>
-          <LinearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#9A6B47" />
-            <Stop offset="100%" stopColor="#6E472F" />
-          </LinearGradient>
-          <LinearGradient id="door" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#513523" />
-            <Stop offset="100%" stopColor="#2F1F17" />
+          <LinearGradient id="pelo" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#FFFFFF" />
+            <Stop offset="100%" stopColor="#E9F0FF" />
           </LinearGradient>
         </Defs>
 
         {plate && <Rect width={1024} height={1024} rx={80} fill="#F7F0E8" />}
 
-        <Ellipse cx={512} cy={875} rx={280} ry={58} fill="#3B2A20" opacity={0.12} />
+        <Ellipse cx={512} cy={875} rx={280} ry={58} fill={P.CONTORNO} opacity={0.12} />
         {v.deco?.({ accent })}
 
-        {showFlag && (
-          <G>
-            <Rect x={497} y={113} width={30} height={168} rx={15} fill={pole} />
-            <Path d="M525 126 C600 96, 660 120, 709 153 C649 180, 601 194, 525 177 Z" fill={flagFill} />
-          </G>
-        )}
+        {/*
+          A ordem manda: orelhas, corpo e braços vêm **antes** da cabeça, para
+          que ela os cubra. É o que dá a leitura de bicho de cabeça grande, com
+          os braços saindo de trás em vez de grudados na frente. Trocar a ordem
+          põe a linha do braço por cima da bochecha.
+        */}
 
-        {/* body */}
-        <Rect x={280} y={300} width={464} height={430} rx={72} fill="url(#body)" />
-        <Rect x={260} y={255} width={110} height={120} rx={26} fill="#9A6B47" />
-        <Rect x={392} y={235} width={110} height={140} rx={26} fill="#A6754F" />
-        <Rect x={522} y={235} width={110} height={140} rx={26} fill="#A6754F" />
-        <Rect x={654} y={255} width={110} height={120} rx={26} fill="#9A6B47" />
-        <Rect x={335} y={285} width={354} height={95} rx={28} fill="#A6754F" />
-
-        <G fill="none" stroke="#5E3E2A" strokeWidth={10} opacity={0.38}>
-          <Path d="M300 430 H724" /><Path d="M300 540 H724" /><Path d="M300 650 H724" />
-          <Path d="M385 380 V430" /><Path d="M515 380 V430" /><Path d="M645 380 V430" />
-          <Path d="M350 430 V540" /><Path d="M485 430 V540" /><Path d="M620 430 V540" />
-          <Path d="M410 540 V650" /><Path d="M550 540 V650" /><Path d="M680 540 V650" />
+        {/* orelhas */}
+        <G strokeLinecap="round" fill="none">
+          <Path d="M455 300 C432 214, 420 152, 414 108" stroke={P.CONTORNO} strokeWidth={116} />
+          <Path d="M569 300 C592 214, 604 152, 610 108" stroke={P.CONTORNO} strokeWidth={116} />
+          <Path d="M455 300 C432 214, 420 152, 414 108" stroke={P.PELO} strokeWidth={94} />
+          <Path d="M569 300 C592 214, 604 152, 610 108" stroke={P.PELO} strokeWidth={94} />
+          <Path d="M458 292 C438 218, 428 166, 422 132" stroke={P.ORELHA_INTERNA} strokeWidth={40} />
+          <Path d="M566 292 C586 218, 596 166, 602 132" stroke={P.ORELHA_INTERNA} strokeWidth={40} />
         </G>
 
-        {v.eyes}
-        {v.mouth}
-
-        <Path d="M430 730 V630 Q430 565 512 565 Q594 565 594 630 V730 Z" fill="url(#door)" />
-        <Path d="M512 578 V730" stroke="#8F6245" strokeWidth={12} opacity={0.55} />
-        <Ellipse cx={552} cy={655} rx={12} ry={12} fill={accent} />
+        {/* rabo, tronco e pés */}
+        <Circle cx={318} cy={752} r={62} fill={P.PELO} stroke={P.CONTORNO} strokeWidth={20} />
+        <Ellipse cx={512} cy={726} rx={198} ry={152} fill="url(#pelo)" stroke={P.CONTORNO} strokeWidth={20} />
+        <Ellipse cx={418} cy={856} rx={88} ry={47} fill={P.PELO} stroke={P.CONTORNO} strokeWidth={18} />
+        <Ellipse cx={606} cy={856} rx={88} ry={47} fill={P.PELO} stroke={P.CONTORNO} strokeWidth={18} />
 
         {v.arms}
 
-        <Rect x={350} y={700} width={122} height={160} rx={52} fill="#6F4932" />
-        <Rect x={552} y={700} width={122} height={160} rx={52} fill="#6F4932" />
-        <Ellipse cx={410} cy={858} rx={82} ry={48} fill="#5B3B29" />
-        <Ellipse cx={614} cy={858} rx={82} ry={48} fill="#5B3B29" />
+        {/* cabeça */}
+        <Ellipse cx={512} cy={470} rx={240} ry={226} fill="url(#pelo)" stroke={P.CONTORNO} strokeWidth={22} />
+        {/* O brilho é o que impede a cabeça de ler como um disco chapado. */}
+        <Ellipse cx={430} cy={352} rx={92} ry={54} fill="#FFFFFF" opacity={0.75} transform="rotate(-18, 430, 352)" />
 
-        <Path
-          d="M329 358 C380 318, 436 310, 500 309"
-          fill="none" stroke="#C89A74" strokeWidth={18} strokeLinecap="round" opacity={0.34}
-        />
+        {v.eyes}
+
+        {/*
+          O focinho ocupa a folga entre os olhos (x 465–559) e acima da boca
+          (y 528). É o vão mais apertado do desenho, e a razão de o nariz ser
+          pequeno em vez de proporcional a um coelho de verdade.
+        */}
+        <Path d="M494 498 H530 Q512 526 512 526 Q512 526 494 498 Z" fill={P.CONTORNO} />
+
+        {v.mouth}
 
         {v.prop?.({ accent })}
         {worn}

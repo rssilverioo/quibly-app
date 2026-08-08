@@ -9,7 +9,7 @@ processo sobe o bundle do widget em vez do React Native — **o app abre e fica
 preso na splash para sempre**, sem crash e sem log. Foi exatamente o que
 aconteceu na build 22 no TestFlight.
 
-`CasteloMark.swift` vem junto porque só a Live Activity o usa, e um `View` de
+`CoelhoMark.swift` vem junto porque só a Live Activity o usa, e um `View` de
 SwiftUI no app sem ninguém para renderizá-lo é peso morto.
 
 `StudyTimerAttributes.swift` **fica em `ios/`** de propósito: `StudyTimerModule`

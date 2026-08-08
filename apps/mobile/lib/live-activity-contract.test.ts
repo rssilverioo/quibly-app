@@ -214,7 +214,7 @@ describe('os comentários do Swift não podem engolir o arquivo', () => {
     '../targets/widget/StudyTimerLiveActivity.swift',
     '../targets/widget/SessionActionIntent.swift',
     '../targets/widget/StudyTimerAttributes.swift',
-    '../targets/widget/CasteloMark.swift',
+    '../targets/widget/CoelhoMark.swift',
     '../modules/study-timer/ios/StudyTimerModule.swift',
     '../modules/study-timer/ios/StudyTimerAttributes.swift',
   ];
