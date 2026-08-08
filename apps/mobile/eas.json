@@ -24,6 +24,19 @@
         "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
       }
     },
+    "dev-device": {
+      "extends": "development",
+      "developmentClient": true,
+      "autoIncrement": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "image": "macos-tahoe-26.5-xcode-26.6"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "device": {
       "extends": "development",
       "developmentClient": false,
