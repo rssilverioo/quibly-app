@@ -77,6 +77,26 @@ export class HealthController {
       commit: this.commit,
       startedAt: this.subiuEm.toISOString(),
       uptimeSeconds: Math.floor((Date.now() - this.subiuEm.getTime()) / 1000),
+      /**
+       * Se os botões da Live Activity têm como funcionar.
+       *
+       * Sem `SESSION_ACTION_SECRET`, `cunharTokenDeAcao` devolve `null` de
+       * propósito, a sessão sobe sem `live_action_token`, o app não tem o que
+       * gravar e o intent do widget morre na terceira guarda. O sintoma é o
+       * botão não fazer nada — o mesmo sintoma de mais quatro causas
+       * diferentes, e foi isso que fez a depuração custar quatro rodadas.
+       *
+       * De fora não havia como distinguir: a rota responde 401 tanto quando o
+       * segredo falta quanto quando o token é inválido. Este booleano separa as
+       * duas coisas num `curl`.
+       *
+       * **É um booleano, e nunca o valor.** A nota no topo do arquivo continua
+       * valendo: dizer que uma variável *existe* não é dizer o que ela é, e é o
+       * único jeito de esta rota servir durante um incidente.
+       */
+      sessionActionsConfigured: Boolean(
+        this.configService.get<string>('SESSION_ACTION_SECRET')?.trim(),
+      ),
     };
   }
 }

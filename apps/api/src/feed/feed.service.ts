@@ -5,12 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ModerationService } from '../moderation/moderation.service';
 
 @Injectable()
 export class FeedService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly moderation: ModerationService,
   ) {}
 
   async getLeagueFeed(
@@ -19,9 +21,15 @@ export class FeedService {
     page: number,
     limit: number,
   ) {
-    const membership = await this.prisma.leagueMember.findUnique({
-      where: { leagueId_userId: { leagueId, userId } },
-    });
+    const [membership, league] = await Promise.all([
+      this.prisma.leagueMember.findUnique({
+        where: { leagueId_userId: { leagueId, userId } },
+      }),
+      this.prisma.league.findUnique({
+        where: { id: leagueId },
+        select: { startDate: true },
+      }),
+    ]);
 
     if (!membership) {
       throw new ForbiddenException('You are not a member of this league');
@@ -29,12 +37,47 @@ export class FeedService {
 
     const offset = (page - 1) * limit;
 
+    /*
+     O feed começa quando a sala começou.
+
+     Um post nasce em **todas** as salas de quem publicou — é o fan-out que faz
+     uma sessão de estudo contar em todo lugar de uma vez. O efeito colateral
+     aparecia numa sala nova: ela abria já com o histórico de quem a criou, e
+     ninguém mais na sala tinha estado lá para ver aquilo acontecer.
+
+     Um desafio de 42 dias que estreia mostrando ontem, anteontem e a semana
+     passada não é um começo. Nas outras salas esses posts continuam onde
+     sempre estiveram; aqui eles nunca aconteceram.
+
+     `1970-01-01` é a janela morta de sala criada sem desafio (ver
+     `rooms.service`), e por ser anterior a tudo ela não filtra nada — que é
+     exatamente o comportamento certo para essas salas.
+    */
+    const desdeOInicio = league?.startDate
+      ? { createdAt: { gte: league.startDate } }
+      : {};
+
+    /*
+     Quem esta pessoa bloqueou não aparece no feed dela.
+
+     No `where`, e não filtrando depois: com paginação, tirar linhas do
+     resultado devolveria páginas curtas e um `total` que não bate com o que se
+     vê — e a última página poderia vir vazia sem que houvesse fim.
+
+     Vale só para quem está lendo. Os posts continuam existindo para todos os
+     outros, e quem foi bloqueado segue membro da sala e no ranking: bloquear
+     não pode ser um jeito de expulsar alguém de um grupo que não é seu.
+    */
+    const bloqueados = await this.moderation.bloqueadosPor(userId);
+    const semBloqueados =
+      bloqueados.size > 0 ? { userId: { notIn: [...bloqueados] } } : {};
+
     const [posts, total, members] = await Promise.all([
       this.prisma.feedPost.findMany({
-        where: { leagueId },
+        where: { leagueId, ...semBloqueados, ...desdeOInicio },
         include: {
           user: {
-            select: { username: true, handle: true, avatarUrl: true },
+            select: { username: true, handle: true, avatarUrl: true, verification: true },
           },
           session: {
             select: {
@@ -58,7 +101,7 @@ export class FeedService {
           comments: {
             include: {
               user: {
-                select: { username: true, handle: true, avatarUrl: true },
+                select: { username: true, handle: true, avatarUrl: true, verification: true },
               },
             },
             orderBy: { createdAt: 'desc' as const },
@@ -69,7 +112,7 @@ export class FeedService {
         skip: offset,
         take: limit,
       }),
-      this.prisma.feedPost.count({ where: { leagueId } }),
+      this.prisma.feedPost.count({ where: { leagueId, ...semBloqueados, ...desdeOInicio } }),
       this.prisma.leagueMember.findMany({
         where: { leagueId },
         select: { userId: true, displayName: true },
@@ -168,7 +211,7 @@ export class FeedService {
       this.prisma.feedPost.findMany({
         where,
         include: {
-          user: { select: { username: true, handle: true, avatarUrl: true } },
+          user: { select: { username: true, handle: true, avatarUrl: true, verification: true } },
           session: {
             select: {
               id: true,
@@ -188,7 +231,7 @@ export class FeedService {
           reactions: true,
           comments: {
             include: {
-              user: { select: { username: true, handle: true, avatarUrl: true } },
+              user: { select: { username: true, handle: true, avatarUrl: true, verification: true } },
             },
             orderBy: { createdAt: 'desc' as const },
             take: 3,
@@ -323,7 +366,7 @@ export class FeedService {
       data: { userId, postId, content },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true },
+          select: { username: true, handle: true, avatarUrl: true, verification: true },
         },
       },
     });
@@ -389,7 +432,7 @@ export class FeedService {
         where: { postId },
         include: {
           user: {
-            select: { username: true, handle: true, avatarUrl: true },
+            select: { username: true, handle: true, avatarUrl: true, verification: true },
           },
         },
         orderBy: { createdAt: 'asc' },

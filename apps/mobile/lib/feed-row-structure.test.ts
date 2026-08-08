@@ -14,7 +14,7 @@ describe('compact room feed', () => {
     expect(row).toContain("size={18}");
   });
 
-  it('uses the static idle castle when a post has no photo', () => {
+  it('uses the static idle mascot when a post has no photo', () => {
     expect(row).toContain('state="idle" size={34} plate={false} animate={false}');
     expect(row).not.toContain('<PostCard');
   });

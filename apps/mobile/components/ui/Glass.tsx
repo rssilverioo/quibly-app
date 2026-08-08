@@ -3,7 +3,8 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import { BlurView } from 'expo-blur';
 import { LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
 
-import { useTheme, radius as R } from '../../theme';
+import { useTheme, radius as R, type ThemeMode } from '../../theme';
+import { palettes } from '../../theme/colors';
 
 /**
  * One glass surface, three rendering paths.
@@ -38,6 +39,16 @@ interface Props {
   interactive?: boolean;
   /** Corner radius. Liquid Glass needs it explicitly to shape its refraction. */
   cornerRadius?: number;
+  /**
+   * Forces the glass to a scheme instead of following the app's theme.
+   *
+   * Only one caller needs this, and it is the reason the prop exists: the login
+   * screen is a fixed dark stage (`DESIGN-GYMRATS §5.15`) that does not follow
+   * the theme, because it is the brand's frame rather than a product surface.
+   * With the app in light mode, theme-following glass turned white there and
+   * the `fgOnScrim` text on it went invisible.
+   */
+  scheme?: ThemeMode;
 }
 
 export default function Glass({
@@ -46,8 +57,13 @@ export default function Glass({
   style,
   interactive = false,
   cornerRadius = R.lg,
+  scheme,
 }: Props) {
-  const { c, mode } = useTheme();
+  const { c: cDoTema, mode: modoDoTema } = useTheme();
+  const mode = scheme ?? modoDoTema;
+  // The wash below is painted in the *glass's* scheme, not the app's — a forced
+  // dark panel washed with the light palette's `surface` would come out white.
+  const c = scheme ? palettes[scheme] : cDoTema;
 
   // Chrome sits over moving content and can afford to be more transparent;
   // a card holds text and needs a floor for legibility.

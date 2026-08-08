@@ -70,6 +70,22 @@ describe('o contrato da Live Activity é o mesmo dos dois lados', () => {
     );
   });
 
+  /**
+   * `application-groups` **não estava em nenhum dos dois perfis de
+   * provisionamento** do build 44 — declarar a entitlement no config não faz a
+   * Apple registrar o grupo. `UserDefaults(suiteName:)` devolvia `nil` e o
+   * intent morria na primeira linha.
+   *
+   * Como o `LiveActivityIntent` roda no processo do app, o `UserDefaults`
+   * padrão basta e não depende de provisionamento nenhum.
+   */
+  it('o intent não depende do App Group para funcionar', () => {
+    expect(ler('../targets/widget/SessionActionIntent.swift')).toContain('?? .standard');
+    expect(ler('../modules/study-timer/ios/StudyTimerModule.swift')).toContain(
+      'UserDefaults.standard, UserDefaults(suiteName',
+    );
+  });
+
   it('cada caminho de falha do intent se identifica no log', () => {
     // Quatro causas indistinguíveis num processo sem tela foi o que impediu o
     // diagnóstico da primeira vez.
@@ -123,6 +139,20 @@ describe('a Dynamic Island compacta não pode reservar largura infinita', () => 
     // Uma barra que nós calculássemos ficaria congelada na fração do último
     // heartbeat — 30 segundos de atraso, com o app suspenso.
     expect(codigo).toContain('ProgressView(timerInterval:');
+  });
+
+  /**
+   * A extensão de widget não carrega i18n — não tem o i18next nem os JSON de
+   * tradução. Texto fixo no Swift aparece em português para quem usa o app em
+   * inglês, que foi o que aconteceu no build 44.
+   */
+  it('não tem texto de interface fixo em português', () => {
+    for (const palavra of ['"Pausar"', '"Retomar"', '"Encerrar"', '"Estudando"']) {
+      expect(codigo).not.toContain(palavra);
+    }
+    // Os rótulos chegam prontos, como a fase já chegava.
+    expect(codigo).toContain('context.state.acaoLabel');
+    expect(codigo).toContain('context.state.encerrarLabel');
   });
 
   it('usa o accent azul do app, e não o lime aposentado em 31/07', () => {
@@ -184,7 +214,7 @@ describe('os comentários do Swift não podem engolir o arquivo', () => {
     '../targets/widget/StudyTimerLiveActivity.swift',
     '../targets/widget/SessionActionIntent.swift',
     '../targets/widget/StudyTimerAttributes.swift',
-    '../targets/widget/CasteloMark.swift',
+    '../targets/widget/CoelhoMark.swift',
     '../modules/study-timer/ios/StudyTimerModule.swift',
     '../modules/study-timer/ios/StudyTimerAttributes.swift',
   ];

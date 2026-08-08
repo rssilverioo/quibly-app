@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { LogBox, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -14,6 +14,7 @@ import {
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { firebaseConfigError } from '../lib/firebase';
 import { useSessionStore } from '../stores/session.store';
+import CitySplash from '../components/CitySplash';
 import { useTheme, hydrateTheme } from '../theme';
 import {
   configureNotifications,
@@ -94,8 +95,35 @@ function acaoDaLiveActivity(url: string | null): 'pause' | 'resume' | 'end' | nu
   return acao === 'pause' || acao === 'resume' || acao === 'end' ? acao : null;
 }
 
+/**
+ * Quanto a fotografia fica antes de dar lugar ao app.
+ *
+ * Curto o bastante para não atrasar quem quer usar o produto, longo o bastante
+ * para a cidade ser vista e a câmera andar um pouco nela. A saída de ~0.6s
+ * acontece depois disto, sobre o app já montado.
+ */
+const ABERTURA_MINIMA_MS = 2200;
+
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, user, profile } = useAuth();
+
+  /**
+   * A abertura tem tempo mínimo, e é ele que faz a tela existir.
+   *
+   * Sem isto ela dura o que a autenticação durar, que para quem já está logado
+   * são milissegundos — e a fotografia nunca aparece. Ver a nota longa abaixo,
+   * onde a `CitySplash` é montada.
+   *
+   * Dois estados e não um: `cumpriuOMinimo` diz que ela **pode** sair,
+   * `aberturaViva` diz que ela ainda está na tela. Entre os dois cabe a saída
+   * por opacidade, que precisa do componente montado para acontecer.
+   */
+  const [aberturaViva, setAberturaViva] = useState(true);
+  const [aberturaCumpriuOMinimo, setAberturaCumpriuOMinimo] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setAberturaCumpriuOMinimo(true), ABERTURA_MINIMA_MS);
+    return () => clearTimeout(id);
+  }, []);
   const { c } = useTheme();
   const segments = useSegments();
   const router = useRouter();
@@ -260,9 +288,36 @@ function RootLayoutNav() {
     );
   }
 
-  if (isLoading) return null;
+  /**
+   * A abertura, no lugar do nada.
+   *
+   * Aqui havia `return null`, e o efeito era o splash nativo dar lugar a uma
+   * tela vazia enquanto o Firebase resolvia a sessão — um piscar de fundo sem
+   * conteúdo, mais longo em rede ruim, que é justamente quando ele mais aparece.
+   *
+   * ## Por que ela não some junto com `isLoading`
+   *
+   * Era o que fazia antes, e a consequência foi a fotografia **não aparecer**.
+   * Resolver a sessão de quem já está logado leva milissegundos: o coelho do
+   * splash nativo dava lugar à lista de salas, e as três cidades só existiam
+   * para quem estava deslogado. `ABERTURA_MINIMA_MS` é o que faz a tela
+   * existir para todo mundo.
+   *
+   * ## Por que ela vira sobreposição depois
+   *
+   * Enquanto a autenticação não resolve, ela é a tela inteira — não há o que
+   * montar embaixo. Assim que resolve, a `Stack` monta **atrás** dela e a
+   * abertura sai por opacidade, revelando o app já pronto. Sem isso a troca
+   * seria um corte seco para uma tela ainda montando.
+   *
+   * A `CitySplash` desmonta e remonta nessa passagem, e não se vê: cidade e
+   * escala vêm de `lib/abertura`, que as deriva do relógio e não do ciclo de
+   * vida de ninguém.
+   */
+  if (isLoading) return <CitySplash />;
 
   return (
+    <>
     <Stack
       screenOptions={{
         headerShown: false,
@@ -284,6 +339,10 @@ function RootLayoutNav() {
       <Stack.Screen name="quizzes" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
     </Stack>
+    {aberturaViva ? (
+      <CitySplash encerrando={aberturaCumpriuOMinimo} aoSair={() => setAberturaViva(false)} />
+    ) : null}
+    </>
   );
 }
 

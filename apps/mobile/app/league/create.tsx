@@ -22,6 +22,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { createRoom, type CreatedRoom } from '../../services/rooms';
 import { inviteUrl } from '@quibly/shared/constants';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
+import { ApiError } from '../../lib/http-errors';
+import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import { track } from '../../lib/analytics';
 import { diasAte, emDias } from '../../lib/prazo-desafio';
 
@@ -148,6 +150,35 @@ export default function CreateRoomScreen() {
       setCreated(await createRoom(name.trim(), displayName.trim(), prazoEmDias));
       track('room_created', { duration_days: prazoEmDias });
     } catch (err) {
+      /*
+       Bater no limite do plano não é um erro, e tratá-lo como um seria a
+       maneira mais rápida de perder a venda: a pessoa lê "não deu certo",
+       tenta de novo, e desiste sem nunca ver que existe um plano.
+
+       O desvio olha o `code`, não a mensagem. A API manda `ROOM_LIMIT_REACHED`
+       justamente para o app distinguir este 403 de "você não tem permissão", e
+       casar o texto quebraria na primeira tradução.
+
+       **Mas só desvia se houver plano para vender.** Com
+       `COMPRAS_NO_APP_ATIVAS` desligado, `/pricing` se redireciona sozinho para
+       a home — de propósito, para o paywall sem preços não aparecer por deep
+       link. Mandar alguém para lá ao bater no limite jogaria a pessoa na lista
+       de salas sem uma palavra de explicação, que é pior do que a mensagem de
+       erro que ela via antes. Enquanto a compra não está no ar, o limite se
+       explica em texto.
+
+       Quando estiver, o gatilho vai pela rota: quem registra a visita é a
+       própria tela do plano, e disparar `paywall_viewed` daqui contaria duas
+       vezes a mesma abertura.
+      */
+      if (err instanceof ApiError && err.body?.code === 'ROOM_LIMIT_REACHED') {
+        if (COMPRAS_NO_APP_ATIVAS) {
+          router.push('/pricing?trigger=quota');
+          return;
+        }
+        setError(t('rooms.roomLimitReached', { limit: err.body.limit ?? 3 }));
+        return;
+      }
       // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
       // para ação destrutiva, não para "não deu certo".
       setError((err as Error)?.message ?? t('rooms.createRoomError'));

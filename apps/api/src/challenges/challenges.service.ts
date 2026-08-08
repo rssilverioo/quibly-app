@@ -86,7 +86,7 @@ export class ChallengesService {
               // `timezone` entra porque o ranking passa a contar DIAS, e dia é
               // uma noção local. Contar em UTC faria quem estuda às 22h em
               // UTC−3 ganhar o dia seguinte, e às vezes dois dias numa noite.
-              select: { id: true, handle: true, avatarUrl: true, timezone: true },
+              select: { id: true, handle: true, avatarUrl: true, timezone: true, verification: true },
             },
           },
         },
@@ -269,6 +269,7 @@ export class ChallengesService {
           displayName: member.displayName,
           handle: member.user.handle,
           avatarUrl: member.user.avatarUrl,
+          verification: member.user.verification,
           metricValue: diasPorUsuario.get(member.userId)?.size ?? 0,
           activeDays: diasPorUsuario.get(member.userId)?.size ?? 0,
           minutes: Math.round(total.minutes),
@@ -340,7 +341,7 @@ export class ChallengesService {
         members: {
           include: {
             user: {
-              select: { id: true, avatarUrl: true, timezone: true },
+              select: { id: true, avatarUrl: true, timezone: true, verification: true },
             },
           },
         },
@@ -423,6 +424,7 @@ export class ChallengesService {
             userId: member.userId,
             displayName: member.displayName,
             avatarUrl: member.user.avatarUrl,
+            verification: member.user.verification,
             checkIns: winner[1].size,
           }
         : null;
@@ -453,6 +455,7 @@ export class ChallengesService {
         userId: entry.userId,
         displayName: entry.displayName,
         avatarUrl: entry.avatarUrl,
+        verification: entry.verification,
         activeDays: activeDaysByUser.get(entry.userId)?.size ?? 0,
       })),
       groupStats: {

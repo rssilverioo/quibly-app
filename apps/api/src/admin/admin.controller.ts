@@ -18,6 +18,7 @@ import { AdminService } from './admin.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { ENTITLEMENT_KEYS, EntitlementKey } from '../entitlements/entitlements.constants';
+import { SetVerifiedDto } from './dto/set-verified.dto';
 
 @Controller('admin')
 @UseGuards(FirebaseAuthGuard, AdminGuard)
@@ -47,6 +48,17 @@ export class AdminController {
   @Get('users/:id')
   getUser(@Param('id') id: string) {
     return this.adminService.getUser(id);
+  }
+
+  /**
+   * O selo, concedido ou removido pelo painel.
+   *
+   * `PATCH` e não dois verbos (`POST /verify` + `DELETE /verify`): é um campo
+   * booleano de um recurso que já existe, e o painel manda o estado que quer.
+   */
+  @Patch('users/:id/verification')
+  setVerified(@Param('id') id: string, @Body() dto: SetVerifiedDto) {
+    return this.adminService.setVerified(id, dto.verification ?? null);
   }
 
   @Get('revenue')

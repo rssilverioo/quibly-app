@@ -26,6 +26,7 @@ import { formatarTempoDeEstudo } from '../../lib/study-time';
 import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
 import StudyHeatmap from '../../components/StudyHeatmap';
+import SeloVerificado from '../../components/ui/SeloVerificado';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -207,10 +208,24 @@ export default function ProfileScreen() {
             <View style={styles.avatarBadge}><Camera size={13} color={c.fgMuted} strokeWidth={2.2} /></View>
           </Press>
           <View style={styles.headerText}>
-            <Text style={styles.name} numberOfLines={1}>{profile.username}</Text>
+            <View style={styles.nomeLinha}>
+              <Text style={styles.name} numberOfLines={1}>{profile.username}</Text>
+              <SeloVerificado selo={profile.verification} size={16} />
+            </View>
             <Text style={styles.handle} numberOfLines={1}>
               @{profile.handle} · {t(`titles.${title.id}`)}
             </Text>
+            {/*
+              A bio era escrita e nunca aparecia.
+
+              O campo existe no banco desde sempre e a tela de editar já pedia
+              por ele — só que nenhuma tela o mostrava. Quem escrevia uma via o
+              texto sumir, o que é pior do que não ter o campo: o app pediu uma
+              informação e a jogou fora.
+            */}
+            {profile.bio ? (
+              <Text style={styles.bio} numberOfLines={3}>{profile.bio}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -400,8 +415,11 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerText: { flex: 1, gap: 2 },
-  name: { ...text.title3, color: c.fg },
+  nomeLinha: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // `flexShrink` no nome, nunca no selo: um selo cortado é pior que nenhum.
+  name: { ...text.title3, color: c.fg, flexShrink: 1 },
   handle: { ...text.caption, color: c.fgMuted },
+  bio: { ...text.caption, color: c.fgMuted, marginTop: space.xs, lineHeight: 18 },
 
   numbersCard: {
     backgroundColor: c.surface,

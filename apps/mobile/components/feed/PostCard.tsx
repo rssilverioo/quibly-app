@@ -19,6 +19,8 @@ export interface FirebaseFeedPost {
   league_id: string;
   user_id: string;
   username: string;
+  /** O selo do autor. `null` na esmagadora maioria — ver `SeloVerificado`. */
+  verification?: 'BLUE' | 'GOLD' | null;
   avatar_url: string | null;
   session_id: string;
   subject_id: string;

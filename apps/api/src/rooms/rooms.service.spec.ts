@@ -42,6 +42,7 @@ describe('RoomsService.listForUser', () => {
       {} as any,
       challenges as any,
       {} as any,
+      {} as any,
     ).listForUser('user-1');
 
     expect(room.activeChallenge).toEqual(
@@ -83,6 +84,7 @@ describe('RoomsService.listForUser', () => {
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     ).listForUser('user-1');
 
     expect(room.activeChallenge).toBeNull();
@@ -98,7 +100,21 @@ describe('RoomsService.listForUser', () => {
         createdAt: new Date(),
       }),
     };
-    const service = new RoomsService({} as any, leagues as any, {} as any, {} as any);
+    // A criação passa pela cota do plano antes de tudo. Os dois retornos
+    // abaixo são o caminho de quem ainda cabe no limite — o caso em que este
+    // teste está interessado.
+    const prisma = {
+      profile: { findUnique: jest.fn().mockResolvedValue({ plan: 'FREE' }) },
+      league: { count: jest.fn().mockResolvedValue(0) },
+    };
+    const entitlements = { getLimit: jest.fn().mockResolvedValue(3) };
+    const service = new RoomsService(
+      prisma as any,
+      leagues as any,
+      {} as any,
+      {} as any,
+      entitlements as any,
+    );
 
     const room = await service.create('user-1', {
       name: 'Sala',
@@ -130,6 +146,7 @@ describe('RoomsService.listForUser', () => {
       {} as any,
       {} as any,
       storage as any,
+      {} as any,
     );
 
     const result = await service.createPost(
@@ -179,13 +196,18 @@ describe('RoomsService.create', () => {
           .mockImplementation(({ data }) =>
             Promise.resolve({ ...league, ...data }),
           ),
+        // A criação passa pela cota antes de tudo; zero salas é o caminho de
+        // quem ainda cabe no limite, que é o que estes testes examinam.
+        count: jest.fn().mockResolvedValue(0),
       },
+      profile: { findUnique: jest.fn().mockResolvedValue({ plan: 'FREE' }) },
     };
     const service = new RoomsService(
       prisma as any,
       leagues as any,
       {} as any,
       {} as any,
+      { getLimit: jest.fn().mockResolvedValue(3) } as any,
     );
     return { service, leagues, prisma };
   };
@@ -282,7 +304,7 @@ describe('RoomsService — só o dono edita a sala', () => {
   });
 
   const service = (prisma: any, st: any = storage()) =>
-    new RoomsService(prisma as any, {} as any, {} as any, st as any);
+    new RoomsService(prisma as any, {} as any, {} as any, st as any, {} as any);
 
   const arquivo = { buffer: Buffer.from('x'), mimetype: 'image/jpeg', originalname: 'capa.jpg' };
 
@@ -394,7 +416,7 @@ describe('RoomsService.listForUser — o líder do desafio', () => {
       },
     };
     return new RoomsService(
-      prisma as any, {} as any, { leaderboard: jest.fn().mockResolvedValue(leaderboard) } as any, {} as any,
+      prisma as any, {} as any, { leaderboard: jest.fn().mockResolvedValue(leaderboard) } as any, {} as any, {} as any,
     ).listForUser('eu');
   };
 
@@ -422,5 +444,91 @@ describe('RoomsService.listForUser — o líder do desafio', () => {
 
     expect(sala.activeChallenge!.leader).toBeNull();
     jest.useRealTimers();
+  });
+});
+
+/**
+ * O limite de salas do plano grátis.
+ *
+ * É o primeiro limite finito que o produto cobra de verdade — todo o resto da
+ * tabela de entitlements nasceu em `Infinity` de propósito. Por isso ele tem
+ * teste próprio: o dia em que alguém trocar o número no banco, o que precisa
+ * continuar valendo é o **comportamento**, não a constante.
+ */
+describe('RoomsService.create — a cota de salas', () => {
+  const montar = (plano: string, minhas: number, limite: number) => {
+    const prisma = {
+      profile: { findUnique: jest.fn().mockResolvedValue({ plan: plano }) },
+      league: {
+        count: jest.fn().mockResolvedValue(minhas),
+        update: jest.fn(),
+      },
+    };
+    const leagues = {
+      create: jest.fn().mockResolvedValue({
+        id: 'room-1',
+        name: 'Sala',
+        inviteCode: 'ABC123',
+        maxMembers: 50,
+        createdAt: new Date(),
+      }),
+    };
+    const entitlements = { getLimit: jest.fn().mockResolvedValue(limite) };
+    const service = new RoomsService(
+      prisma as any,
+      leagues as any,
+      {} as any,
+      {} as any,
+      entitlements as any,
+    );
+    return { service, prisma, leagues, entitlements };
+  };
+
+  const criar = (service: RoomsService) =>
+    service.create('user-1', { name: 'Sala', display_name: 'Rô' });
+
+  it('deixa criar enquanto sobra cota', async () => {
+    const { service, leagues } = montar('FREE', 2, 3);
+
+    await criar(service);
+
+    expect(leagues.create).toHaveBeenCalled();
+  });
+
+  it('recusa a quarta sala de quem tem três, e diz que é o paywall', async () => {
+    const { service, leagues } = montar('FREE', 3, 3);
+
+    // O `code` é o que separa este 403 de "você não tem permissão". Sem ele o
+    // app abriria um alerta de erro onde deveria abrir a tela de assinatura, e
+    // casar a mensagem quebraria na primeira tradução.
+    await expect(criar(service)).rejects.toMatchObject({
+      response: { code: 'ROOM_LIMIT_REACHED', limit: 3, current: 3 },
+    });
+    expect(leagues.create).not.toHaveBeenCalled();
+  });
+
+  it('não conta nem consulta nada quando o plano é ilimitado', async () => {
+    const { service, prisma, leagues } = montar('PRO', 99, Infinity);
+
+    await criar(service);
+
+    // Uma sala a mais no PRO não pode custar um COUNT na tabela de ligas.
+    expect(prisma.league.count).not.toHaveBeenCalled();
+    expect(leagues.create).toHaveBeenCalled();
+  });
+
+  /**
+   * Entrar na sala de outra pessoa não custa nada e nunca deve custar. Se a
+   * contagem virar participação, o convite de um amigo passa a depender do
+   * plano de quem foi convidado.
+   */
+  it('conta salas de que a pessoa é dona, não as que ela participa', async () => {
+    const { service, prisma } = montar('FREE', 0, 3);
+
+    await criar(service);
+
+    expect(prisma.league.count).toHaveBeenCalledWith({
+      where: { ownerId: 'user-1' },
+    });
   });
 });

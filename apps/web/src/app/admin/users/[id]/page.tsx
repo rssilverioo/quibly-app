@@ -19,6 +19,7 @@ interface UserDetail {
   avatarUrl: string | null;
   bio: string | null;
   plan: 'FREE' | 'PRO';
+  verification: 'BLUE' | 'GOLD' | null;
   level: number;
   totalXp: number;
   currentStreak: number;
@@ -70,6 +71,32 @@ export default function AdminUserDetailPage() {
   const [user, setUser] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savingBadge, setSavingBadge] = useState(false);
+
+  /**
+   * Concede ou remove o selo.
+   *
+   * Clicar no selo que já está ativo o remove — é o comportamento de um par de
+   * botões de rádio que aceita "nenhum", e evita um terceiro controle só para
+   * dizer "sem selo".
+   *
+   * O estado local só muda depois da resposta do servidor. Um selo é uma
+   * afirmação sobre uma pessoa real; mostrar otimista e depois voltar atrás
+   * faria o painel mentir sobre quem foi verificado.
+   */
+  async function setBadge(next: 'BLUE' | 'GOLD' | null) {
+    if (!user || savingBadge) return;
+    const value = user.verification === next ? null : next;
+    setSavingBadge(true);
+    try {
+      await api.patch(`/admin/users/${userId}/verification`, { verification: value });
+      setUser({ ...user, verification: value });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update badge');
+    } finally {
+      setSavingBadge(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchUser() {
@@ -144,6 +171,50 @@ export default function AdminUserDetailPage() {
           <p className="text-xs text-quibly-text-muted mt-2">
             Joined {formatDate(user.createdAt)}
           </p>
+
+          {/*
+            Os selos.
+
+            Concedidos aqui e em nenhum outro lugar — não existe rota que o
+            usuário alcance. É o que mantém o selo significando "é mesmo essa
+            pessoa" em vez de "pagou", que foi o que aconteceu com o X.
+          */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-xs font-medium text-quibly-text-muted mb-2">
+              Verification
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <BadgeToggle
+                active={user.verification === 'BLUE'}
+                disabled={savingBadge}
+                onClick={() => setBadge('BLUE')}
+                color="#1D9BF0"
+                label="Verified"
+                hint="Identity confirmed"
+              />
+              <BadgeToggle
+                active={user.verification === 'GOLD'}
+                disabled={savingBadge}
+                onClick={() => setBadge('GOLD')}
+                color="#E8B923"
+                label="Teacher"
+                hint="Verified educator"
+              />
+              {user.verification && (
+                <button
+                  onClick={() => setBadge(null)}
+                  disabled={savingBadge}
+                  className="text-xs text-quibly-text-muted hover:text-quibly-text underline disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-quibly-text-muted mt-2">
+              Gold is for teachers only. Students use it to decide whose room to
+              trust, so a wrong one costs more than a missing one.
+            </p>
+          </div>
         </div>
       </Card>
 
@@ -271,5 +342,57 @@ export default function AdminUserDetailPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/**
+ * Um selo, ligado ou desligado.
+ *
+ * Caixa de seleção e não interruptor: os dois selos são mutuamente exclusivos
+ * — uma pessoa é verificada **ou** professora, nunca as duas —, e um par de
+ * caixas onde marcar uma desmarca a outra é o gesto que o painel precisa.
+ *
+ * O visto desenhado à mão, e não um emoji: o emoji muda de forma em cada
+ * sistema, e este é o mesmo símbolo que o app vai desenhar do outro lado.
+ */
+function BadgeToggle({
+  active, disabled, onClick, color, label, hint,
+}: {
+  active: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  color: string;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={hint}
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition disabled:opacity-50 ${
+        active
+          ? 'border-transparent text-white'
+          : 'border-white/15 text-quibly-text-muted hover:border-white/30'
+      }`}
+      style={active ? { backgroundColor: color } : undefined}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M12 1.5l2.6 2.1 3.3-.3.9 3.2 2.9 1.6-1.3 3.1 1.3 3.1-2.9 1.6-.9 3.2-3.3-.3L12 22.5l-2.6-2.1-3.3.3-.9-3.2-2.9-1.6L3.6 12.8 2.3 9.7l2.9-1.6.9-3.2 3.3.3L12 1.5z"
+          fill={active ? '#FFFFFF' : color}
+          opacity={active ? 0.28 : 1}
+        />
+        <path
+          d="M8.4 12.2l2.5 2.5 4.7-5"
+          fill="none"
+          stroke={active ? '#FFFFFF' : '#0A0A0F'}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {label}
+    </button>
   );
 }

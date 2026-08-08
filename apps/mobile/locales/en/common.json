@@ -143,7 +143,8 @@
     "deleteConfirm": "Delete",
     "cancel": "Cancel",
     "nameTooShort": "The name needs at least 2 letters.",
-    "editError": "Couldn't save. Try again."
+    "editError": "Couldn't save. Try again.",
+    "roomLimitReached": "The free plan includes {{limit}} rooms of your own. Join as many as you like."
   },
   "members": "Members",
   "members_one": "{{count}} member",
@@ -177,5 +178,26 @@
     "Thu",
     "Fri",
     "Sat"
-  ]
+  ],
+  "sending": "Sending…",
+  "moderation": {
+    "reportTitle": "Report this content",
+    "reportSubtitle": "Tell us what is wrong. We review every report.",
+    "reason": {
+      "spam": "Spam or misleading",
+      "harassment": "Harassment or hate",
+      "nudity": "Nudity or sexual content",
+      "violence": "Violence or dangerous acts",
+      "other": "Something else"
+    },
+    "alsoBlock": "Also block {{name}}",
+    "thisPerson": "this person",
+    "submit": "Submit report",
+    "reviewNotice": "Blocking takes effect right away. Reports are reviewed by our team.",
+    "error": "Could not send the report. Try again.",
+    "blockedTitle": "Blocked people",
+    "blockedEmpty": "You have not blocked anyone.",
+    "unblock": "Unblock",
+    "blockedNotice": "You will not see their posts or messages. They are not told."
+  }
 }

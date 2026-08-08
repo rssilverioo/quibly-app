@@ -29,6 +29,7 @@ import {
 } from '../../../services/chat-realtime';
 import { getMyRooms } from '../../../services/rooms';
 import { autorDaMensagem } from '../../../lib/chat-messages';
+import SeloVerificado from '../../../components/ui/SeloVerificado';
 import { abreDia, rotuloDoDia } from '../../../lib/chat-day';
 import {
   bolhaOtimista,
@@ -255,7 +256,7 @@ export default function RoomChatScreen() {
     const abreBloco = !anterior
       || new Date(item.created_at).getTime() - new Date(anterior.created_at).getTime() > TIME_BLOCK_MS;
     const mine = item.user_id === meuId;
-    const { nome: author, avatar } = autorDaMensagem(item);
+    const { nome: author, avatar, selo } = autorDaMensagem(item);
     const apagada = Boolean(item.deleted_at);
 
     return (
@@ -266,7 +267,14 @@ export default function RoomChatScreen() {
         <View style={[styles.row, mine ? styles.rowMine : styles.rowOther, item.falhou && styles.rowFailed]}>
           {!mine ? <View style={styles.avatar}><Avatar uri={avatar} name={author} size={28} /></View> : null}
           <View style={styles.column}>
-            {!mine && author ? <Text style={styles.author}>{author}</Text> : null}
+            {!mine && author ? (
+              <View style={styles.autorLinha}>
+                <Text style={styles.author}>{author}</Text>
+                {/* Só nas mensagens dos outros: o selo responde "quem é essa
+                    pessoa?", e ninguém precisa disso sobre si mesmo. */}
+                <SeloVerificado selo={selo} size={12} />
+              </View>
+            ) : null}
             <View style={[
               styles.bubble,
               mine ? styles.bubbleMine : styles.bubbleOther,
@@ -401,7 +409,10 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   rowFailed: { opacity: 0.4 },
   avatar: { alignSelf: 'flex-end' },
   column: { maxWidth: '78%' },
-  author: { ...text.caption, color: c.fgMuted, marginBottom: 4 },
+  // A linha do autor virou `row` por causa do selo; a margem que era do texto
+  // passou para ela, senão o selo empurra a bolha para baixo.
+  autorLinha: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  author: { ...text.caption, color: c.fgMuted },
   bubble: { minHeight: 34, paddingVertical: space.sm, paddingHorizontal: 14, borderRadius: radius.md, justifyContent: 'center' },
   bubbleMine: { backgroundColor: c.accent },
   bubbleOther: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },

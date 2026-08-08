@@ -295,7 +295,7 @@ export class LeaguesService {
         startedAt: true,
         proofMode: true,
         subject: { select: { name: true, color: true } },
-        user: { select: { username: true, handle: true, avatarUrl: true } },
+        user: { select: { username: true, handle: true, avatarUrl: true, verification: true } },
       },
       orderBy: { startedAt: 'asc' },
     });

@@ -1,20 +1,59 @@
 /**
  * Mascot building blocks, drawn on the source SVG's 1024x1024 grid.
  *
- * Everything here is a pure function of the palette so the same castle works
+ * Everything here is a pure function of the palette so the same rabbit works
  * on the dark app ground and on the cream marketing surface. The drop shadow
  * from the source file is deliberately dropped: `feDropShadow` is unsupported
  * on Android in react-native-svg and renders inconsistently on iOS.
+ *
+ * ## A grade sobreviveu à troca de mascote
+ *
+ * Estas peças foram desenhadas para um castelo. Quando ele virou o coelho, o
+ * que **não** mudou foi onde cada coisa fica: olhos em y=470, boca em y≈540,
+ * braços saindo de (288, 470) e (736, 470), objeto na mão em (812, 272).
+ *
+ * Isso não é acaso, é o que tornou a troca possível num arquivo só. Os 30
+ * estados de `Mascot.tsx` e as ~15 telas que os chamam continuam valendo sem
+ * uma linha de mudança, porque a anatomia é um contrato de coordenadas — e o
+ * corpo é a única coisa que estava do outro lado dele.
  */
 import { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
-const INK = '#201712';
-const TONGUE = '#C96A4B';
-const LIMB = '#7A5136';
+export const PELO = '#FFFFFF';
+/**
+ * O azul do contorno do coelho — o mesmo traço das ilustrações da marca.
+ *
+ * `INK` era o marrom-escuro do castelo, e valia para olhos, boca e traços. No
+ * coelho o traço é azul, então a constante trocou de valor e não de papel: um
+ * lugar só continua decidindo a cor de tudo que é linha.
+ */
+export const CONTORNO = '#123E8C';
+const INK = CONTORNO;
+export const ORELHA_INTERNA = '#BBD5FF';
+const TONGUE = '#E8899B';
 
 export interface PartProps {
-  /** Brand accent for this palette — lime on dark, bronze on cream. */
+  /** Brand accent for this palette. */
   accent: string;
+}
+
+/**
+ * Um membro: contorno azul por baixo, pelo branco por cima.
+ *
+ * O braço do castelo era um traço marrom só. O coelho é branco, e branco sobre
+ * o fundo claro do app desapareceria sem contorno — daí o mesmo caminho ser
+ * percorrido duas vezes, o primeiro mais grosso. A mão fecha a ponta pela
+ * mesma razão e na mesma ordem.
+ */
+function Membro({ d, mao }: { d: string; mao: readonly [number, number] }) {
+  return (
+    <G>
+      <Path d={d} fill="none" stroke={CONTORNO} strokeWidth={82} strokeLinecap="round" />
+      <Circle cx={mao[0]} cy={mao[1]} r={58} fill={CONTORNO} />
+      <Path d={d} fill="none" stroke={PELO} strokeWidth={62} strokeLinecap="round" />
+      <Circle cx={mao[0]} cy={mao[1]} r={48} fill={PELO} />
+    </G>
+  );
 }
 
 // ── eyes ────────────────────────────────────────────────────────────────────
@@ -113,68 +152,69 @@ export const MouthWobble = () => (
 
 export const ArmsRest = () => (
   <G>
-    <Path d="M288 470 C220 500, 215 610, 285 650" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Path d="M736 470 C804 500, 809 610, 739 650" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Circle cx={272} cy={655} r={48} fill={LIMB} />
-    <Circle cx={752} cy={655} r={48} fill={LIMB} />
+    <Membro d="M288 470 C220 500, 215 610, 285 650" mao={[272, 655]} />
+    <Membro d="M736 470 C804 500, 809 610, 739 650" mao={[752, 655]} />
   </G>
 );
 
 export const ArmsUp = () => (
   <G>
-    <Path d="M288 470 C214 430, 196 330, 236 262" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Path d="M736 470 C810 430, 828 330, 788 262" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Circle cx={230} cy={250} r={48} fill={LIMB} />
-    <Circle cx={794} cy={250} r={48} fill={LIMB} />
+    <Membro d="M288 470 C214 430, 196 330, 236 262" mao={[230, 250]} />
+    <Membro d="M736 470 C810 430, 828 330, 788 262" mao={[794, 250]} />
   </G>
 );
 
 export const ArmsRightUp = () => (
   <G>
-    <Path d="M288 470 C220 500, 215 610, 285 650" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Path d="M736 470 C812 452, 840 372, 806 300" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Circle cx={272} cy={655} r={48} fill={LIMB} />
-    <Circle cx={800} cy={288} r={48} fill={LIMB} />
+    <Membro d="M288 470 C220 500, 215 610, 285 650" mao={[272, 655]} />
+    <Membro d="M736 470 C812 452, 840 372, 806 300" mao={[800, 288]} />
   </G>
 );
 
 export const ArmsShrug = () => (
   <G>
-    <Path d="M288 470 C214 452, 190 400, 206 348" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Path d="M736 470 C810 452, 834 400, 818 348" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Circle cx={200} cy={336} r={48} fill={LIMB} />
-    <Circle cx={824} cy={336} r={48} fill={LIMB} />
+    <Membro d="M288 470 C214 452, 190 400, 206 348" mao={[200, 336]} />
+    <Membro d="M736 470 C810 452, 834 400, 818 348" mao={[824, 336]} />
   </G>
 );
 
 export const ArmsDroop = () => (
   <G>
-    <Path d="M288 486 C236 546, 232 664, 268 716" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Path d="M736 486 C788 546, 792 664, 756 716" fill="none" stroke={LIMB} strokeWidth={62} strokeLinecap="round" />
-    <Circle cx={262} cy={722} r={48} fill={LIMB} />
-    <Circle cx={762} cy={722} r={48} fill={LIMB} />
+    <Membro d="M288 486 C236 546, 232 664, 268 716" mao={[262, 722]} />
+    <Membro d="M736 486 C788 546, 792 664, 756 716" mao={[762, 722]} />
   </G>
 );
 
 // ── worn items ──────────────────────────────────────────────────────────────
-// Anything that sits on the battlements replaces the flag — you can't wear a
-// crown and fly a banner from the same tower.
+/*
+ Tudo aqui desceu 120 unidades na troca do castelo pelo coelho.
+
+ No castelo, o chapéu pousava nas ameias — o ponto mais alto da figura. O
+ coelho tem orelhas ali, e um chapéu naquela altura ficava flutuando acima
+ delas, preso em nada. Descendo até a cúpula da cabeça, ele se apoia onde
+ caberia de verdade e as orelhas passam por cima, que é como um coelho usa
+ chapéu.
+
+ A bandeira do castelo não desceu: sumiu. Ela era o mastro de uma torre, e não
+ há torre. Com ela foi embora o `HIDES_FLAG` de `Mascot.tsx`, que existia só
+ para impedir que a coroa e o mastro disputassem a mesma ameia.
+*/
 
 export const Cap = ({ accent }: PartProps) => (
   <G>
-    <Path d="M512 150 L716 216 L512 282 L308 216 Z" fill="#1E1E2A" />
-    <Rect x={452} y={236} width={120} height={34} rx={10} fill="#2A2A38" />
-    <Path d="M700 226 V300" stroke="#1E1E2A" strokeWidth={10} strokeLinecap="round" />
-    <Circle cx={700} cy={312} r={20} fill={accent} />
+    <Path d="M512 270 L716 336 L512 402 L308 336 Z" fill="#1E1E2A" />
+    <Rect x={452} y={356} width={120} height={34} rx={10} fill="#2A2A38" />
+    <Path d="M700 346 V420" stroke="#1E1E2A" strokeWidth={10} strokeLinecap="round" />
+    <Circle cx={700} cy={432} r={20} fill={accent} />
   </G>
 );
 
 export const Crown = ({ accent }: PartProps) => (
   <G>
-    <Path d="M330 250 L330 150 L412 210 L512 128 L612 210 L694 150 L694 250 Z" fill={accent} />
-    <Circle cx={412} cy={196} r={16} fill="#FF5A7A" />
-    <Circle cx={512} cy={176} r={18} fill="#38BDF8" />
-    <Circle cx={612} cy={196} r={16} fill="#FF5A7A" />
+    <Path d="M330 370 L330 270 L412 330 L512 248 L612 330 L694 270 L694 370 Z" fill={accent} />
+    <Circle cx={412} cy={316} r={16} fill="#FF5A7A" />
+    <Circle cx={512} cy={296} r={18} fill="#38BDF8" />
+    <Circle cx={612} cy={316} r={16} fill="#FF5A7A" />
   </G>
 );
 
@@ -189,21 +229,23 @@ export const Shades = () => (
   </G>
 );
 
+// O arco desceu só 40: ele passa **na frente** das orelhas, que é como um fone
+// de fato se apoia numa cabeça de coelho. Descer 120 o enterraria nos olhos.
 export const Headphones = ({ accent }: PartProps) => (
   <G>
-    <Path d="M286 356 C286 210, 738 210, 738 356" fill="none" stroke="#1E1E2A" strokeWidth={30} strokeLinecap="round" />
-    <Rect x={244} y={330} width={84} height={140} rx={34} fill="#1E1E2A" />
-    <Rect x={696} y={330} width={84} height={140} rx={34} fill="#1E1E2A" />
-    <Rect x={262} y={352} width={48} height={96} rx={24} fill={accent} opacity={0.85} />
-    <Rect x={714} y={352} width={48} height={96} rx={24} fill={accent} opacity={0.85} />
+    <Path d="M286 396 C286 250, 738 250, 738 396" fill="none" stroke="#1E1E2A" strokeWidth={30} strokeLinecap="round" />
+    <Rect x={244} y={370} width={84} height={140} rx={34} fill="#1E1E2A" />
+    <Rect x={696} y={370} width={84} height={140} rx={34} fill="#1E1E2A" />
+    <Rect x={262} y={392} width={48} height={96} rx={24} fill={accent} opacity={0.85} />
+    <Rect x={714} y={392} width={48} height={96} rx={24} fill={accent} opacity={0.85} />
   </G>
 );
 
 export const PartyHat = ({ accent }: PartProps) => (
   <G>
-    <Path d="M512 108 L586 268 H438 Z" fill={accent} />
-    <Path d="M470 214 H570" stroke="#0A0A0C" strokeWidth={12} opacity={0.35} />
-    <Circle cx={512} cy={102} r={20} fill="#FF5A7A" />
+    <Path d="M512 228 L586 388 H438 Z" fill={accent} />
+    <Path d="M470 334 H570" stroke="#0A0A0C" strokeWidth={12} opacity={0.35} />
+    <Circle cx={512} cy={222} r={20} fill="#FF5A7A" />
   </G>
 );
 

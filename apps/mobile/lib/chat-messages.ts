@@ -18,6 +18,8 @@ export interface AutorDaMensagem {
   username?: string;
   handle?: string;
   avatar_url?: string | null;
+  /** O selo, quando há. Ver `components/ui/SeloVerificado`. */
+  verification?: 'BLUE' | 'GOLD' | null;
 }
 
 export interface ChatMessageComAutor extends ChatMessage {
@@ -62,9 +64,13 @@ export function mensagensDaResposta(resposta: unknown): ChatMessageComAutor[] {
 export function autorDaMensagem(mensagem: ChatMessageComAutor): {
   nome: string;
   avatar: string | null;
+  selo: 'BLUE' | 'GOLD' | null;
 } {
   return {
     nome: mensagem.user?.username ?? mensagem.profile?.username ?? '',
     avatar: mensagem.user?.avatar_url ?? mensagem.profile?.avatar_url ?? null,
+    // `null` na esmagadora maioria. Ler as duas formas pela mesma razão do
+    // nome e do avatar, logo acima.
+    selo: mensagem.user?.verification ?? mensagem.profile?.verification ?? null,
   };
 }

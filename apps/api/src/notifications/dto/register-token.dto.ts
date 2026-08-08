@@ -7,4 +7,14 @@ export class RegisterTokenDto {
   @IsOptional()
   @IsString()
   platform?: string;
+
+  /**
+   * O idioma do aparelho (`pt-BR`, `en-US`), não o escolhido no app.
+   *
+   * A notificação chega na tela de bloqueio, entre as de todos os outros apps,
+   * e ali quem manda é o idioma do celular.
+   */
+  @IsOptional()
+  @IsString()
+  locale?: string;
 }

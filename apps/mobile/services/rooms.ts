@@ -73,6 +73,11 @@ export interface RoomFeedUser {
   username: string;
   handle: string;
   avatar_url: string | null;
+  /**
+   * O selo, quando há. Concedido pelo painel e nunca comprável — ver
+   * `components/ui/SeloVerificado`.
+   */
+  verification?: 'BLUE' | 'GOLD' | null;
 }
 
 /** Comentário do bloco `latest_comments` — no máximo 3, ver `RoomFeedPost`. */
@@ -288,6 +293,8 @@ export interface LeaderboardEntry {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
+  /** O selo, quando há. Ver `components/ui/SeloVerificado`. */
+  verification?: 'BLUE' | 'GOLD' | null;
   metric_value: number;
   minutes: number;
   sessions: number;

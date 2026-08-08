@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import { idiomaDe, textosPara } from './notification-texts';
 
 @Injectable()
 export class NotificationsService {
@@ -13,11 +14,24 @@ export class NotificationsService {
     private readonly firebaseService: FirebaseService,
   ) {}
 
-  async registerToken(userId: string, token: string, platform?: string) {
+  /**
+   * O `locale` é o do **aparelho**, e chega em toda re-registro.
+   *
+   * Isso importa: quem troca o idioma do celular passa a receber no novo sem
+   * fazer mais nada, porque o app re-registra o token a cada abertura. Se ele
+   * fosse gravado só na criação, a pessoa ficaria presa ao idioma que o
+   * aparelho tinha no dia em que instalou o app.
+   */
+  async registerToken(
+    userId: string,
+    token: string,
+    platform?: string,
+    locale?: string,
+  ) {
     await this.prisma.pushToken.upsert({
       where: { token },
-      update: { userId, platform, updatedAt: new Date() },
-      create: { userId, token, platform },
+      update: { userId, platform, locale, updatedAt: new Date() },
+      create: { userId, token, platform, locale },
     });
     return { registered: true };
   }
@@ -35,6 +49,32 @@ export class NotificationsService {
       select: { token: true },
     });
     return tokens.map((t) => t.token);
+  }
+
+  /**
+   * Os aparelhos de quem vai receber, agrupados pelo idioma de cada um.
+   *
+   * Agrupar em vez de mandar um por um: cada grupo compõe o texto uma vez e
+   * dispara para todos os tokens daquele idioma. Uma pessoa com o celular em
+   * português e o tablet em inglês recebe cada um no seu, sem que nada além
+   * desta função saiba que isso é possível.
+   */
+  private async tokensPorIdioma(
+    userIds: string[],
+  ): Promise<Map<'pt' | 'en', string[]>> {
+    const linhas = await this.prisma.pushToken.findMany({
+      where: { userId: { in: userIds } },
+      select: { token: true, locale: true },
+    });
+
+    const grupos = new Map<'pt' | 'en', string[]>();
+    for (const linha of linhas) {
+      const idioma = idiomaDe(linha.locale);
+      const lista = grupos.get(idioma) ?? [];
+      lista.push(linha.token);
+      grupos.set(idioma, lista);
+    }
+    return grupos;
   }
 
   private async sendToTokens(
@@ -159,13 +199,6 @@ export class NotificationsService {
 
     if (recipientIds.length === 0) return;
 
-    const tokens = await this.prisma.pushToken.findMany({
-      where: { userId: { in: recipientIds } },
-      select: { token: true },
-    });
-
-    if (tokens.length === 0) return;
-
     const preview =
       content.length > 80 ? content.slice(0, 80) + '...' : content;
 
@@ -174,14 +207,20 @@ export class NotificationsService {
       select: { name: true },
     });
 
-    await this.sendToTokens(
-      tokens.map((t) => t.token),
-      {
-        title: league?.name ?? 'New Message',
-        body: `${senderName}: ${preview}`,
-      },
-      { type: 'chat_message', leagueId },
-    );
+    // O nome da sala vem do que a pessoa digitou, então ele não se traduz — o
+    // que precisa de idioma é a saída para quando a sala não tem nome.
+    const grupos = await this.tokensPorIdioma(recipientIds);
+    for (const [idioma, tokens] of grupos) {
+      const texto = textosPara(idioma);
+      await this.sendToTokens(
+        tokens,
+        {
+          title: texto.chatTitulo(league?.name ?? texto.salaSemNome),
+          body: texto.chatCorpo(senderName, preview),
+        },
+        { type: 'chat_message', leagueId },
+      );
+    }
   }
 
   async notifyAchievements(userId: string, achievementNames: string[]) {

@@ -17,6 +17,7 @@ import { FeedModule } from './feed/feed.module';
 import { ChatModule } from './chat/chat.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ModerationModule } from './moderation/moderation.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { ImageSearchModule } from './image-search/image-search.module';
 import { DocumentsModule } from './documents/documents.module';
@@ -76,6 +77,7 @@ import { ChallengesModule } from './challenges/challenges.module';
     ChatModule,
     AchievementsModule,
     NotificationsModule,
+    ModerationModule,
     DocumentsModule,
     LessonsModule,
     FlashcardsModule,

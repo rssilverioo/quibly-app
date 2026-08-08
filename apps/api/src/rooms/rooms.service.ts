@@ -11,6 +11,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { ChallengesService } from '../challenges/challenges.service';
 import { StorageService } from '../storage/storage.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 @Injectable()
 export class RoomsService {
@@ -19,7 +20,45 @@ export class RoomsService {
     private readonly leaguesService: LeaguesService,
     private readonly challengesService: ChallengesService,
     private readonly storageService: StorageService,
+    private readonly entitlements: EntitlementsService,
   ) {}
+
+  /**
+   * O limite de salas do plano. Deixa passar, ou recusa dizendo o porquê.
+   *
+   * ## Por que conta dono, e não participação
+   *
+   * Entrar na sala de outra pessoa não custa nada e nunca deve custar. Contar
+   * participação faria o limite punir quem foi convidado — a pessoa é aceita
+   * em quatro grupos de estudo e o app trava, sem que ela tenha criado nada.
+   * Pior: o convite de um amigo passaria a depender do plano dela.
+   *
+   * ## Por que a resposta carrega `code`
+   *
+   * Um 403 com texto é indistinguível de "você não tem permissão" para quem
+   * está do outro lado. O app precisa saber que **este** 403 é o paywall, para
+   * abrir a tela de assinatura em vez de um alerta de erro — e precisa saber
+   * disso sem casar string, que quebra na primeira tradução.
+   */
+  private async exigirCotaDeSala(userId: string) {
+    const perfil = await this.prisma.profile.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    });
+
+    const limite = await this.entitlements.getLimit(perfil?.plan || 'FREE', 'rooms');
+    if (limite === Infinity) return;
+
+    const minhas = await this.prisma.league.count({ where: { ownerId: userId } });
+    if (minhas < limite) return;
+
+    throw new ForbiddenException({
+      code: 'ROOM_LIMIT_REACHED',
+      limit: limite,
+      current: minhas,
+      message: `The free plan includes ${limite} rooms of your own.`,
+    });
+  }
 
   /**
    * A sala nasce **com** o desafio, quando o cliente diz como ela funciona.
@@ -35,6 +74,8 @@ export class RoomsService {
    * a build 1.2.1 em campo manda, e ela deve seguir funcionando como sempre.
    */
   async create(userId: string, dto: CreateRoomDto) {
+    await this.exigirCotaDeSala(userId);
+
     const agora = new Date();
     const nasceComDesafio = dto.duration_days != null;
 

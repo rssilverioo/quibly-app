@@ -107,65 +107,85 @@ enum ChatMessageType {
 // ─── MODELS ───
 
 model Profile {
-  id                     String    @id // Firebase UID
-  email                  String    @unique
-  username               String
-  handle                 String    @unique
-  avatarUrl              String?   @map("avatar_url")
-  bio                    String?
-  totalXp                Int       @default(0) @map("total_xp")
-  level                  Int       @default(1)
-  lockInScore            Int       @default(0) @map("lock_in_score")
-  verifiedHours          Decimal   @default(0) @map("verified_hours") @db.Decimal(10, 2)
-  currentStreak          Int       @default(0) @map("current_streak")
-  longestStreak          Int       @default(0) @map("longest_streak")
-  totalStudyMinutes      Int       @default(0) @map("total_study_minutes")
-  lastStudyDate          DateTime? @map("last_study_date") @db.Date
-  plan                   Plan      @default(FREE)
-  subscriptionStatus     String?   @map("subscription_status")
-  currentPeriodEnd       DateTime? @map("current_period_end") @db.Timestamptz()
-  subscriptionPlatform   String?   @map("subscription_platform")  // 'apple' | 'google'
-  onboardingCompleted    Boolean   @default(false) @map("onboarding_completed")
-  educationLevel         String?   @map("education_level")   // high_school | college | graduate | professional
-  studyGoal              String?   @map("study_goal")        // exam_prep | school | certification | fun
-  dailyGoalMinutes       Int       @default(15) @map("daily_goal_minutes")
+  id                   String             @id // Firebase UID
+  email                String             @unique
+  username             String
+  handle               String             @unique
+  avatarUrl            String?            @map("avatar_url")
+  bio                  String?
+  totalXp              Int                @default(0) @map("total_xp")
+  level                Int                @default(1)
+  lockInScore          Int                @default(0) @map("lock_in_score")
+  verifiedHours        Decimal            @default(0) @map("verified_hours") @db.Decimal(10, 2)
+  currentStreak        Int                @default(0) @map("current_streak")
+  longestStreak        Int                @default(0) @map("longest_streak")
+  totalStudyMinutes    Int                @default(0) @map("total_study_minutes")
+  lastStudyDate        DateTime?          @map("last_study_date") @db.Date
+  plan                 Plan               @default(FREE)
+  subscriptionStatus   String?            @map("subscription_status")
+  currentPeriodEnd     DateTime?          @map("current_period_end") @db.Timestamptz()
+  subscriptionPlatform String?            @map("subscription_platform") // 'apple' | 'google'
+  /**
+   * O selo — dado por nós, **nunca vendido**.
+   * A distinção é o que faz o selo valer alguma coisa. Se ele puder ser
+   * comprado, deixa de significar "é mesmo essa pessoa" e passa a significar
+   * "pagou" — foi o que aconteceu com o X, e o selo virou ruído em meses.
+   * Aqui ele responde uma pergunta só: **este perfil é mesmo quem diz ser?**
+   * Professor, cursinho, criador com público. Quem concede somos nós, pelo
+   * painel; não existe rota que o usuário alcance.
+   * `null` é o estado da esmagadora maioria — sem selo. Enum anulável e não um
+   * booleano com um tipo ao lado: assim é impossível existir "verificado sem
+   * tipo" ou "tipo sem verificação", dois estados inválidos que o banco não
+   * teria como proibir.
+   * O que o Pro ganha é uma marca própria, derivada de `plan` e visualmente
+   * distinta destas. Uma diz identidade, a outra diz apoio, e misturar as duas
+   * apaga o significado das duas.
+   */
+  verification         VerificationBadge?
+  onboardingCompleted  Boolean            @default(false) @map("onboarding_completed")
+  educationLevel       String?            @map("education_level") // high_school | college | graduate | professional
+  studyGoal            String?            @map("study_goal") // exam_prep | school | certification | fun
+  dailyGoalMinutes     Int                @default(15) @map("daily_goal_minutes")
 
   /// ISO 3166-1 alpha-2, resolvido no onboarding por locale + IP.
-  countryCode            String?   @map("country_code") @db.Char(2)
+  countryCode String?   @map("country_code") @db.Char(2)
   /// A prova que o usuário está estudando. Sugerida por geo, sempre trocável.
-  examTrackId            String?   @map("exam_track_id") @db.Uuid
+  examTrackId String?   @map("exam_track_id") @db.Uuid
   /// IANA, ex: 'America/Sao_Paulo'. A Fase 2 precisa disto para horário de
   /// silêncio das notificações; a Fase 6, para fechar o dia no fuso certo.
-  timezone               String?
+  timezone    String?
   /// Data da prova alvo, quando existe. É o `dias até a prova` da Fase 6.
-  examDate               DateTime? @map("exam_date") @db.Date
+  examDate    DateTime? @map("exam_date") @db.Date
 
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  subjects          Subject[]
-  dailyPlans        DailyPlan[]
-  studySessions     StudySession[]
-  proofChecks       ProofCheck[]
-  ownedLeagues      League[]         @relation("LeagueOwner")
-  leagueMemberships LeagueMember[]
-  feedPosts         FeedPost[]
-  feedReactions     FeedReaction[]
-  feedComments      FeedComment[]
-  chatMessages      ChatMessage[]
-  chatReactions     ChatReaction[]
-  userAchievements  UserAchievement[]
-  pushTokens        PushToken[]
-  documents         Document[]
-  lessons           Lesson[]
-  flashcardSets     FlashcardSet[]
-  quizzes           Quiz[]
-  dailyUsage        DailyUsage[]
+  subjects           Subject[]
+  dailyPlans         DailyPlan[]
+  studySessions      StudySession[]
+  proofChecks        ProofCheck[]
+  ownedLeagues       League[]            @relation("LeagueOwner")
+  leagueMemberships  LeagueMember[]
+  feedPosts          FeedPost[]
+  feedReactions      FeedReaction[]
+  feedComments       FeedComment[]
+  chatMessages       ChatMessage[]
+  chatReactions      ChatReaction[]
+  userAchievements   UserAchievement[]
+  pushTokens         PushToken[]
+  documents          Document[]
+  lessons            Lesson[]
+  flashcardSets      FlashcardSet[]
+  quizzes            Quiz[]
+  dailyUsage         DailyUsage[]
   audioStudySessions AudioStudySession[]
-  sessionAnomalies  SessionAnomaly[]
-  country           Country?         @relation(fields: [countryCode], references: [code], onDelete: SetNull)
-  examTrack         ExamTrack?       @relation(fields: [examTrackId], references: [id], onDelete: SetNull)
-  topicMastery      TopicMastery[]
+  sessionAnomalies   SessionAnomaly[]
+  blocksMade         UserBlock[]         @relation("BlockAuthor")
+  blocksReceived     UserBlock[]         @relation("BlockTarget")
+  reportsMade        ContentReport[]     @relation("ReportAuthor")
+  country            Country?            @relation(fields: [countryCode], references: [code], onDelete: SetNull)
+  examTrack          ExamTrack?          @relation(fields: [examTrackId], references: [id], onDelete: SetNull)
+  topicMastery       TopicMastery[]
 
   @@index([level(sort: Desc)])
   @@index([totalXp(sort: Desc)])
@@ -211,29 +231,29 @@ model StudySession {
   /// 30s; a session whose last beat is older than the grace window is swept to
   /// `abandoned` and credited only up to this instant. NULL means the session
   /// has not beaten once yet — the sweeper falls back to `startedAt`.
-  lastHeartbeatAt         DateTime?     @map("last_heartbeat_at") @db.Timestamptz()
+  lastHeartbeatAt DateTime? @map("last_heartbeat_at") @db.Timestamptz()
   /// Wall-clock instant the session became `paused`. NULL whenever the session
   /// is not currently paused. The closed intervals live in `SessionPause`;
   /// this is only the open one.
-  pausedAt                DateTime?     @map("paused_at") @db.Timestamptz()
+  pausedAt        DateTime? @map("paused_at") @db.Timestamptz()
   /// How the session reached a terminal state: 'user' (explicit end),
   /// 'abandoned_no_heartbeat' (swept), 'user_abandon' (explicit discard).
   /// Kept as a plain string so adding a reason is not a migration.
-  endReason               String?       @map("end_reason")
+  endReason       String?   @map("end_reason")
   /// Server-computed seconds the session actually ran, before the daily cap is
   /// applied. `totalDurationMinutes` is what got credited; this is what was
   /// measured. When they disagree, the cap clipped the session.
-  measuredSeconds         Int?          @map("measured_seconds")
+  measuredSeconds Int?      @map("measured_seconds")
 
-  user        Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject     Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  league      League?      @relation(fields: [leagueId], references: [id], onDelete: SetNull)
-  proofChecks ProofCheck[]
-  feedPosts   FeedPost[]
+  user         Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject      Subject            @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  league       League?            @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  proofChecks  ProofCheck[]
+  feedPosts    FeedPost[]
   audioSession AudioStudySession?
-  pauses      SessionPause[]
-  anomalies   SessionAnomaly[]
-  topics      SessionTopic[]
+  pauses       SessionPause[]
+  anomalies    SessionAnomaly[]
+  topics       SessionTopic[]
 
   @@index([userId])
   @@index([userId, startedAt(sort: Desc)])
@@ -304,22 +324,22 @@ model ProofCheck {
 }
 
 model League {
-  id          String        @id @default(uuid()) @db.Uuid
-  name        String
-  description String?
-  ownerId     String        @map("owner_id")
-  startDate   DateTime      @map("start_date") @db.Date
-  endDate     DateTime      @map("end_date") @db.Date
-  privacy     LeaguePrivacy @default(private)
-  mode        LeagueMode    @default(competitive)
-  participationMode String  @default("photo") @map("participation_mode")
-  status      LeagueStatus  @default(upcoming)
-  inviteCode  String        @unique @map("invite_code")
+  id                String        @id @default(uuid()) @db.Uuid
+  name              String
+  description       String?
+  ownerId           String        @map("owner_id")
+  startDate         DateTime      @map("start_date") @db.Date
+  endDate           DateTime      @map("end_date") @db.Date
+  privacy           LeaguePrivacy @default(private)
+  mode              LeagueMode    @default(competitive)
+  participationMode String        @default("photo") @map("participation_mode")
+  status            LeagueStatus  @default(upcoming)
+  inviteCode        String        @unique @map("invite_code")
   /// Capa escolhida pelo dono. `null` cai no desenho gerado a partir do id.
-  coverUrl    String?       @map("cover_url")
-  maxMembers  Int           @default(50) @map("max_members")
-  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt   DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  coverUrl          String?       @map("cover_url")
+  maxMembers        Int           @default(50) @map("max_members")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   owner        Profile        @relation("LeagueOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members      LeagueMember[]
@@ -492,6 +512,17 @@ model PushToken {
   userId    String   @map("user_id")
   token     String   @unique
   platform  String?
+  /**
+   * O idioma do **aparelho**, não o da conta.
+   * Fica aqui e não no `Profile` porque é do aparelho que a pergunta trata: a
+   * notificação chega na tela de bloqueio, no meio das notificações de todos
+   * os outros apps, e ali quem manda é o idioma do celular. Uma pessoa com o
+   * iPhone em português e um iPad em inglês tem que receber cada uma no seu —
+   * e um campo no perfil não saberia disso.
+   * Nulo é o estado dos tokens registrados antes desta coluna existir. Cai no
+   * idioma padrão em vez de virar erro.
+   */
+  locale    String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
@@ -578,9 +609,9 @@ model FlashcardSet {
   language   String   @default("en")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  user       Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  document   Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  lesson     Lesson?    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user       Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  lesson     Lesson?     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   flashcards Flashcard[]
 
   @@index([userId])
@@ -590,13 +621,13 @@ model FlashcardSet {
 }
 
 model Flashcard {
-  id         String  @id @default(uuid()) @db.Uuid
-  setId      String  @map("set_id") @db.Uuid
-  front      String  @db.Text
-  back       String  @db.Text
-  explain    String? @db.Text
-  imageUrl   String? @map("image_url")
-  sortOrder  Int     @default(0) @map("sort_order")
+  id        String  @id @default(uuid()) @db.Uuid
+  setId     String  @map("set_id") @db.Uuid
+  front     String  @db.Text
+  back      String  @db.Text
+  explain   String? @db.Text
+  imageUrl  String? @map("image_url")
+  sortOrder Int     @default(0) @map("sort_order")
 
   set FlashcardSet @relation(fields: [setId], references: [id], onDelete: Cascade)
 
@@ -627,13 +658,13 @@ model Quiz {
 }
 
 model Question {
-  id           String @id @default(uuid()) @db.Uuid
-  quizId       String @map("quiz_id") @db.Uuid
-  question     String @db.Text
-  options      Json   // string[4]
-  correctIndex Int    @map("correct_index")
+  id           String  @id @default(uuid()) @db.Uuid
+  quizId       String  @map("quiz_id") @db.Uuid
+  question     String  @db.Text
+  options      Json // string[4]
+  correctIndex Int     @map("correct_index")
   imageUrl     String? @map("image_url")
-  sortOrder    Int    @default(0) @map("sort_order")
+  sortOrder    Int     @default(0) @map("sort_order")
   /// Liga a questão ao currículo. Nullable porque todo o conteúdo gerado
   /// antes da Fase 1 não tem tópico, e não há de onde inferir.
   topicId      String? @map("topic_id") @db.Uuid
@@ -647,12 +678,12 @@ model Question {
 }
 
 model DailyUsage {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @map("user_id")
-  date           DateTime @db.Date
-  flashcardSets  Int      @default(0) @map("flashcard_sets")
-  quizzes        Int      @default(0)
-  audioSessions  Int      @default(0) @map("audio_sessions")
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id")
+  date          DateTime @db.Date
+  flashcardSets Int      @default(0) @map("flashcard_sets")
+  quizzes       Int      @default(0)
+  audioSessions Int      @default(0) @map("audio_sessions")
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -837,14 +868,14 @@ model ExamTrack {
 }
 
 model Discipline {
-  id          String  @id @default(uuid()) @db.Uuid
-  trackId     String  @map("track_id") @db.Uuid
-  slug        String
-  name        String
+  id        String  @id @default(uuid()) @db.Uuid
+  trackId   String  @map("track_id") @db.Uuid
+  slug      String
+  name      String
   /// Cor sugerida ao virar `Subject` do usuário no onboarding.
-  color       String  @default("#7C5CFC")
-  icon        String?
-  sortOrder   Int     @default(0) @map("sort_order")
+  color     String  @default("#7C5CFC")
+  icon      String?
+  sortOrder Int     @default(0) @map("sort_order")
 
   track  ExamTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
   topics Topic[]
@@ -865,20 +896,20 @@ model Topic {
   ///   peso × (1 − domínio) × urgência = prioridade
   /// Peso errado aqui envenena o plano de estudo de todo mundo, por isso
   /// `weightSource` é obrigatório na prática — ver seeds.
-  weight       Int    @default(50)
+  weight Int @default(50)
 
   /// Em quantas das últimas 10 provas o tópico apareceu, 0–10. Peso diz
   /// quanto vale; frequência diz quão provável é cair. São coisas
   /// diferentes: um tópico pode valer muito e cair pouco.
-  frequency    Int    @default(5)
+  frequency Int @default(5)
 
   /// De onde saíram `weight` e `frequency`. Sem isto os números viram
   /// folclore em seis meses e ninguém sabe se dá para confiar.
   weightSource String? @map("weight_source")
 
-  sortOrder    Int    @default(0) @map("sort_order")
+  sortOrder Int @default(0) @map("sort_order")
 
-  discipline Discipline      @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  discipline Discipline     @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
   sessions   SessionTopic[]
   mastery    TopicMastery[]
   questions  Question[]
@@ -912,9 +943,9 @@ model SessionTopic {
 /// (quiz alimentando mastery) começa a preencher. Existe agora porque criar
 /// depois custaria um backfill de dados que ninguém guardou.
 model TopicMastery {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @map("user_id")
-  topicId    String    @map("topic_id") @db.Uuid
+  id      String @id @default(uuid()) @db.Uuid
+  userId  String @map("user_id")
+  topicId String @map("topic_id") @db.Uuid
 
   attempts   Int       @default(0)
   correct    Int       @default(0)
@@ -932,4 +963,79 @@ model TopicMastery {
   @@unique([userId, topicId])
   @@index([userId, nextDueAt])
   @@map("quibly_topic_mastery")
+}
+
+/**
+ * Quem uma pessoa escolheu não ver mais.
+ * A Apple exige o bloqueio em qualquer app com conteúdo de usuário (Guideline
+ * 1.2), e o app tem feed e chat. Mas a exigência é o piso, não o desenho.
+ * ## Bloquear é pessoal, e não expulsa ninguém
+ * O conteúdo de quem foi bloqueado some **para quem bloqueou**, e mais nada
+ * acontece: os dois continuam membros da sala, e o ranking continua contando
+ * os dois. Bloquear alguém não pode ser uma forma de tirar essa pessoa de um
+ * grupo que não é seu — quem faz isso é o dono, removendo da sala.
+ * É por isso que a linha guarda um par de pessoas e não um par de pessoa e
+ * sala: a decisão vale em todo lugar onde as duas se encontram.
+ */
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// Quem bloqueou.
+  userId    String   @map("user_id")
+  /// Quem foi bloqueado — nunca é notificado, e é assim de propósito.
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user    Profile @relation("BlockAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  blocked Profile @relation("BlockTarget", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  /// Bloquear duas vezes é a mesma decisão, não duas.
+  @@unique([userId, blockedId])
+  @@index([userId])
+  @@map("user_blocks")
+}
+
+/**
+ * Uma denúncia de conteúdo, para alguém olhar depois.
+ * O outro lado do Guideline 1.2. Denunciar **não** apaga nada sozinho: um
+ * `POST` de qualquer pessoa derrubando conteúdo alheio seria a ferramenta de
+ * abuso mais fácil de usar que o produto teria. A linha entra em `PENDING` e o
+ * painel de admin decide.
+ * `targetType` e `targetId` em vez de uma chave estrangeira por tipo: post,
+ * comentário, mensagem de chat e perfil são quatro tabelas, e quatro colunas
+ * anuláveis (das quais exatamente uma pode estar preenchida) é um invariante
+ * que o banco não consegue impor de qualquer forma.
+ */
+model ContentReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  reporterId String   @map("reporter_id")
+  /// 'post' | 'comment' | 'chat_message' | 'profile'
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  /// 'spam' | 'harassment' | 'nudity' | 'violence' | 'other'
+  reason     String
+  details    String?  @db.VarChar(500)
+  /// 'PENDING' | 'REVIEWED' | 'DISMISSED'
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  reporter Profile @relation("ReportAuthor", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  /// A mesma pessoa denunciando o mesmo conteúdo de novo é a mesma denúncia.
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt])
+  @@map("content_reports")
+}
+
+/**
+ * Os dois selos, e o que cada um afirma.
+ * `BLUE` — o perfil é mesmo de quem diz ser. É o selo do Instagram, do
+ * Facebook, do Strava: identidade conferida, e nada além disso.
+ * `GOLD` — **professor**. Além da identidade, afirma que a pessoa ensina, e é
+ * por isso que é mais raro e mais caro de conceder: quem estuda usa esse selo
+ * para decidir de quem seguir a sala, e um dourado errado custa a confiança de
+ * quem confiou nele.
+ */
+enum VerificationBadge {
+  BLUE
+  GOLD
 }
