@@ -44,7 +44,32 @@ describe('o selo de verificado', () => {
     expect(selo).toContain('if (!selo) return null;');
   });
 
-  it('aparece ao lado do nome no feed', () => {
-    expect(ler('../components/feed/FeedRow.tsx')).toContain('<SeloVerificado');
+  /**
+   * Nos quatro lugares onde uma pessoa vê outra. Um selo que aparece em uma
+   * tela e some na seguinte não é um selo — é um detalhe do feed.
+   */
+  it('aparece onde as pessoas se veem: feed, chat, ranking e perfil', () => {
+    for (const tela of [
+      '../components/feed/FeedRow.tsx',
+      '../app/league/chat/[id].tsx',
+      '../app/league/challenge/[id].tsx',
+      '../app/(tabs)/profile.tsx',
+    ]) {
+      expect(ler(tela)).toContain('<SeloVerificado');
+    }
+  });
+});
+
+/**
+ * A bio era escrita e nunca aparecia.
+ *
+ * O campo existe no banco desde sempre e `profile/edit` já pedia por ele —
+ * mas nenhuma tela o mostrava. Quem escrevia uma via o texto sumir, o que é
+ * pior que não ter o campo: o app pediu uma informação e a jogou fora.
+ */
+describe('a bio', () => {
+  it('é pedida na edição e mostrada no perfil', () => {
+    expect(ler('../app/profile/edit.tsx')).toContain('bio');
+    expect(ler('../app/(tabs)/profile.tsx')).toContain('profile.bio');
   });
 });

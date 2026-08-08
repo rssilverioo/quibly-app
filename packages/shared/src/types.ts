@@ -7,6 +7,14 @@ export interface Profile {
   handle: string;
   avatar_url: string | null;
   bio: string | null;
+  /**
+   * O selo, quando há — `null` na esmagadora maioria.
+   *
+   * Concedido pelo painel e nunca comprável: azul afirma identidade, dourado
+   * afirma que a pessoa ensina. Ver a nota em `Profile.verification` no schema
+   * da API.
+   */
+  verification?: 'BLUE' | 'GOLD' | null;
   total_xp: number;
   level: number;
   lock_in_score: number;

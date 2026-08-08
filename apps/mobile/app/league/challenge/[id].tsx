@@ -20,6 +20,7 @@ import {
   type ChallengeLeaderboard,
 } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+import SeloVerificado from '../../../components/ui/SeloVerificado';
 
 /** Cinco linhas de esqueleto: a forma do placar é conhecida, então esperar com
  *  a forma certa é melhor que esperar com um spinner (§4.4). */
@@ -186,7 +187,10 @@ export default function ChallengeLeaderboardScreen() {
               <View style={styles.row}>
                 <Avatar uri={item.avatar_url} name={item.display_name} size={40} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.name} numberOfLines={1}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>
+                  <View style={styles.nomeLinha}>
+                    <Text style={styles.name} numberOfLines={1}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>
+                    <SeloVerificado selo={item.verification} size={13} />
+                  </View>
                   {/* A métrica é o dia; as horas viram a linha de baixo. O
                       número que ordena e o número que informa não podem
                       competir pelo mesmo peso. */}
@@ -249,7 +253,10 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   divider: { position: 'absolute', left: 60, right: 0, bottom: 0, height: StyleSheet.hairlineWidth, backgroundColor: c.border },
   meRow: { backgroundColor: c.accentSoft },
   meBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: c.accent, zIndex: 1 },
-  name: { ...text.bodyStrong, color: c.fg },
+  // `flexShrink` no nome e não na linha: nome longo encolhe, o selo nunca —
+  // um selo cortado pela metade é pior que nenhum.
+  nomeLinha: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  name: { ...text.bodyStrong, color: c.fg, flexShrink: 1 },
   metric: { ...text.caption, color: c.fgMuted, marginTop: 2 },
   // Mais apagada que a métrica: as horas informam, os dias ordenam. Dar o mesmo
   // peso às duas devolveria a dúvida de qual número vale.

@@ -293,6 +293,8 @@ export interface LeaderboardEntry {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
+  /** O selo, quando há. Ver `components/ui/SeloVerificado`. */
+  verification?: 'BLUE' | 'GOLD' | null;
   metric_value: number;
   minutes: number;
   sessions: number;
