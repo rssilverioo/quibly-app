@@ -28,6 +28,9 @@ function serializeProfile<T extends { verifiedHours: any }>(profile: T) {
  * coluna nova nasce pública, e quem a acrescenta seis meses depois não tem
  * como saber disso. Aqui, o padrão de uma coluna nova é não vazar.
  *
+ * O selo sai daqui de propósito: ele existe **para** ser visto, e um selo que
+ * o perfil público não carrega não serve para nada.
+ *
  * O que fica de fora e por quê: `email` é contato e não identidade pública;
  * `plan`, `subscriptionStatus`, `currentPeriodEnd` e `subscriptionPlatform`
  * são a vida financeira da pessoa; `educationLevel`, `studyGoal` e
@@ -40,7 +43,7 @@ export function serializePublicProfile(profile: {
   handle: string;
   avatarUrl: string | null;
   bio: string | null;
-  verified: boolean;
+  verification: 'BLUE' | 'GOLD' | null;
   level: number;
   totalXp: number;
   currentStreak: number;
@@ -55,7 +58,7 @@ export function serializePublicProfile(profile: {
     handle: profile.handle,
     avatar_url: profile.avatarUrl,
     bio: profile.bio,
-    verified: profile.verified,
+    verification: profile.verification,
     level: profile.level,
     total_xp: profile.totalXp,
     current_streak: profile.currentStreak,
@@ -73,7 +76,7 @@ const CAMPOS_PUBLICOS = {
   handle: true,
   avatarUrl: true,
   bio: true,
-  verified: true,
+  verification: true,
   level: true,
   totalXp: true,
   currentStreak: true,

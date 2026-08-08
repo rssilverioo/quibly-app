@@ -149,7 +149,7 @@ export class AdminService {
    * porque um `PATCH` que responde vazio obriga quem chama a supor que deu
    * certo.
    */
-  async setVerified(userId: string, verified: boolean) {
+  async setVerified(userId: string, verification: 'BLUE' | 'GOLD' | null) {
     const existe = await this.prisma.profile.findUnique({
       where: { id: userId },
       select: { id: true },
@@ -158,12 +158,14 @@ export class AdminService {
 
     const perfil = await this.prisma.profile.update({
       where: { id: userId },
-      data: { verified },
-      select: { id: true, username: true, handle: true, verified: true },
+      data: { verification },
+      select: { id: true, username: true, handle: true, verification: true },
     });
 
     this.logger.log(
-      `${verified ? 'Concedido' : 'Removido'} selo de verificado: ${perfil.handle} (${userId})`,
+      verification
+        ? `Selo ${verification} concedido: ${perfil.handle} (${userId})`
+        : `Selo removido: ${perfil.handle} (${userId})`,
     );
 
     return perfil;

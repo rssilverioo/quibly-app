@@ -56,9 +56,9 @@ export class AdminController {
    * `PATCH` e não dois verbos (`POST /verify` + `DELETE /verify`): é um campo
    * booleano de um recurso que já existe, e o painel manda o estado que quer.
    */
-  @Patch('users/:id/verified')
+  @Patch('users/:id/verification')
   setVerified(@Param('id') id: string, @Body() dto: SetVerifiedDto) {
-    return this.adminService.setVerified(id, dto.verified);
+    return this.adminService.setVerified(id, dto.verification ?? null);
   }
 
   @Get('revenue')

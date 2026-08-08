@@ -107,41 +107,45 @@ enum ChatMessageType {
 // ─── MODELS ───
 
 model Profile {
-  id                   String    @id // Firebase UID
-  email                String    @unique
+  id                   String             @id // Firebase UID
+  email                String             @unique
   username             String
-  handle               String    @unique
-  avatarUrl            String?   @map("avatar_url")
+  handle               String             @unique
+  avatarUrl            String?            @map("avatar_url")
   bio                  String?
-  totalXp              Int       @default(0) @map("total_xp")
-  level                Int       @default(1)
-  lockInScore          Int       @default(0) @map("lock_in_score")
-  verifiedHours        Decimal   @default(0) @map("verified_hours") @db.Decimal(10, 2)
-  currentStreak        Int       @default(0) @map("current_streak")
-  longestStreak        Int       @default(0) @map("longest_streak")
-  totalStudyMinutes    Int       @default(0) @map("total_study_minutes")
-  lastStudyDate        DateTime? @map("last_study_date") @db.Date
-  plan                 Plan      @default(FREE)
-  subscriptionStatus   String?   @map("subscription_status")
-  currentPeriodEnd     DateTime? @map("current_period_end") @db.Timestamptz()
-  subscriptionPlatform String?   @map("subscription_platform") // 'apple' | 'google'
+  totalXp              Int                @default(0) @map("total_xp")
+  level                Int                @default(1)
+  lockInScore          Int                @default(0) @map("lock_in_score")
+  verifiedHours        Decimal            @default(0) @map("verified_hours") @db.Decimal(10, 2)
+  currentStreak        Int                @default(0) @map("current_streak")
+  longestStreak        Int                @default(0) @map("longest_streak")
+  totalStudyMinutes    Int                @default(0) @map("total_study_minutes")
+  lastStudyDate        DateTime?          @map("last_study_date") @db.Date
+  plan                 Plan               @default(FREE)
+  subscriptionStatus   String?            @map("subscription_status")
+  currentPeriodEnd     DateTime?          @map("current_period_end") @db.Timestamptz()
+  subscriptionPlatform String?            @map("subscription_platform") // 'apple' | 'google'
   /**
-   * O selo de verificado — dado por nós, **nunca vendido**.
+   * O selo — dado por nós, **nunca vendido**.
    * A distinção é o que faz o selo valer alguma coisa. Se ele puder ser
    * comprado, deixa de significar "é mesmo essa pessoa" e passa a significar
    * "pagou" — foi o que aconteceu com o X, e o selo virou ruído em meses.
    * Aqui ele responde uma pergunta só: **este perfil é mesmo quem diz ser?**
    * Professor, cursinho, criador com público. Quem concede somos nós, pelo
    * painel; não existe rota que o usuário alcance.
+   * `null` é o estado da esmagadora maioria — sem selo. Enum anulável e não um
+   * booleano com um tipo ao lado: assim é impossível existir "verificado sem
+   * tipo" ou "tipo sem verificação", dois estados inválidos que o banco não
+   * teria como proibir.
    * O que o Pro ganha é uma marca própria, derivada de `plan` e visualmente
-   * diferente desta. Uma diz identidade, a outra diz apoio, e misturar as duas
+   * distinta destas. Uma diz identidade, a outra diz apoio, e misturar as duas
    * apaga o significado das duas.
    */
-  verified             Boolean   @default(false)
-  onboardingCompleted  Boolean   @default(false) @map("onboarding_completed")
-  educationLevel       String?   @map("education_level") // high_school | college | graduate | professional
-  studyGoal            String?   @map("study_goal") // exam_prep | school | certification | fun
-  dailyGoalMinutes     Int       @default(15) @map("daily_goal_minutes")
+  verification         VerificationBadge?
+  onboardingCompleted  Boolean            @default(false) @map("onboarding_completed")
+  educationLevel       String?            @map("education_level") // high_school | college | graduate | professional
+  studyGoal            String?            @map("study_goal") // exam_prep | school | certification | fun
+  dailyGoalMinutes     Int                @default(15) @map("daily_goal_minutes")
 
   /// ISO 3166-1 alpha-2, resolvido no onboarding por locale + IP.
   countryCode String?   @map("country_code") @db.Char(2)
@@ -1020,4 +1024,18 @@ model ContentReport {
   @@unique([reporterId, targetType, targetId])
   @@index([status, createdAt])
   @@map("content_reports")
+}
+
+/**
+ * Os dois selos, e o que cada um afirma.
+ * `BLUE` — o perfil é mesmo de quem diz ser. É o selo do Instagram, do
+ * Facebook, do Strava: identidade conferida, e nada além disso.
+ * `GOLD` — **professor**. Além da identidade, afirma que a pessoa ensina, e é
+ * por isso que é mais raro e mais caro de conceder: quem estuda usa esse selo
+ * para decidir de quem seguir a sala, e um dourado errado custa a confiança de
+ * quem confiou nele.
+ */
+enum VerificationBadge {
+  BLUE
+  GOLD
 }

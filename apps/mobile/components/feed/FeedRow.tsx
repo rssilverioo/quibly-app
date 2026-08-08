@@ -4,6 +4,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import type { FirebaseFeedPost } from './PostCard';
 import { Mascot } from '../mascot';
 import Avatar from '../ui/Avatar';
+import SeloVerificado from '../ui/SeloVerificado';
 import Press from '../ui/Press';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 
@@ -79,6 +80,10 @@ export default function FeedRow({ post, locale, onPress }: FeedRowProps) {
         <View style={styles.byline}>
           <Avatar uri={post.avatar_url} name={post.username} size={18} />
           <Text numberOfLines={1} style={styles.author}>{post.username}</Text>
+          {/* Depois do nome e antes da hora: é onde o olho já passa, e onde
+              toda rede social o pôs — o selo é reconhecido pela posição tanto
+              quanto pelo desenho. */}
+          <SeloVerificado selo={post.verification} size={13} />
         </View>
       </View>
       <Text style={styles.time}>{time}</Text>

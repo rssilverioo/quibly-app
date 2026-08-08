@@ -100,6 +100,7 @@ export function roomFeedPostToCardPost(
     league_id: post.league_id ?? roomId,
     user_id: post.user_id,
     username: post.user?.username ?? '',
+    verification: post.user?.verification ?? null,
     avatar_url: post.user?.avatar_url ?? null,
     session_id: post.session?.id ?? '',
     subject_id: post.session?.subject?.id ?? '',

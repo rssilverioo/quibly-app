@@ -17,7 +17,7 @@ describe('serializePublicProfile', () => {
     handle: 'rodrigo',
     avatarUrl: null,
     bio: 'Estudando para 2026',
-    verified: true,
+    verification: 'GOLD',
     level: 8,
     totalXp: 2450,
     currentStreak: 12,
@@ -67,12 +67,13 @@ describe('serializePublicProfile', () => {
       [
         'avatar_url', 'bio', 'current_streak', 'handle', 'id', 'level',
         'longest_streak', 'member_since', 'total_study_minutes', 'total_xp',
-        'username', 'verified', 'verified_hours',
+        'username', 'verification', 'verified_hours',
       ].sort(),
     );
   });
 
-  it('o selo de verificado é público — é para ser visto', () => {
-    expect(serializePublicProfile(perfilCompleto as any).verified).toBe(true);
+  /** Um selo que o perfil público não carrega não serve para nada. */
+  it('o selo é público — é para ser visto', () => {
+    expect(serializePublicProfile(perfilCompleto as any).verification).toBe('GOLD');
   });
 });
