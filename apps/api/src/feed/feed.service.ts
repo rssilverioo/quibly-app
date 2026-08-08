@@ -21,15 +21,41 @@ export class FeedService {
     page: number,
     limit: number,
   ) {
-    const membership = await this.prisma.leagueMember.findUnique({
-      where: { leagueId_userId: { leagueId, userId } },
-    });
+    const [membership, league] = await Promise.all([
+      this.prisma.leagueMember.findUnique({
+        where: { leagueId_userId: { leagueId, userId } },
+      }),
+      this.prisma.league.findUnique({
+        where: { id: leagueId },
+        select: { startDate: true },
+      }),
+    ]);
 
     if (!membership) {
       throw new ForbiddenException('You are not a member of this league');
     }
 
     const offset = (page - 1) * limit;
+
+    /*
+     O feed começa quando a sala começou.
+
+     Um post nasce em **todas** as salas de quem publicou — é o fan-out que faz
+     uma sessão de estudo contar em todo lugar de uma vez. O efeito colateral
+     aparecia numa sala nova: ela abria já com o histórico de quem a criou, e
+     ninguém mais na sala tinha estado lá para ver aquilo acontecer.
+
+     Um desafio de 42 dias que estreia mostrando ontem, anteontem e a semana
+     passada não é um começo. Nas outras salas esses posts continuam onde
+     sempre estiveram; aqui eles nunca aconteceram.
+
+     `1970-01-01` é a janela morta de sala criada sem desafio (ver
+     `rooms.service`), e por ser anterior a tudo ela não filtra nada — que é
+     exatamente o comportamento certo para essas salas.
+    */
+    const desdeOInicio = league?.startDate
+      ? { createdAt: { gte: league.startDate } }
+      : {};
 
     /*
      Quem esta pessoa bloqueou não aparece no feed dela.
@@ -48,7 +74,7 @@ export class FeedService {
 
     const [posts, total, members] = await Promise.all([
       this.prisma.feedPost.findMany({
-        where: { leagueId, ...semBloqueados },
+        where: { leagueId, ...semBloqueados, ...desdeOInicio },
         include: {
           user: {
             select: { username: true, handle: true, avatarUrl: true },
@@ -86,7 +112,7 @@ export class FeedService {
         skip: offset,
         take: limit,
       }),
-      this.prisma.feedPost.count({ where: { leagueId, ...semBloqueados } }),
+      this.prisma.feedPost.count({ where: { leagueId, ...semBloqueados, ...desdeOInicio } }),
       this.prisma.leagueMember.findMany({
         where: { leagueId },
         select: { userId: true, displayName: true },

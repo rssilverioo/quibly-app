@@ -178,5 +178,26 @@
     "qui",
     "sex",
     "sáb"
-  ]
+  ],
+  "sending": "Enviando…",
+  "moderation": {
+    "reportTitle": "Denunciar este conteúdo",
+    "reportSubtitle": "Conte o que está errado. A gente analisa todas as denúncias.",
+    "reason": {
+      "spam": "Spam ou engano",
+      "harassment": "Assédio ou ódio",
+      "nudity": "Nudez ou conteúdo sexual",
+      "violence": "Violência ou risco",
+      "other": "Outro motivo"
+    },
+    "alsoBlock": "Bloquear também {{name}}",
+    "thisPerson": "esta pessoa",
+    "submit": "Enviar denúncia",
+    "reviewNotice": "O bloqueio vale na hora. A denúncia passa por análise da nossa equipe.",
+    "error": "Não deu para enviar a denúncia. Tente de novo.",
+    "blockedTitle": "Pessoas bloqueadas",
+    "blockedEmpty": "Você não bloqueou ninguém.",
+    "unblock": "Desbloquear",
+    "blockedNotice": "Você não vê os posts nem as mensagens dessas pessoas. Elas não são avisadas."
+  }
 }
