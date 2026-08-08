@@ -57,13 +57,21 @@ type Phase = 'work' | 'break';
  */
 function faseParaOWidget(estado: {
   timerMode: TimerMode;
+  isRunning: boolean;
   phase: Phase;
   phaseElapsedSeconds: number;
   workDuration: number;
   breakDuration: number;
 }) {
+  // Os rótulos vão sempre, inclusive no cronômetro livre: os botões existem
+  // nos dois modos, e só a fase é que some.
+  const rotulos = {
+    acaoLabel: i18n.t(estado.isRunning ? 'session:active.pause' : 'session:active.resume'),
+    encerrarLabel: i18n.t('session:active.endSession'),
+  };
+
   if (estado.timerMode === 'stopwatch') {
-    return { remainingSeconds: 0, totalSeconds: 0, label: '' };
+    return { remainingSeconds: 0, totalSeconds: 0, label: '', ...rotulos };
   }
 
   const totalSeconds = (estado.phase === 'work' ? estado.workDuration : estado.breakDuration) * 60;
@@ -73,6 +81,7 @@ function faseParaOWidget(estado: {
     // Traduzido aqui: a extensão de widget não carrega i18n, e mandar a chave
     // faria a chave aparecer na tela de bloqueio.
     label: i18n.t(estado.phase === 'work' ? 'session:active.work' : 'session:active.break'),
+    ...rotulos,
   };
 }
 

@@ -83,14 +83,27 @@ export interface FaseDaSessao {
   remainingSeconds: number;
   totalSeconds: number;
   label: string;
+  /**
+   * Os rótulos dos botões, **já traduzidos**.
+   *
+   * A extensão de widget não carrega i18n — não tem o i18next nem os JSON de
+   * tradução. A primeira versão tinha "Pausar" e "Encerrar" escritos no Swift, e
+   * a Live Activity aparecia em português para quem usa o app em inglês.
+   */
+  acaoLabel: string;
+  encerrarLabel: string;
 }
 
-const SEM_FASE: FaseDaSessao = { remainingSeconds: 0, totalSeconds: 0, label: '' };
+const SEM_FASE: FaseDaSessao = {
+  remainingSeconds: 0, totalSeconds: 0, label: '', acaoLabel: '', encerrarLabel: '',
+};
 
-const arredondar = (fase: FaseDaSessao): [number, number, string] => [
+const arredondar = (fase: FaseDaSessao): [number, number, string, string, string] => [
   Math.max(0, Math.floor(fase.remainingSeconds)),
   Math.max(0, Math.floor(fase.totalSeconds)),
   fase.label,
+  fase.acaoLabel,
+  fase.encerrarLabel,
 ];
 
 export async function startLiveTimer(

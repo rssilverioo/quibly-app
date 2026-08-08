@@ -52,26 +52,37 @@ public class StudyTimerModule: Module {
      o app — funciona, e é o caminho lento.
      */
     Function("setActionContext") { (sessionId: String, token: String, apiBaseUrl: String) in
-      guard let defaults = UserDefaults(suiteName: "group.com.quibly.app") else {
-        NSLog("[StudyTimer] App Group indisponível — os botões vão abrir o app.")
-        return
+      /*
+       Escreve nos **dois** lugares.
+
+       `UserDefaults.standard` é o que importa: o `LiveActivityIntent` roda no
+       processo do app e lê daqui. O App Group é tentado por cima, para o dia em
+       que ele for provisionado de verdade e alguma parte do widget precisar
+       ler fora do app.
+
+       No build 44 o App Group não existia — a entitlement não estava em perfil
+       de provisionamento nenhum —, e como só ele era escrito, o botão de pausar
+       não tinha o que ler.
+      */
+      for defaults in [UserDefaults.standard, UserDefaults(suiteName: "group.com.quibly.app")].compactMap({ $0 }) {
+        defaults.set(sessionId, forKey: "quibly.session.id")
+        defaults.set(token, forKey: "quibly.session.actionToken")
+        defaults.set(apiBaseUrl, forKey: "quibly.api.baseUrl")
       }
-      defaults.set(sessionId, forKey: "quibly.session.id")
-      defaults.set(token, forKey: "quibly.session.actionToken")
-      defaults.set(apiBaseUrl, forKey: "quibly.api.baseUrl")
     }
 
     /// Apaga a credencial quando a sessão acaba. Token vivo sem sessão é
     /// superfície de ataque sem função.
     Function("clearActionContext") {
-      guard let defaults = UserDefaults(suiteName: "group.com.quibly.app") else { return }
-      defaults.removeObject(forKey: "quibly.session.id")
-      defaults.removeObject(forKey: "quibly.session.actionToken")
+      for defaults in [UserDefaults.standard, UserDefaults(suiteName: "group.com.quibly.app")].compactMap({ $0 }) {
+        defaults.removeObject(forKey: "quibly.session.id")
+        defaults.removeObject(forKey: "quibly.session.actionToken")
+      }
     }
 
     Events("onNotificationAction")
 
-    AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in
+    AsyncFunction("start") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String, acaoLabel: String, encerrarLabel: String) in
       #if canImport(ActivityKit)
       guard #available(iOS 16.2, *) else {
         NSLog("[StudyTimer] iOS < 16.2: sem Live Activity neste aparelho.")
@@ -100,7 +111,8 @@ public class StudyTimerModule: Module {
       // 409), so adopt any existing activity rather than stacking a second.
       if let existing = Activity<StudyTimerAttributes>.activities.first {
         await Self.update(existing, elapsedSeconds: elapsedSeconds, isRunning: isRunning,
-                          phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel)
+                          phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel,
+                          acaoLabel: acaoLabel, encerrarLabel: encerrarLabel)
         return
       }
 
@@ -111,7 +123,9 @@ public class StudyTimerModule: Module {
         isRunning: isRunning,
         phaseRemainingSeconds: phaseRemaining,
         phaseTotalSeconds: phaseTotal,
-        phaseLabel: phaseLabel
+        phaseLabel: phaseLabel,
+        acaoLabel: acaoLabel,
+        encerrarLabel: encerrarLabel
       )
 
       do {
@@ -127,12 +141,13 @@ public class StudyTimerModule: Module {
       #endif
     }
 
-    AsyncFunction("update") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String) in
+    AsyncFunction("update") { (subject: String, elapsedSeconds: Int, isRunning: Bool, phaseRemaining: Int, phaseTotal: Int, phaseLabel: String, acaoLabel: String, encerrarLabel: String) in
       #if canImport(ActivityKit)
       guard #available(iOS 16.2, *) else { return }
       guard let activity = Activity<StudyTimerAttributes>.activities.first else { return }
       await Self.update(activity, elapsedSeconds: elapsedSeconds, isRunning: isRunning,
-                        phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel)
+                        phaseRemaining: phaseRemaining, phaseTotal: phaseTotal, phaseLabel: phaseLabel,
+                          acaoLabel: acaoLabel, encerrarLabel: encerrarLabel)
       #endif
     }
 
@@ -168,7 +183,9 @@ public class StudyTimerModule: Module {
     isRunning: Bool,
     phaseRemaining: Int,
     phaseTotal: Int,
-    phaseLabel: String
+    phaseLabel: String,
+    acaoLabel: String,
+    encerrarLabel: String
   ) async {
     // Re-anchoring `startedAt` to now on every update is what keeps the
     // lock-screen timer honest: the system counts forward from this instant,
@@ -180,7 +197,9 @@ public class StudyTimerModule: Module {
       isRunning: isRunning,
       phaseRemainingSeconds: phaseRemaining,
       phaseTotalSeconds: phaseTotal,
-      phaseLabel: phaseLabel
+      phaseLabel: phaseLabel,
+      acaoLabel: acaoLabel,
+      encerrarLabel: encerrarLabel
     )
     await activity.update(.init(state: state, staleDate: nil))
   }

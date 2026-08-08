@@ -62,13 +62,33 @@ public struct StudyTimerAttributes: ActivityAttributes {
     /// "Foco", "Pausa" — traduzido no app, porque a extensão não tem i18n.
     public var phaseLabel: String
 
+    /**
+     Os rótulos dos botões, já no idioma do usuário.
+
+     A extensão de widget **não carrega i18n**: ela não tem o i18next, nem
+     acesso aos JSON de tradução do bundle do app. A primeira versão resolvia
+     isso escrevendo "Pausar" e "Encerrar" direto no Swift — e a Live Activity
+     ficou em português para quem usava o app em inglês.
+
+     Localizable.strings na extensão seria a saída nativa, e criaria um segundo
+     lugar para traduzir a mesma palavra. Mandar o texto pronto mantém uma fonte
+     só: quem sabe o idioma é o app, e ele já resolve `phaseLabel` assim.
+
+     `acaoLabel` é só um: o app sabe se está correndo e manda "Pausar" ou
+     "Retomar" — a extensão não precisa escolher.
+     */
+    public var acaoLabel: String
+    public var encerrarLabel: String
+
     public init(
       startedAt: Date,
       baseElapsedSeconds: Int,
       isRunning: Bool,
       phaseRemainingSeconds: Int = 0,
       phaseTotalSeconds: Int = 0,
-      phaseLabel: String = ""
+      phaseLabel: String = "",
+      acaoLabel: String = "",
+      encerrarLabel: String = ""
     ) {
       self.startedAt = startedAt
       self.baseElapsedSeconds = baseElapsedSeconds
@@ -76,6 +96,8 @@ public struct StudyTimerAttributes: ActivityAttributes {
       self.phaseRemainingSeconds = phaseRemainingSeconds
       self.phaseTotalSeconds = phaseTotalSeconds
       self.phaseLabel = phaseLabel
+      self.acaoLabel = acaoLabel
+      self.encerrarLabel = encerrarLabel
     }
 
     /// Se há um bloco com fim, e portanto regressiva e barra.

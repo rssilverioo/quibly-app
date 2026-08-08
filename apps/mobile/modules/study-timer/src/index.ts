@@ -38,6 +38,8 @@ declare class StudyTimerModuleType extends NativeModule<StudyTimerEvents> {
     phaseRemainingSeconds: number,
     phaseTotalSeconds: number,
     phaseLabel: string,
+    acaoLabel: string,
+    encerrarLabel: string,
   ): Promise<void>;
   update(
     subject: string,
@@ -46,6 +48,8 @@ declare class StudyTimerModuleType extends NativeModule<StudyTimerEvents> {
     phaseRemainingSeconds: number,
     phaseTotalSeconds: number,
     phaseLabel: string,
+    acaoLabel: string,
+    encerrarLabel: string,
   ): Promise<void>;
   stop(): Promise<void>;
   /** iOS: guarda no App Group o que o App Intent da extensão precisa. */

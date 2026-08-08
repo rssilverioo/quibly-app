@@ -14,7 +14,27 @@ enum GrupoCompartilhado {
   static let chaveToken = "quibly.session.actionToken"
   static let chaveApiUrl = "quibly.api.baseUrl"
 
-  static var defaults: UserDefaults? { UserDefaults(suiteName: id) }
+  /**
+   Onde ler o contexto da sessão — e por que o App Group é opcional.
+
+   `LiveActivityIntent` roda no **processo do app**, então o `UserDefaults`
+   padrão daqui é o do próprio app: o mesmo que o módulo nativo escreveu. O App
+   Group foi acrescentado quando eu ainda achava que o intent rodava na
+   extensão; a premissa caiu e a dependência ficou.
+
+   E ela custou caro: `application-groups` **não estava em nenhum dos dois
+   perfis de provisionamento** do build 44 — o App Group precisa ser registrado
+   no portal da Apple e o perfil regerado, e declarar a entitlement no config
+   não faz isso. `UserDefaults(suiteName:)` devolvia `nil`, e o intent morria na
+   primeira linha sem que nada acontecesse.
+
+   O grupo continua sendo tentado primeiro: quando existir, ele serve também às
+   partes do widget que rodam mesmo na extensão. Mas o caminho que precisa
+   funcionar hoje não depende dele.
+   */
+  static var defaults: UserDefaults? {
+    UserDefaults(suiteName: id) ?? .standard
+  }
 }
 
 /**

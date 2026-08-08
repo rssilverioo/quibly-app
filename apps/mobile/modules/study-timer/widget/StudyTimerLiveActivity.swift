@@ -66,7 +66,11 @@ struct StudyTimerLiveActivity: Widget {
             if context.state.temFase {
               BarraDaFase(state: context.state)
             }
-            ActionRow(isRunning: context.state.isRunning)
+            ActionRow(
+              isRunning: context.state.isRunning,
+              acaoLabel: context.state.acaoLabel,
+              encerrarLabel: context.state.encerrarLabel
+            )
           }
         }
       } compactLeading: {
@@ -179,7 +183,9 @@ private struct LockScreenView: View {
       return "\(materia) · \(context.state.phaseLabel)"
     }
     if !materia.isEmpty { return materia }
-    return context.state.phaseLabel.isEmpty ? "Estudando" : context.state.phaseLabel
+    // Sem matéria e sem fase não há o que rotular. Um texto fixo aqui seria
+    // mais uma palavra em português num app que pode estar em inglês.
+    return context.state.phaseLabel
   }
 }
 
@@ -321,11 +327,14 @@ private struct LinkButton: View {
 @available(iOS 16.1, *)
 private struct ActionRow: View {
   let isRunning: Bool
+  /// Já traduzidos pelo app — a extensão não tem i18n. Ver `StudyTimerAttributes`.
+  let acaoLabel: String
+  let encerrarLabel: String
 
   var body: some View {
     HStack(spacing: 10) {
       AcaoLarga(
-        titulo: isRunning ? "Pausar" : "Retomar",
+        titulo: acaoLabel,
         icone: isRunning ? "pause.fill" : "play.fill",
         url: isRunning ? "quibly://session/pause" : "quibly://session/resume",
         acao: isRunning ? "pause" : "resume",
@@ -334,7 +343,7 @@ private struct ActionRow: View {
       )
 
       AcaoLarga(
-        titulo: "Encerrar",
+        titulo: encerrarLabel,
         icone: "stop.fill",
         url: "quibly://session/end",
         acao: "end",
