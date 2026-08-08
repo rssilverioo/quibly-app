@@ -13,7 +13,7 @@ import {
 } from 'lucide-react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { logout as firebaseLogout, deleteAccount, updateProfile } from '../../services/auth';
+import { logout as firebaseLogout, deleteAccount } from '../../services/auth';
 import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import { uploadAvatar } from '../../services/storage';
 import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
@@ -96,10 +96,16 @@ export default function ProfileScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (!result.canceled && result.assets[0] && user) {
       try {
-        const url = await uploadAvatar(user.uid, result.assets[0].uri);
-        const updated = await updateProfile({ avatar_url: url });
-        if (updated) setProfile(updated);
-      } catch { Alert.alert(t('common:error'), t('avatarUploadError')); }
+        // Uma chamada só: o upload já grava e devolve o perfil. Ver a nota em
+        // `uploadAvatar` sobre o `PATCH` que existia aqui e dava 400.
+        setProfile(await uploadAvatar(user.uid, result.assets[0].uri));
+      } catch (err) {
+        // A mensagem do servidor, quando há. O `catch` vazio que estava aqui
+        // descartava a causa: um 400 de validação, um 413 de arquivo grande e
+        // uma queda de rede viravam a mesma frase, e não havia como saber qual
+        // tinha sido — foi o que fez este defeito durar.
+        Alert.alert(t('common:error'), (err as Error)?.message || t('avatarUploadError'));
+      }
     }
   };
 
@@ -123,8 +129,20 @@ export default function ProfileScreen() {
         try {
           await deleteAccount();
           router.replace('/(auth)/login');
-        } catch {
-          Alert.alert(t('common:error'), t('deleteAccountError'));
+        } catch (err) {
+          /*
+           A causa importa mais aqui do que em qualquer outro lugar da tela.
+
+           O Firebase recusa apagar a conta de quem não fez login há pouco
+           (`auth/requires-recent-login`) — e a saída é sair e entrar de novo,
+           que é uma instrução que a pessoa consegue seguir. A frase genérica
+           escondia isso, e quem batia nela só podia tentar de novo e falhar
+           igual.
+
+           E esta é a porta que a Apple exige existir dentro do app desde 2022.
+           Ela precisa funcionar, e quando não funcionar precisa dizer por quê.
+          */
+          Alert.alert(t('common:error'), (err as Error)?.message || t('deleteAccountError'));
         }
       }},
     ]);

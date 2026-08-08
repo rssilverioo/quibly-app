@@ -1,12 +1,10 @@
 import { useEffect } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -48,6 +46,18 @@ const SAIDA_MS = 620;
  * existir. Quem manda embora é `aoSair`, e quem decide quando é o layout —
  * aqui só mora a animação.
  *
+ * ## Por que não há logotipo aqui
+ *
+ * Teve, por um build. Ele caía **em cima das pernas do coelho** — as três
+ * fotos têm a mesma composição, com o mascote embaixo e ao centro — e o
+ * branco ainda disputava legibilidade com a calçada clara.
+ *
+ * O erro foi de origem, não de posição: a arte já é a marca. O coelho ocupa o
+ * meio da tela e a cidade se apresenta na própria placa. Um logotipo por cima
+ * disso é uma segunda assinatura numa imagem que já estava assinada, e não há
+ * lugar na composição onde ele não atrapalhe. Quem quiser o wordmark o
+ * encontra no login, um segundo depois.
+ *
  * ## Por que ela não decide mais nada
  *
  * A cidade e a curva de aproximação vieram para `lib/abertura`. Esta tela e a
@@ -69,7 +79,6 @@ export default function CitySplash({
   // montado — e a câmera precisa continuar de onde parou nas duas.
   const escala = useSharedValue(escalaDaAproximacao());
   const opacidade = useSharedValue(1);
-  const marca = useSharedValue(0);
 
   useEffect(() => {
     escala.value = withTiming(ZOOM_FINAL, {
@@ -78,7 +87,6 @@ export default function CitySplash({
       // a velocidade saltar no quadro em que a outra assume a animação.
       easing: Easing.linear,
     });
-    marca.value = withDelay(320, withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) }));
   }, []);
 
   useEffect(() => {
@@ -96,7 +104,6 @@ export default function CitySplash({
 
   const estiloDaTela = useAnimatedStyle(() => ({ opacity: opacidade.value }));
   const estiloDaCamera = useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }));
-  const estiloDaMarca = useAnimatedStyle(() => ({ opacity: marca.value }));
 
   return (
     <Animated.View style={[styles.tela, estiloDaTela]} pointerEvents="none">
@@ -105,18 +112,6 @@ export default function CitySplash({
         style={[styles.arte, estiloDaCamera]}
         resizeMode="cover"
       />
-      {/* Sem isto o logotipo branco cai em cima da calçada clara das fotos. */}
-      <LinearGradient
-        colors={['transparent', 'rgba(4,10,26,0.72)']}
-        style={styles.pe}
-      />
-      <Animated.View style={[styles.marca, estiloDaMarca]}>
-        <Image
-          source={require('../assets/quibly-text.png')}
-          style={styles.marcaImagem}
-          resizeMode="contain"
-        />
-      </Animated.View>
     </Animated.View>
   );
 }
@@ -133,7 +128,4 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   arte: { width: '100%', height: '100%' },
-  pe: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '32%' },
-  marca: { position: 'absolute', left: 0, right: 0, bottom: '11%', alignItems: 'center' },
-  marcaImagem: { width: 168, height: 46, tintColor: '#FFFFFF' },
 });
