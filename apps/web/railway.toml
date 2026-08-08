@@ -1,0 +1,34 @@
+# Como o Railway constrói e serve o **site** (e, com ele, o painel de admin).
+#
+# ## Por que este arquivo existe, se já há um `railway.toml` na raiz
+#
+# O da raiz é da **API**: ele roda `nest build` e sobe `apps/api/dist/main.js`.
+# Um segundo serviço apontando para o mesmo repositório leria aquele arquivo e
+# construiria a API de novo, servindo-a no lugar do site.
+#
+# Railway resolve isso deixando cada serviço escolher seu config: no painel do
+# serviço do site, em **Config-as-code → Railway Config File**, o caminho é
+# `apps/web/railway.toml`. Sem essa configuração, este arquivo é ignorado e o
+# da raiz vale — que é o defeito que ele existe para evitar.
+#
+# ## Por que Dockerfile e não builder automático
+#
+# Fora da Vercel, quem monta o runtime do Next somos nós. O `Dockerfile` ao
+# lado faz o `output: 'standalone'` e — o que mais importa — recebe as sete
+# `NEXT_PUBLIC_*` como **build args**, porque o Next as assa no bundle do
+# navegador durante o build. Passadas só como variável de ambiente, o site sobe
+# sem erro nenhum e simplesmente não fala com a API.
+#
+# O contexto do build é a **raiz do repositório**, não `apps/web`: o Dockerfile
+# precisa do `package-lock.json` e de `packages/shared`, que estão fora dela.
+# Por isso este serviço não deve ter Root Directory configurado.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "apps/web/Dockerfile"
+
+# Sem `startCommand`: quem inicia o processo é o `CMD` do Dockerfile.
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
