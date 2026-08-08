@@ -28,12 +28,21 @@
 
 FROM node:22-alpine AS base
 
-# ── dependências ────────────────────────────────────────────────────────────
-FROM base AS deps
+# ── build ───────────────────────────────────────────────────────────────────
+FROM base AS builder
 WORKDIR /app
-# Só os manifestos primeiro: enquanto eles não mudarem, o Docker reaproveita a
-# camada de instalação e o deploy não repete um `npm ci` inteiro por causa de
-# uma linha de CSS.
+
+# Os manifestos primeiro, e o `npm ci` **neste mesmo estágio**.
+#
+# A primeira versão instalava num estágio `deps` e copiava só
+# `/app/node_modules` para cá. O build quebrou com `sh: next: not found`: num
+# workspace npm, o binário é alcançado pelo symlink em
+# `apps/web/node_modules/.bin`, e essa pasta ficava para trás — o pacote estava
+# instalado e o atalho até ele, não.
+#
+# Instalar aqui mantém a árvore inteira e ainda preserva o cache: enquanto os
+# manifestos não mudarem, esta camada é reaproveitada e uma linha de CSS não
+# refaz o `npm ci`.
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
@@ -42,10 +51,6 @@ COPY packages/shared/package.json packages/shared/
 # as versões que o CI testou. Mesmo raciocínio do `nixpacks.toml`.
 RUN npm ci
 
-# ── build ───────────────────────────────────────────────────────────────────
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ARG NEXT_PUBLIC_API_URL
