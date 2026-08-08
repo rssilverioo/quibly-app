@@ -5,9 +5,10 @@ import { FeedModule } from '../feed/feed.module';
 import { LeaguesModule } from '../leagues/leagues.module';
 import { ChallengesModule } from '../challenges/challenges.module';
 import { StorageModule } from '../storage/storage.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 @Module({
-  imports: [FeedModule, LeaguesModule, ChallengesModule, StorageModule],
+  imports: [FeedModule, LeaguesModule, ChallengesModule, StorageModule, EntitlementsModule],
   controllers: [RoomsController],
   providers: [RoomsService],
   exports: [RoomsService],
