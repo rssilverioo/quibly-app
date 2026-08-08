@@ -143,8 +143,7 @@
     "deleteConfirm": "Apagar",
     "cancel": "Cancelar",
     "nameTooShort": "O nome precisa ter pelo menos 2 letras.",
-    "editError": "Não deu para salvar. Tente de novo.",
-    "roomLimitReached": "O plano grátis inclui {{limit}} salas suas. Participar das dos outros é ilimitado."
+    "editError": "Não deu para salvar. Tente de novo."
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
@@ -199,5 +198,16 @@
     "blockedEmpty": "Você não bloqueou ninguém.",
     "unblock": "Desbloquear",
     "blockedNotice": "Você não vê os posts nem as mensagens dessas pessoas. Elas não são avisadas."
+  },
+  "pro": {
+    "name": "Quibly Pro",
+    "limitTitle": "{{limit}} salas é o plano grátis",
+    "limitSubtitle": "Você encheu todas as salas que o plano grátis dá — o que costuma significar que tem gente estudando com você.",
+    "benefitRooms": "Criar quantas salas quiser",
+    "benefitSupport": "Apoiar quem está construindo isso",
+    "cta": "Conhecer o Quibly Pro",
+    "comingSoon": "O plano chega em breve",
+    "dismiss": "Agora não",
+    "joinIsFree": "Participar das salas dos outros é sempre ilimitado."
   }
 }

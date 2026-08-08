@@ -143,8 +143,7 @@
     "deleteConfirm": "Delete",
     "cancel": "Cancel",
     "nameTooShort": "The name needs at least 2 letters.",
-    "editError": "Couldn't save. Try again.",
-    "roomLimitReached": "The free plan includes {{limit}} rooms of your own. Join as many as you like."
+    "editError": "Couldn't save. Try again."
   },
   "members": "Members",
   "members_one": "{{count}} member",
@@ -199,5 +198,16 @@
     "blockedEmpty": "You have not blocked anyone.",
     "unblock": "Unblock",
     "blockedNotice": "You will not see their posts or messages. They are not told."
+  },
+  "pro": {
+    "name": "Quibly Pro",
+    "limitTitle": "{{limit}} rooms is the free plan",
+    "limitSubtitle": "You filled every room the free plan gives you — that usually means people are studying with you.",
+    "benefitRooms": "Create as many rooms as you want",
+    "benefitSupport": "Support a small team building this",
+    "cta": "See Quibly Pro",
+    "comingSoon": "The plan is coming soon",
+    "dismiss": "Not now",
+    "joinIsFree": "Joining other people's rooms is always unlimited."
   }
 }
