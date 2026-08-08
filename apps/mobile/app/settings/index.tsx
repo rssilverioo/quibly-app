@@ -49,10 +49,20 @@ export default function SettingsScreen() {
   const styles = useMemo(() => makeStyles(c), [c]);
   const [saindo, setSaindo] = useState(false);
 
-  const versao = Constants.expoConfig?.version ?? '—';
-  const build =
-    Constants.expoConfig?.ios?.buildNumber ??
-    String(Constants.expoConfig?.android?.versionCode ?? '');
+  /**
+   * A versão vem do **binário**, não do `app.json`.
+   *
+   * `expoConfig.ios.buildNumber` estava vazio, e a linha saía "Quibly 1.2.1 ()".
+   * O motivo é o `appVersionSource: "remote"` do `eas.json`: quem incrementa o
+   * build é o servidor do EAS, então o número nunca chega ao arquivo de
+   * configuração — ele só existe no app instalado.
+   *
+   * `nativeBuildVersion` lê do próprio binário, que é o único lugar onde a
+   * resposta é verdadeira. E é justamente esta linha que responde "qual build
+   * você está usando?", a primeira pergunta de todo defeito relatado.
+   */
+  const versao = Constants.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '—';
+  const build = Constants.nativeBuildVersion ?? '';
 
   const sair = () => {
     Alert.alert(t('logOutConfirmTitle'), t('logOutConfirmMessage'), [
@@ -181,7 +191,9 @@ export default function SettingsScreen() {
 
         {/* A versão existe para o suporte: "qual build você está usando?" é a
             primeira pergunta de todo defeito relatado. */}
-        <Text style={styles.versao}>{t('version', { version: versao, build })}</Text>
+        <Text style={styles.versao}>
+          {build ? t('version', { version: versao, build }) : `Quibly ${versao}`}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

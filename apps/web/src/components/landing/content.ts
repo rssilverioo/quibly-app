@@ -1,244 +1,153 @@
 export type Lang = 'en' | 'pt';
 
-const content = {
+/**
+ * O texto da página.
+ *
+ * ## O que saiu, e por quê
+ *
+ * A versão anterior vendia outro produto: "Transforme PDFs em Estudo
+ * Interativo", com flashcards por IA e quizzes como as quatro features. Isso
+ * era verdade em alguma fase do projeto e deixou de ser — quem chegasse pelo
+ * site baixaria esperando um app de flashcards e abriria um app de salas de
+ * estudo.
+ *
+ * Saiu também a seção de números: "10K+ Flashcards Criados", "95% de
+ * Satisfação", "2x Retenção Mais Rápida", sob o título "Nossos usuários veem
+ * resultados reais". **O app não lançou.** Alegação de eficácia sem base não é
+ * só constrangedora: é motivo de reprovação na App Store e problema de
+ * propaganda enganosa. Antes de ter usuários, número honesto não existe — e a
+ * ausência dele é o que fez esta página ter que ser interessante por outros
+ * meios.
+ *
+ * ## A régua para o que fica
+ *
+ * Toda frase aqui descreve algo que o app **faz hoje**. Nada de "em breve"
+ * escrito como presente, nada de recurso que existe no roadmap.
+ */
+export const conteudo = {
   nav: {
-    en: { logo: 'Quibly', cta: 'Download App', links: ['Features', 'How It Works', 'Pricing', 'FAQ'], switchLang: 'Português', switchHref: '/pt' },
-    pt: { logo: 'Quibly', cta: 'Baixar App', links: ['Recursos', 'Como Funciona', 'Preços', 'FAQ'], switchLang: 'English', switchHref: '/' },
+    en: { recursos: 'How it works', porque: 'Why days', plano: 'Pricing', baixar: 'Get the app' },
+    pt: { recursos: 'Como funciona', porque: 'Por que dias', plano: 'Planos', baixar: 'Baixar o app' },
   },
+
   hero: {
     en: {
-      badge: 'AI-Powered Study',
-      title1: 'Turn PDFs into',
-      titleGradient: 'Interactive Study',
-      subtitle: 'Upload any PDF and AI creates flashcards with images and quizzes automatically. Study smarter with gamification, XP, and streaks.',
-      ctaAppStore: 'App Store',
-      ctaGooglePlay: 'Google Play',
+      etiqueta: 'Study rooms',
+      titulo: 'Studying alone is easy to quit.',
+      tituloDestaque: 'Being seen is not.',
+      texto:
+        'Create a room, bring the people you study with, and start a challenge. Every session counts, every check-in shows up in the feed, and the ranking counts the days you turned up — not the one night you crammed.',
+      cta: 'Get the app',
+      ctaSegundo: 'See how it works',
+      legenda: 'Six months of showing up. One square per day.',
     },
     pt: {
-      badge: 'Estudo com IA',
-      title1: 'Transforme PDFs em',
-      titleGradient: 'Estudo Interativo',
-      subtitle: 'Faça upload de qualquer PDF e a IA cria flashcards com imagens e quizzes automaticamente. Estude de forma mais inteligente com gamificação, XP e streaks.',
-      ctaAppStore: 'App Store',
-      ctaGooglePlay: 'Google Play',
+      etiqueta: 'Salas de estudo',
+      titulo: 'Estudar sozinho é fácil de largar.',
+      tituloDestaque: 'Ser visto, não.',
+      texto:
+        'Crie uma sala, chame quem estuda com você e comecem um desafio. Cada sessão conta, cada check-in aparece no feed, e o ranking conta os dias em que você apareceu — não a noite em que você virou.',
+      cta: 'Baixar o app',
+      ctaSegundo: 'Ver como funciona',
+      legenda: 'Seis meses de presença. Um quadrado por dia.',
     },
   },
-  features: {
+
+  cronometro: {
     en: {
-      badge: 'Features',
-      title: 'Everything you need to study smarter',
-      subtitle: 'Powered by AI and designed to make studying actually fun.',
-      cards: [
-        { emoji: '🧠', title: 'AI Flashcards', description: 'AI reads your PDF and creates flashcards with key concepts and illustrative images automatically.' },
-        { emoji: '📝', title: 'Smart Quizzes', description: 'Multiple-choice quizzes generated from your material with instant visual feedback.' },
-        { emoji: '🏆', title: 'Gamification', description: 'Earn XP, maintain streaks, level up, and climb leaderboards as you study.' },
-        { emoji: '📊', title: 'Progress Tracking', description: 'See your study stats, accuracy rates, and improvement trends over time.' },
+      etiqueta: 'The timer',
+      titulo: 'Close the app. The clock keeps going.',
+      texto:
+        'Time is measured on the server, not on your phone. Take a call, put it face down, let the battery die — the session survives. On iPhone it stays on the lock screen and in the Dynamic Island, with pause and finish right there.',
+      pontos: [
+        'Counted on the server, so nothing depends on the app staying open',
+        'Live on the lock screen and in the Dynamic Island',
+        'If the connection drops, the session is credited up to the last beat',
       ],
     },
     pt: {
-      badge: 'Recursos',
-      title: 'Tudo que você precisa para estudar melhor',
-      subtitle: 'Impulsionado por IA e projetado para tornar o estudo divertido.',
-      cards: [
-        { emoji: '🧠', title: 'Flashcards com IA', description: 'A IA lê seu PDF e cria flashcards com conceitos-chave e imagens ilustrativas automaticamente.' },
-        { emoji: '📝', title: 'Quizzes Inteligentes', description: 'Quizzes de múltipla escolha gerados do seu material com feedback visual imediato.' },
-        { emoji: '🏆', title: 'Gamificação', description: 'Ganhe XP, mantenha streaks, suba de nível e escale o ranking enquanto estuda.' },
-        { emoji: '📊', title: 'Acompanhamento', description: 'Veja suas estatísticas de estudo, taxas de acerto e tendências de melhoria.' },
-      ],
-    },
-  },
-  howItWorks: {
-    en: {
-      badge: 'How It Works',
-      title: '3 simple steps to start',
-      subtitle: 'From PDF to interactive study in seconds.',
-      steps: [
-        { number: '1', title: 'Upload your PDF', description: 'Drag and drop any study material. Accepts PDFs up to 10MB.' },
-        { number: '2', title: 'AI generates content', description: 'Artificial intelligence analyzes your material and creates personalized flashcards and quizzes.' },
-        { number: '3', title: 'Study & earn XP', description: 'Review flashcards, take quizzes, and track progress with XP, streaks, and levels.' },
-      ],
-    },
-    pt: {
-      badge: 'Como Funciona',
-      title: '3 passos simples para começar',
-      subtitle: 'De PDF a estudo interativo em segundos.',
-      steps: [
-        { number: '1', title: 'Faça upload do PDF', description: 'Arraste e solte seu material de estudo. Aceita PDFs até 10MB.' },
-        { number: '2', title: 'IA gera conteúdo', description: 'A inteligência artificial analisa seu material e cria flashcards e quizzes personalizados.' },
-        { number: '3', title: 'Estude e ganhe XP', description: 'Revise flashcards, faça quizzes e acompanhe seu progresso com XP, streaks e níveis.' },
+      etiqueta: 'O cronômetro',
+      titulo: 'Feche o app. O relógio continua.',
+      texto:
+        'O tempo é medido no servidor, não no seu celular. Atenda o telefone, vire a tela para baixo, deixe a bateria acabar — a sessão sobrevive. No iPhone ela fica na tela de bloqueio e na Dynamic Island, com pausar e encerrar ali mesmo.',
+      pontos: [
+        'Contado no servidor, então nada depende de o app ficar aberto',
+        'Ao vivo na tela de bloqueio e na Dynamic Island',
+        'Se a conexão cair, a sessão é creditada até a última batida',
       ],
     },
   },
-  comparison: {
+
+  dias: {
     en: {
-      badge: 'Pricing',
-      title: 'Choose your plan',
-      subtitle: 'Start free, upgrade anytime.',
-      free: {
-        title: 'Free',
-        price: 'Free',
-        suffix: 'forever',
-        cta: 'Get Started',
-        features: [
-          '3 flashcard sets per day',
-          '3 quizzes per day',
-          'PDF upload',
-          'Flashcards with images',
-          'XP and streaks',
-        ],
-      },
-      pro: {
-        title: 'Pro',
-        badge: 'Most Popular',
-        price: '$4.99',
-        suffix: '/month',
-        cta: 'Go Pro',
-        features: [
-          'Unlimited flashcard sets',
-          'Unlimited quizzes',
-          'PDF upload',
-          'Flashcards with images',
-          'XP and streaks',
-          'Priority support',
-        ],
-      },
+      etiqueta: 'Why days',
+      titulo: 'Consistency beats records.',
+      texto:
+        'The ranking counts days you showed up, with minutes only as a tiebreaker. One all-nighter does not win a challenge, and one light day does not erase your streak. It rewards the thing that actually gets people through an exam: coming back tomorrow.',
     },
     pt: {
-      badge: 'Preços',
-      title: 'Escolha seu plano',
-      subtitle: 'Comece grátis, faça upgrade quando quiser.',
-      free: {
-        title: 'Free',
-        price: 'Grátis',
-        suffix: 'para sempre',
-        cta: 'Começar',
-        features: [
-          '3 sets de flashcards por dia',
-          '3 quizzes por dia',
-          'Upload de PDF',
-          'Flashcards com imagens',
-          'XP e streaks',
-        ],
-      },
-      pro: {
-        title: 'Pro',
-        badge: 'Mais Popular',
-        price: '$4.99',
-        suffix: '/mês',
-        cta: 'Assinar Pro',
-        features: [
-          'Flashcards ilimitados',
-          'Quizzes ilimitados',
-          'Upload de PDF',
-          'Flashcards com imagens',
-          'XP e streaks',
-          'Suporte prioritário',
-        ],
-      },
+      etiqueta: 'Por que dias',
+      titulo: 'Constância ganha de recorde.',
+      texto:
+        'O ranking conta dias em que você apareceu, e os minutos só desempatam. Virar uma noite não ganha desafio, e um dia leve não apaga sua sequência. Ele premia o que de fato tira alguém de uma prova: voltar amanhã.',
     },
   },
-  stats: {
+
+  passos: {
     en: {
-      badge: 'By the Numbers',
-      title: 'Study that actually works',
-      subtitle: 'Our users see real results.',
-      items: [
-        { value: '10K+', label: 'Flashcards Created' },
-        { value: '95%', label: 'User Satisfaction' },
-        { value: '2x', label: 'Faster Retention' },
-        { value: '500+', label: 'PDFs Processed' },
+      etiqueta: 'Getting started',
+      titulo: 'Three steps, one afternoon.',
+      itens: [
+        { titulo: 'Create the room', texto: 'Name it, pick a deadline, set the cover. Sixty seconds.' },
+        { titulo: 'Send the link', texto: 'Anyone with the link joins. No accounts to hand out.' },
+        { titulo: 'Start studying', texto: 'Hit the timer or post a check-in photo. Both count as showing up.' },
       ],
     },
     pt: {
-      badge: 'Em Números',
-      title: 'Estudo que realmente funciona',
-      subtitle: 'Nossos usuários veem resultados reais.',
-      items: [
-        { value: '10K+', label: 'Flashcards Criados' },
-        { value: '95%', label: 'Satisfação' },
-        { value: '2x', label: 'Retenção Mais Rápida' },
-        { value: '500+', label: 'PDFs Processados' },
+      etiqueta: 'Como começa',
+      titulo: 'Três passos, uma tarde.',
+      itens: [
+        { titulo: 'Crie a sala', texto: 'Dê um nome, escolha o prazo, ponha uma capa. Sessenta segundos.' },
+        { titulo: 'Mande o link', texto: 'Quem tem o link entra. Sem distribuir conta para ninguém.' },
+        { titulo: 'Comece a estudar', texto: 'Toque o cronômetro ou poste uma foto de check-in. Os dois contam presença.' },
       ],
     },
   },
-  faq: {
+
+  plano: {
     en: {
-      badge: 'FAQ',
-      title: 'Frequently asked questions',
-      items: [
-        { q: 'How does the AI generate flashcards?', a: 'Our AI reads your PDF, identifies key concepts, and creates flashcards with questions, answers, and relevant images automatically.' },
-        { q: 'What types of PDFs are supported?', a: 'Any text-based PDF up to 10MB — textbooks, notes, articles, slides, and more.' },
-        { q: 'Is my data secure?', a: 'Yes. Your PDFs are processed securely and we never share your data with third parties.' },
-        { q: 'Can I use Quibly for free?', a: 'Absolutely! The free plan includes 3 flashcard sets and 3 quizzes per day. Upgrade to Pro for unlimited access.' },
-        { q: 'How does the XP system work?', a: 'You earn XP by studying flashcards and completing quizzes. Maintain daily streaks to earn bonus XP and level up.' },
-        { q: 'Is there a web version?', a: 'Quibly is currently available as a mobile app for iOS and Android. A web version is on our roadmap.' },
-      ],
+      etiqueta: 'Pricing',
+      titulo: 'Free for three rooms of your own.',
+      texto:
+        'Joining other people’s rooms is always unlimited — an invitation should never depend on someone’s plan. The paid plan lifts the limit on rooms you create.',
+      nota: 'Quibly Pro is coming soon.',
     },
     pt: {
-      badge: 'FAQ',
-      title: 'Perguntas frequentes',
-      items: [
-        { q: 'Como a IA gera os flashcards?', a: 'Nossa IA lê seu PDF, identifica conceitos-chave e cria flashcards com perguntas, respostas e imagens relevantes automaticamente.' },
-        { q: 'Quais tipos de PDF são aceitos?', a: 'Qualquer PDF baseado em texto até 10MB — livros, anotações, artigos, slides e mais.' },
-        { q: 'Meus dados estão seguros?', a: 'Sim. Seus PDFs são processados com segurança e nunca compartilhamos seus dados com terceiros.' },
-        { q: 'Posso usar o Quibly de graça?', a: 'Claro! O plano gratuito inclui 3 sets de flashcards e 3 quizzes por dia. Faça upgrade para Pro para acesso ilimitado.' },
-        { q: 'Como funciona o sistema de XP?', a: 'Você ganha XP estudando flashcards e completando quizzes. Mantenha streaks diárias para ganhar XP bônus e subir de nível.' },
-        { q: 'Existe versão web?', a: 'O Quibly está disponível atualmente como app móvel para iOS e Android. Uma versão web está em nosso roadmap.' },
-      ],
+      etiqueta: 'Planos',
+      titulo: 'Grátis para três salas suas.',
+      texto:
+        'Participar das salas dos outros é sempre ilimitado — um convite nunca deveria depender do plano de ninguém. O plano pago tira o limite das salas que você cria.',
+      nota: 'O Quibly Pro chega em breve.',
     },
   },
-  appDemo: {
+
+  fim: {
     en: {
-      badge: 'See It In Action',
-      title: 'Watch Quibly work its magic',
-      subtitle: 'From PDF to interactive study in seconds. Here\'s the full flow.',
-      stepDescriptions: [
-        'Drop any PDF and we handle the rest.',
-        'AI creates cards with questions, answers, and explanations.',
-        'Multiple choice quizzes with instant feedback.',
-        'Track progress, maintain streaks, and level up.',
-      ],
+      titulo: 'Tomorrow is the one that counts.',
+      texto: 'Free to start. Nothing to set up.',
+      cta: 'Get the app',
+      loja: 'Also coming to Android',
     },
     pt: {
-      badge: 'Veja em Ação',
-      title: 'Veja a mágica do Quibly',
-      subtitle: 'De PDF a estudo interativo em segundos. Veja o fluxo completo.',
-      stepDescriptions: [
-        'Envie qualquer PDF e nós cuidamos do resto.',
-        'A IA cria cards com perguntas, respostas e explicações.',
-        'Quizzes de múltipla escolha com feedback instantâneo.',
-        'Acompanhe seu progresso, mantenha streaks e suba de nível.',
-      ],
+      titulo: 'Amanhã é o que conta.',
+      texto: 'Comece de graça. Nada para configurar.',
+      cta: 'Baixar o app',
+      loja: 'Em breve no Android',
     },
   },
-  ctaFinal: {
-    en: {
-      title: 'Ready to study smarter?',
-      subtitle: 'Join thousands of students already using Quibly to ace their exams.',
-      ctaAppStore: 'App Store',
-      ctaGooglePlay: 'Google Play',
-    },
-    pt: {
-      title: 'Pronto para estudar melhor?',
-      subtitle: 'Junte-se a milhares de estudantes que já usam o Quibly para arrasar nas provas.',
-      ctaAppStore: 'App Store',
-      ctaGooglePlay: 'Google Play',
-    },
-  },
-  footer: {
-    en: {
-      product: { title: 'Product', links: [{ label: 'Features', href: '#features' }, { label: 'Pricing', href: '#pricing' }, { label: 'FAQ', href: '#faq' }] },
-      support: { title: 'Support', links: [{ label: 'Terms of Use', href: '/terms' }, { label: 'Privacy Policy', href: '/privacy' }] },
-      social: { title: 'Social', links: [{ label: 'Twitter', href: 'https://twitter.com/quiblyapp' }, { label: 'Instagram', href: 'https://instagram.com/quiblyapp' }] },
-      copyright: 'All rights reserved.',
-    },
-    pt: {
-      product: { title: 'Produto', links: [{ label: 'Recursos', href: '#features' }, { label: 'Preços', href: '#pricing' }, { label: 'FAQ', href: '#faq' }] },
-      support: { title: 'Suporte', links: [{ label: 'Termos de Uso', href: '/terms' }, { label: 'Política de Privacidade', href: '/privacy' }] },
-      social: { title: 'Social', links: [{ label: 'Twitter', href: 'https://twitter.com/quiblyapp' }, { label: 'Instagram', href: 'https://instagram.com/quiblyapp' }] },
-      copyright: 'Todos os direitos reservados.',
-    },
+
+  rodape: {
+    en: { direitos: 'Quibly', privacidade: 'Privacy', termos: 'Terms', apagar: 'Delete account' },
+    pt: { direitos: 'Quibly', privacidade: 'Privacidade', termos: 'Termos', apagar: 'Excluir conta' },
   },
 } as const;
-
-export default content;
