@@ -125,6 +125,19 @@ model Profile {
   subscriptionStatus   String?   @map("subscription_status")
   currentPeriodEnd     DateTime? @map("current_period_end") @db.Timestamptz()
   subscriptionPlatform String?   @map("subscription_platform") // 'apple' | 'google'
+  /**
+   * O selo de verificado — dado por nós, **nunca vendido**.
+   * A distinção é o que faz o selo valer alguma coisa. Se ele puder ser
+   * comprado, deixa de significar "é mesmo essa pessoa" e passa a significar
+   * "pagou" — foi o que aconteceu com o X, e o selo virou ruído em meses.
+   * Aqui ele responde uma pergunta só: **este perfil é mesmo quem diz ser?**
+   * Professor, cursinho, criador com público. Quem concede somos nós, pelo
+   * painel; não existe rota que o usuário alcance.
+   * O que o Pro ganha é uma marca própria, derivada de `plan` e visualmente
+   * diferente desta. Uma diz identidade, a outra diz apoio, e misturar as duas
+   * apaga o significado das duas.
+   */
+  verified             Boolean   @default(false)
   onboardingCompleted  Boolean   @default(false) @map("onboarding_completed")
   educationLevel       String?   @map("education_level") // high_school | college | graduate | professional
   studyGoal            String?   @map("study_goal") // exam_prep | school | certification | fun
@@ -495,6 +508,17 @@ model PushToken {
   userId    String   @map("user_id")
   token     String   @unique
   platform  String?
+  /**
+   * O idioma do **aparelho**, não o da conta.
+   * Fica aqui e não no `Profile` porque é do aparelho que a pergunta trata: a
+   * notificação chega na tela de bloqueio, no meio das notificações de todos
+   * os outros apps, e ali quem manda é o idioma do celular. Uma pessoa com o
+   * iPhone em português e um iPad em inglês tem que receber cada uma no seu —
+   * e um campo no perfil não saberia disso.
+   * Nulo é o estado dos tokens registrados antes desta coluna existir. Cai no
+   * idioma padrão em vez de virar erro.
+   */
+  locale    String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 

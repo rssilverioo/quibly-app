@@ -1,8 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AdminService {
+  // Conceder e remover selo deixa rastro: é uma ação de curadoria, e daqui a
+  // seis meses "quem verificou esse perfil?" é uma pergunta que alguém faz.
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getStats() {
@@ -132,6 +136,37 @@ export class AdminService {
         },
       },
     });
+  }
+
+  /**
+   * Concede ou remove o selo de verificado.
+   *
+   * Só existe aqui. Não há rota de usuário que alcance esta coluna, e é o que
+   * mantém o selo significando "é mesmo essa pessoa" em vez de "pagou" — ver a
+   * nota em `Profile.verified`.
+   *
+   * Devolve o perfil já atualizado para o painel não precisar reconsultar, e
+   * porque um `PATCH` que responde vazio obriga quem chama a supor que deu
+   * certo.
+   */
+  async setVerified(userId: string, verified: boolean) {
+    const existe = await this.prisma.profile.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!existe) throw new NotFoundException('User not found');
+
+    const perfil = await this.prisma.profile.update({
+      where: { id: userId },
+      data: { verified },
+      select: { id: true, username: true, handle: true, verified: true },
+    });
+
+    this.logger.log(
+      `${verified ? 'Concedido' : 'Removido'} selo de verificado: ${perfil.handle} (${userId})`,
+    );
+
+    return perfil;
   }
 
   // ─── Revenue ───

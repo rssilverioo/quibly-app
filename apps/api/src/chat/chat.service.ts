@@ -59,7 +59,7 @@ export class ChatService {
       },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true },
+          select: { username: true, handle: true, avatarUrl: true, verified: true },
         },
         reactions: true,
       },
@@ -98,7 +98,7 @@ export class ChatService {
       },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true },
+          select: { username: true, handle: true, avatarUrl: true, verified: true },
         },
       },
     });

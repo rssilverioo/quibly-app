@@ -8,6 +8,81 @@ function serializeProfile<T extends { verifiedHours: any }>(profile: T) {
   return { ...profile, verifiedHours: Number(profile.verifiedHours) };
 }
 
+/**
+ * O que uma pessoa pode ver de **outra**.
+ *
+ * ## O vazamento que isto fecha
+ *
+ * `getProfileByHandle` devolvia `{ ...profile }` — a linha inteira. Como a
+ * rota é `GET /users/:handle` e o handle é público por natureza (aparece no
+ * feed, no ranking e no chat), qualquer pessoa logada conseguia o **e-mail**
+ * de qualquer outra, mais o status da assinatura e a data de renovação.
+ *
+ * Ninguém tinha reparado porque o app nunca chamou essa rota: ela existia à
+ * espera da tela de perfil de outra pessoa. Ou seja, o vazamento estava
+ * armado e ia disparar junto com a funcionalidade.
+ *
+ * ## A regra
+ *
+ * Lista fechada, nunca `omit`. Com `{ ...profile, email: undefined }` toda
+ * coluna nova nasce pública, e quem a acrescenta seis meses depois não tem
+ * como saber disso. Aqui, o padrão de uma coluna nova é não vazar.
+ *
+ * O que fica de fora e por quê: `email` é contato e não identidade pública;
+ * `plan`, `subscriptionStatus`, `currentPeriodEnd` e `subscriptionPlatform`
+ * são a vida financeira da pessoa; `educationLevel`, `studyGoal` e
+ * `dailyGoalMinutes` são o que ela respondeu no onboarding, para o produto e
+ * não para a plateia.
+ */
+export function serializePublicProfile(profile: {
+  id: string;
+  username: string;
+  handle: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  verified: boolean;
+  level: number;
+  totalXp: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalStudyMinutes: number;
+  verifiedHours: any;
+  createdAt: Date;
+}) {
+  return {
+    id: profile.id,
+    username: profile.username,
+    handle: profile.handle,
+    avatar_url: profile.avatarUrl,
+    bio: profile.bio,
+    verified: profile.verified,
+    level: profile.level,
+    total_xp: profile.totalXp,
+    current_streak: profile.currentStreak,
+    longest_streak: profile.longestStreak,
+    total_study_minutes: profile.totalStudyMinutes,
+    verified_hours: Number(profile.verifiedHours),
+    member_since: profile.createdAt,
+  };
+}
+
+/** As colunas que `serializePublicProfile` precisa, e só elas. */
+const CAMPOS_PUBLICOS = {
+  id: true,
+  username: true,
+  handle: true,
+  avatarUrl: true,
+  bio: true,
+  verified: true,
+  level: true,
+  totalXp: true,
+  currentStreak: true,
+  longestStreak: true,
+  totalStudyMinutes: true,
+  verifiedHours: true,
+  createdAt: true,
+} as const;
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -30,16 +105,25 @@ export class UsersService {
     return serializeProfile(profile);
   }
 
+  /**
+   * O perfil de outra pessoa, pelo @.
+   *
+   * Devolve só o que é público — ver `serializePublicProfile`. O `select`
+   * também evita trazer do banco o que não vai sair daqui: filtrar depois
+   * funcionaria igual, e deixaria o e-mail passar pela memória do processo
+   * para ser descartado no fim.
+   */
   async getProfileByHandle(handle: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { handle },
+      select: CAMPOS_PUBLICOS,
     });
 
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
 
-    return serializeProfile(profile);
+    return serializePublicProfile(profile);
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {

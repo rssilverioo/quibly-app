@@ -77,7 +77,7 @@ export class FeedService {
         where: { leagueId, ...semBloqueados, ...desdeOInicio },
         include: {
           user: {
-            select: { username: true, handle: true, avatarUrl: true },
+            select: { username: true, handle: true, avatarUrl: true, verified: true },
           },
           session: {
             select: {
@@ -101,7 +101,7 @@ export class FeedService {
           comments: {
             include: {
               user: {
-                select: { username: true, handle: true, avatarUrl: true },
+                select: { username: true, handle: true, avatarUrl: true, verified: true },
               },
             },
             orderBy: { createdAt: 'desc' as const },
@@ -211,7 +211,7 @@ export class FeedService {
       this.prisma.feedPost.findMany({
         where,
         include: {
-          user: { select: { username: true, handle: true, avatarUrl: true } },
+          user: { select: { username: true, handle: true, avatarUrl: true, verified: true } },
           session: {
             select: {
               id: true,
@@ -231,7 +231,7 @@ export class FeedService {
           reactions: true,
           comments: {
             include: {
-              user: { select: { username: true, handle: true, avatarUrl: true } },
+              user: { select: { username: true, handle: true, avatarUrl: true, verified: true } },
             },
             orderBy: { createdAt: 'desc' as const },
             take: 3,
@@ -366,7 +366,7 @@ export class FeedService {
       data: { userId, postId, content },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true },
+          select: { username: true, handle: true, avatarUrl: true, verified: true },
         },
       },
     });
@@ -432,7 +432,7 @@ export class FeedService {
         where: { postId },
         include: {
           user: {
-            select: { username: true, handle: true, avatarUrl: true },
+            select: { username: true, handle: true, avatarUrl: true, verified: true },
           },
         },
         orderBy: { createdAt: 'asc' },

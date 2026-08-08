@@ -22,6 +22,7 @@ export class NotificationsController {
       user.userId,
       dto.token,
       dto.platform,
+      dto.locale,
     );
   }
 
