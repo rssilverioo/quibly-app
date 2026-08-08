@@ -34,9 +34,17 @@ const makeNotifications = () => ({
   notifyChatMessage: jest.fn().mockResolvedValue(undefined),
 });
 
+/** O cenário padrão: ninguém bloqueou ninguém. */
+const semBloqueios = () => ({ bloqueadosPor: jest.fn().mockResolvedValue(new Set<string>()) });
+
 function makeService(prisma: any, gateway = makeGateway()) {
   return {
-    service: new ChatService(prisma as any, makeNotifications() as any, gateway as any),
+    service: new ChatService(
+      prisma as any,
+      makeNotifications() as any,
+      gateway as any,
+      semBloqueios() as any,
+    ),
     gateway,
   };
 }

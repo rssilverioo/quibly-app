@@ -67,11 +67,42 @@ describe('HealthController', () => {
    * A rota é pública. Se um dia alguém acrescentar nome de bucket, host de
    * banco ou lista de variáveis aqui, isto quebra — que é o objetivo.
    */
-  it('não expõe nada além de estado, versão e tempo de vida', () => {
+  it('não expõe nada além de estado, versão, tempo de vida e prontidão', () => {
     const r = makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health();
 
+    // A lista é fechada de propósito: esta rota é pública, e a única forma de
+    // ela continuar servindo durante um incidente é ninguém poder acrescentar
+    // nome de bucket, host de banco ou lista de variáveis sem passar por aqui.
     expect(Object.keys(r).sort()).toEqual(
-      ['commit', 'startedAt', 'status', 'uptimeSeconds'].sort(),
+      ['commit', 'sessionActionsConfigured', 'startedAt', 'status', 'uptimeSeconds'].sort(),
     );
+  });
+
+  /**
+   * O campo diz **se** o segredo existe, nunca o que ele é.
+   *
+   * Sem `SESSION_ACTION_SECRET` a API não cunha `live_action_token`, o app não
+   * tem o que gravar, e os botões da Live Activity morrem — com o mesmo
+   * sintoma de outras quatro causas. Foi o que fez aquela depuração custar
+   * quatro rodadas, e é o que este booleano separa num `curl`.
+   */
+  describe('sessionActionsConfigured', () => {
+    it('é booleano, e nunca o valor do segredo', () => {
+      const r = makeController({ SESSION_ACTION_SECRET: 'segredo-de-verdade' }).health();
+
+      expect(r.sessionActionsConfigured).toBe(true);
+      expect(JSON.stringify(r)).not.toContain('segredo-de-verdade');
+    });
+
+    it('é falso quando a variável falta', () => {
+      expect(makeController({}).health().sessionActionsConfigured).toBe(false);
+    });
+
+    it('é falso quando a variável existe vazia — que é o caso que engana', () => {
+      // Uma variável setada como string vazia no painel parece configurada na
+      // lista e não serve para assinar nada.
+      expect(makeController({ SESSION_ACTION_SECRET: '   ' }).health().sessionActionsConfigured)
+        .toBe(false);
+    });
   });
 });

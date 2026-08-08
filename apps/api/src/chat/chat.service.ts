@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ModerationService } from '../moderation/moderation.service';
 import { transformKeys } from '../common/interceptors/snake-case.interceptor';
 import { ChatGateway } from './chat.gateway';
 
@@ -14,6 +15,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly gateway: ChatGateway,
+    private readonly moderation: ModerationService,
   ) {}
 
   private async verifyMembership(
@@ -37,9 +39,22 @@ export class ChatService {
   ) {
     await this.verifyMembership(leagueId, userId);
 
+    /*
+     Quem esta pessoa bloqueou não aparece no histórico dela.
+
+     No `where` e não depois: a paginação daqui é por cursor com `take + 1`, e
+     tirar linhas do resultado quebraria o `hasMore` — uma página inteira de
+     mensagens de quem foi bloqueado viraria "acabou o histórico".
+
+     Vale só para quem está lendo. Os dois continuam na sala, e quem foi
+     bloqueado nunca é avisado.
+    */
+    const bloqueados = await this.moderation.bloqueadosPor(userId);
+
     const messages = await this.prisma.chatMessage.findMany({
       where: {
         leagueId,
+        ...(bloqueados.size > 0 ? { userId: { notIn: [...bloqueados] } } : {}),
         ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
       },
       include: {

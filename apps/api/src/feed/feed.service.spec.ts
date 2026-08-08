@@ -1,5 +1,8 @@
 import { FeedService } from './feed.service';
 
+/** O cenário padrão: ninguém bloqueou ninguém. */
+const semBloqueios = () => ({ bloqueadosPor: jest.fn().mockResolvedValue(new Set<string>()) });
+
 describe('FeedService.getLeagueFeed', () => {
   it('returns paginated posts with server-calculated study data', async () => {
     const prisma = {
@@ -36,7 +39,7 @@ describe('FeedService.getLeagueFeed', () => {
       },
     };
 
-    const result = await new FeedService(prisma as any, {} as any).getLeagueFeed(
+    const result = await new FeedService(prisma as any, {} as any, semBloqueios() as any).getLeagueFeed(
       'room-1',
       'user-1',
       1,
@@ -100,7 +103,7 @@ describe('FeedService.getChallengeMemberPosts', () => {
       },
     };
 
-    const result = await new FeedService(prisma as any, {} as any)
+    const result = await new FeedService(prisma as any, {} as any, semBloqueios() as any)
       .getChallengeMemberPosts('challenge-1', 'requester', 'target-user', 1, 20);
 
     expect(prisma.feedPost.findMany).toHaveBeenCalledWith(

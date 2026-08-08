@@ -5,12 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ModerationService } from '../moderation/moderation.service';
 
 @Injectable()
 export class FeedService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly moderation: ModerationService,
   ) {}
 
   async getLeagueFeed(
@@ -29,9 +31,24 @@ export class FeedService {
 
     const offset = (page - 1) * limit;
 
+    /*
+     Quem esta pessoa bloqueou não aparece no feed dela.
+
+     No `where`, e não filtrando depois: com paginação, tirar linhas do
+     resultado devolveria páginas curtas e um `total` que não bate com o que se
+     vê — e a última página poderia vir vazia sem que houvesse fim.
+
+     Vale só para quem está lendo. Os posts continuam existindo para todos os
+     outros, e quem foi bloqueado segue membro da sala e no ranking: bloquear
+     não pode ser um jeito de expulsar alguém de um grupo que não é seu.
+    */
+    const bloqueados = await this.moderation.bloqueadosPor(userId);
+    const semBloqueados =
+      bloqueados.size > 0 ? { userId: { notIn: [...bloqueados] } } : {};
+
     const [posts, total, members] = await Promise.all([
       this.prisma.feedPost.findMany({
-        where: { leagueId },
+        where: { leagueId, ...semBloqueados },
         include: {
           user: {
             select: { username: true, handle: true, avatarUrl: true },
@@ -69,7 +86,7 @@ export class FeedService {
         skip: offset,
         take: limit,
       }),
-      this.prisma.feedPost.count({ where: { leagueId } }),
+      this.prisma.feedPost.count({ where: { leagueId, ...semBloqueados } }),
       this.prisma.leagueMember.findMany({
         where: { leagueId },
         select: { userId: true, displayName: true },
