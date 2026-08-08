@@ -143,7 +143,8 @@
     "deleteConfirm": "Delete",
     "cancel": "Cancel",
     "nameTooShort": "The name needs at least 2 letters.",
-    "editError": "Couldn't save. Try again."
+    "editError": "Couldn't save. Try again.",
+    "roomLimitReached": "The free plan includes {{limit}} rooms of your own. Join as many as you like."
   },
   "members": "Members",
   "members_one": "{{count}} member",
