@@ -14,6 +14,7 @@ import {
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { firebaseConfigError } from '../lib/firebase';
 import { useSessionStore } from '../stores/session.store';
+import CitySplash from '../components/CitySplash';
 import { useTheme, hydrateTheme } from '../theme';
 import {
   configureNotifications,
@@ -260,7 +261,19 @@ function RootLayoutNav() {
     );
   }
 
-  if (isLoading) return null;
+  /**
+   * A abertura, no lugar do nada.
+   *
+   * Aqui havia `return null`, e o efeito era o splash nativo dar lugar a uma
+   * tela vazia enquanto o Firebase resolvia a sessão — um piscar de fundo sem
+   * conteúdo, mais longo em rede ruim, que é justamente quando ele mais aparece.
+   *
+   * A ilustração cobre esse intervalo e vai embora sozinha quando a
+   * autenticação termina: quem já está logado cai no app, quem não está cai no
+   * login. Nenhuma temporização artificial — ela dura exatamente o que a espera
+   * durar.
+   */
+  if (isLoading) return <CitySplash />;
 
   return (
     <Stack
