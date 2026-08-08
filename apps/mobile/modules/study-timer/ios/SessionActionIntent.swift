@@ -15,25 +15,40 @@ enum GrupoCompartilhado {
   static let chaveApiUrl = "quibly.api.baseUrl"
 
   /**
-   Onde ler o contexto da sessão — e por que o App Group é opcional.
+   Onde ler o contexto da sessão — e por que a tentativa anterior não bastou.
 
    `LiveActivityIntent` roda no **processo do app**, então o `UserDefaults`
-   padrão daqui é o do próprio app: o mesmo que o módulo nativo escreveu. O App
-   Group foi acrescentado quando eu ainda achava que o intent rodava na
+   padrão daqui é o do próprio app: o mesmo que `StudyTimerModule` escreveu. O
+   App Group foi acrescentado quando eu ainda achava que o intent rodava na
    extensão; a premissa caiu e a dependência ficou.
 
    E ela custou caro: `application-groups` **não estava em nenhum dos dois
    perfis de provisionamento** do build 44 — o App Group precisa ser registrado
    no portal da Apple e o perfil regerado, e declarar a entitlement no config
-   não faz isso. `UserDefaults(suiteName:)` devolvia `nil`, e o intent morria na
-   primeira linha sem que nada acontecesse.
+   não faz isso.
 
-   O grupo continua sendo tentado primeiro: quando existir, ele serve também às
-   partes do widget que rodam mesmo na extensão. Mas o caminho que precisa
-   funcionar hoje não depende dele.
+   ## O erro da correção do build 45
+
+   Ela era `UserDefaults(suiteName: id) ?? .standard`, apostando que um grupo
+   sem entitlement devolvia `nil`. **Não devolve.** `UserDefaults(suiteName:)`
+   só é `nil` quando o nome é inválido — como o próprio bundle id. Para um
+   grupo que existe no papel mas ao qual o processo não tem direito, ele
+   devolve um objeto perfeitamente válido, apoiado num contêiner que não é o
+   compartilhado.
+
+   Ou seja: o `??` nunca disparava. O intent lia um suite vazio, com o
+   `.standard` cheio ao lado, e continuava morrendo na segunda guarda — com um
+   log dizendo "sem sessão", que é verdade sobre o lugar errado.
+
+   A correção certa não é escolher o armazém, é procurar a chave nos dois. O
+   grupo vem primeiro porque, quando for provisionado de fato, ele serve também
+   às partes que rodam mesmo dentro da extensão.
    */
-  static var defaults: UserDefaults? {
-    UserDefaults(suiteName: id) ?? .standard
+  static func valor(_ chave: String) -> String? {
+    if let doGrupo = UserDefaults(suiteName: id)?.string(forKey: chave) {
+      return doGrupo
+    }
+    return UserDefaults.standard.string(forKey: chave)
   }
 }
 
@@ -101,23 +116,19 @@ struct SessionActionIntent: LiveActivityIntent {
      `xcrun simctl spawn booted log stream` e no console do Xcode com o aparelho
      conectado, que é o único lugar onde isto se depura.
      */
-    guard let defaults = GrupoCompartilhado.defaults else {
-      NSLog("[Quibly] App Group indisponível — a entitlement não foi aplicada.")
+    guard let sessionId = GrupoCompartilhado.valor(GrupoCompartilhado.chaveSessao) else {
+      NSLog("[Quibly] Sem sessão gravada. A sessão começou num build antigo?")
       return .result()
     }
-    guard let sessionId = defaults.string(forKey: GrupoCompartilhado.chaveSessao) else {
-      NSLog("[Quibly] Sem sessão no App Group. A sessão começou num build antigo?")
-      return .result()
-    }
-    guard let token = defaults.string(forKey: GrupoCompartilhado.chaveToken) else {
-      NSLog("[Quibly] Sem token. Falta SESSION_ACTION_SECRET no servidor?")
+    guard let token = GrupoCompartilhado.valor(GrupoCompartilhado.chaveToken) else {
+      NSLog("[Quibly] Sem token. Confira `sessionActionsConfigured` em /health.")
       return .result()
     }
     guard
-      let base = defaults.string(forKey: GrupoCompartilhado.chaveApiUrl),
+      let base = GrupoCompartilhado.valor(GrupoCompartilhado.chaveApiUrl),
       let url = URL(string: "\(base)/sessions/\(sessionId)/live/\(acao)")
     else {
-      NSLog("[Quibly] URL da API inválida no App Group.")
+      NSLog("[Quibly] URL da API inválida.")
       return .result()
     }
 
