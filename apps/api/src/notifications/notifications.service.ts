@@ -117,6 +117,22 @@ export class NotificationsService {
             this.prisma.pushToken
               .deleteMany({ where: { token } })
               .catch(() => {});
+          } else if (code === 'messaging/third-party-auth-error') {
+            /*
+             O Firebase não conseguiu falar com a Apple.
+
+             Este código quer dizer uma coisa só, e nunca é culpa do token: a
+             chave APNs do projeto está ausente, vencida, ou é de outro time.
+             O aparelho está certo, o token está certo, e nada chega.
+
+             Merece mensagem própria porque, num `warn` genérico, ele se perde
+             entre falhas de rede — e a ação é completamente diferente: não é
+             tentar de novo, é subir a `.p8` no console do Firebase.
+            */
+            this.logger.error(
+              'APNs auth failed: check the APNs key in Firebase Console → Cloud Messaging ' +
+                `(project settings, iOS app). Nothing will reach iPhones until it is fixed. ${msg}`,
+            );
           } else {
             this.logger.warn(`Push send failed (code=${code}): ${msg}`);
           }
