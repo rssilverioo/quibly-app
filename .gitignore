@@ -33,3 +33,4 @@ coverage/
 
 # Estado do Maestri (papéis de agente) — ferramenta, não produto.
 .maestri/
+apps/web/tsconfig.tsbuildinfo
