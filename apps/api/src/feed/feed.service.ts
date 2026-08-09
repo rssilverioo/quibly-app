@@ -416,6 +416,48 @@ export class FeedService {
     return { deleted: true };
   }
 
+  /**
+   * Apagar o próprio post.
+   *
+   * ## O defeito que isto conserta
+   *
+   * O app oferecia "Apagar post" desde sempre e chamava `DELETE /feed/:postId`
+   * — uma rota que **nunca existiu**. O `@Delete` do controller cobria só
+   * comentários, então o servidor respondia 404 e a tela mostrava "não deu para
+   * apagar o post" sem nada indicar que o problema não era da pessoa nem da
+   * rede: era um botão sem destino.
+   *
+   * Vale para os dois gestos da tela de publicação, que chamam a mesma rota:
+   * apagar de vez, e sair de uma sala só.
+   *
+   * ## O que vai junto
+   *
+   * Reações e comentários somem em cascata, declarada no schema. A **sessão
+   * não**: ela é o registro do estudo, e o post é a publicação dele. Apagar o
+   * post é se arrepender de ter mostrado, nunca de ter estudado — os minutos, o
+   * XP e o dia na sequência ficam.
+   */
+  async deletePost(userId: string, postId: string) {
+    const post = await this.prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Só o autor. Nem o dono da sala apaga post dos outros: para o que incomoda
+    // existem denúncia e bloqueio, que não dependem de quem manda na sala.
+    if (post.userId !== userId) {
+      throw new ForbiddenException('You can only delete your own posts');
+    }
+
+    await this.prisma.feedPost.delete({ where: { id: postId } });
+
+    return { deleted: true };
+  }
+
   async getPostComments(postId: string, page: number, limit: number) {
     const post = await this.prisma.feedPost.findUnique({
       where: { id: postId },

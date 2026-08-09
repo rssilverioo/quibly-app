@@ -61,6 +61,21 @@ export class FeedController {
     return this.feedService.deleteComment(user.userId, commentId);
   }
 
+  /**
+   * Apagar o próprio post.
+   *
+   * Declarado **depois** de `comments/:commentId` de propósito: o Nest casa as
+   * rotas na ordem em que são declaradas, e `:postId` acima capturaria a
+   * palavra "comments" como se fosse um id.
+   */
+  @Delete(':postId')
+  deletePost(
+    @CurrentUser() user: { userId: string; email: string },
+    @Param('postId') postId: string,
+  ) {
+    return this.feedService.deletePost(user.userId, postId);
+  }
+
   @Get(':postId/comments')
   getPostComments(
     @Param('postId') postId: string,
