@@ -304,7 +304,13 @@ export default function RoomFeedScreen() {
           </View>
         )}
       />
-      <Press haptic="medium" onPress={() => router.push(`/league/post/${room.id}`)} style={styles.fab}><Plus size={26} color={c.fgOnAccent} /></Press>
+      <Press haptic="medium" onPress={() => router.push({
+          pathname: '/league/post/[id]',
+          // O nome vai junto: quem está aqui já sabe qual é a sala, e fazer a
+          // próxima tela redescobrir isso por rede é o que a deixava mostrando
+          // "Publicando em —" enquanto carregava.
+          params: { id: room.id, nome: room.name },
+        })} style={styles.fab}><Plus size={26} color={c.fgOnAccent} /></Press>
       <RoomTabBar roomId={room.id} challengeId={challenge?.id} />
     </SafeAreaView>
   );

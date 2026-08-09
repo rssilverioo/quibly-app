@@ -74,7 +74,7 @@ const ACESSORIO_LEGENDA = 'legenda-do-post';
  * bloco fixo embaixo empurrando o conteúdo.
  */
 export default function RoomPhotoPostScreen() {
-  const { id: roomId } = useLocalSearchParams<{ id: string }>();
+  const { id: roomId, nome: nomeDaRota } = useLocalSearchParams<{ id: string; nome?: string }>();
   const router = useRouter();
   const { t, i18n } = useTranslation('common');
   const { c } = useTheme();
@@ -88,14 +88,31 @@ export default function RoomPhotoPostScreen() {
   const [error, setError] = useState<string | null>(null);
   const [sala, setSala] = useState<RoomSummary | null>(null);
 
+  /**
+   * O nome da sala chega pela rota, e a busca é só a rede de segurança.
+   *
+   * A tela mostrava "Publicando em —" enquanto `getMyRooms()` não voltava — e
+   * para sempre, se a chamada falhasse, porque o `catch` é mudo de propósito.
+   * Um traço no lugar do destino é pior que não perguntar: a pessoa está
+   * prestes a publicar uma foto e a tela não diz para onde.
+   *
+   * Quem navega até aqui vem da tela da sala e **já sabe o nome**. Passá-lo
+   * como parâmetro faz o destino aparecer no primeiro quadro, sem rede.
+   *
+   * A busca continua para quem chega por link direto, onde o parâmetro não
+   * existe — e é ela também que traz o desafio, que decide se a foto pontua.
+   */
   useEffect(() => {
     if (!roomId) return;
-    // Falha em silêncio de propósito: o contexto é enfeite útil, e não poder
-    // mostrar o nome da sala não é razão para impedir a publicação.
+    // Falha em silêncio de propósito: não saber o modo do desafio não é razão
+    // para impedir a publicação.
     void getMyRooms()
       .then((salas) => setSala(salas.find((s) => s.id === roomId) ?? null))
       .catch(() => {});
   }, [roomId]);
+
+  /** O que a etiqueta mostra: a rota primeiro, a busca depois. */
+  const nomeDaSala = nomeDaRota || sala?.name || null;
 
   /**
    * Se esta foto pontua no desafio da sala.
@@ -189,11 +206,21 @@ export default function RoomPhotoPostScreen() {
 
             <View style={styles.trio}>
               {/* Para onde vai */}
-              <View style={styles.lado}>
-                <Avatar uri={sala?.cover_url ?? null} name={sala?.name ?? '?'} size={36} />
-                <Text style={styles.ladoRotulo}>{t('rooms.postingTo')}</Text>
-                <Text style={styles.ladoValor} numberOfLines={2}>{sala?.name ?? '—'}</Text>
-              </View>
+              {/* Para onde vai.
+                  Sem nome, a coluna inteira sai: um rótulo "Publicando em"
+                  seguido de traço não informa nada e ainda ocupa espaço que a
+                  mídia poderia usar. */}
+              {nomeDaSala ? (
+                <View style={styles.lado}>
+                  <Avatar uri={sala?.cover_url ?? null} name={nomeDaSala} size={36} />
+                  <Text style={styles.ladoRotulo}>{t('rooms.postingTo')}</Text>
+                  <Text style={styles.ladoValor} numberOfLines={2}>{nomeDaSala}</Text>
+                </View>
+              ) : (
+                // O espaço permanece reservado, senão a mídia salta de posição
+                // no instante em que o nome chega.
+                <View style={styles.lado} />
+              )}
 
               {/* A mídia. O quadro existe desde o início, vazio.
                   **Tocar o quadro tira foto; o lápis escolhe da galeria.**

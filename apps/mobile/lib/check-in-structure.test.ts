@@ -72,6 +72,29 @@ describe('check-in — estrutura', () => {
     expect(codigo).toMatch(/countsForChallenge|doesNotCount/);
   });
 
+  /**
+   * A tela mostrava "Publicando em —" enquanto `getMyRooms()` não voltava, e
+   * para sempre se a chamada falhasse — o `catch` é mudo de propósito. Um
+   * traço no lugar do destino é pior que não perguntar: a pessoa está prestes
+   * a publicar uma foto e a tela não diz para onde.
+   */
+  it('o nome da sala vem pela rota, e não só por rede', () => {
+    expect(codigo).toContain('nome: nomeDaRota');
+    expect(codigo).toContain('nomeDaRota || sala?.name');
+    // Quem navega já sabe o nome; a busca é a rede de segurança do link direto.
+    const salaTela = readFileSync(
+      new URL('../app/league/room/[id].tsx', import.meta.url).pathname,
+      'utf8',
+    );
+    expect(salaTela).toContain('nome: room.name');
+  });
+
+  it('sem nome, a coluna não mostra um traço', () => {
+    // Rótulo seguido de "—" não informa nada e ainda ocupa a coluna.
+    expect(codigo).not.toContain("sala?.name ?? '—'");
+    expect(codigo).toContain('nomeDaSala ? (');
+  });
+
   it('não promete controle sobre a hora, que é do servidor', () => {
     const trecho = codigo.slice(codigo.indexOf("t('rooms.checkInTime')"));
     // Um campo editável aqui prometeria algo que o cliente não decide — ele
