@@ -13,6 +13,15 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 interface Props {
   children: ReactNode;
   onPress?: () => void;
+  /**
+   * Segurar. Usado para denunciar e bloquear conteúdo de outra pessoa.
+   *
+   * Fica aqui e não num `Pressable` avulso no ponto de uso porque toda
+   * superfície tocável do app passa por este componente — e o toque longo
+   * precisa dar o mesmo retorno tátil que o toque curto, ou parece que o app
+   * travou. O háptico é `medium` de propósito: ele confirma que algo abriu.
+   */
+  onLongPress?: () => void;
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
   /** Physical feedback on press. Off only for low-stakes taps. */
@@ -38,6 +47,7 @@ interface Props {
 export default function Press({
   children,
   onPress,
+  onLongPress,
   style,
   disabled,
   haptic = 'light',
@@ -72,6 +82,16 @@ export default function Press({
         pressed.value = 0;
       }}
       onPress={onPress}
+      onLongPress={
+        onLongPress
+          ? () => {
+              // Háptico próprio: sem ele, segurar e ver uma folha subir parece
+              // que o toque escapou, e não que a pessoa conseguiu o que quis.
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              onLongPress();
+            }
+          : undefined
+      }
     >
       {children}
     </AnimatedPressable>

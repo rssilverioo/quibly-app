@@ -68,5 +68,9 @@
     "savedMessage": "Your profile has been updated.",
     "handleTaken": "This handle is already taken. Try another one.",
     "updateError": "Failed to update profile."
-  }
+  },
+  "terms": "Terms of Service",
+  "privacy": "Privacy Policy",
+  "version": "Quibly {{version}} ({{build}})",
+  "logOutError": "Could not sign out."
 }

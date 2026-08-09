@@ -6,6 +6,7 @@ const ler = (caminho: string) =>
 
 const iap = ler('../services/iap.ts');
 const perfil = ler('../app/(tabs)/profile.tsx');
+const ajustes = ler('../app/settings/index.tsx');
 const precos = ler('../app/pricing/index.tsx');
 
 /**
@@ -31,9 +32,16 @@ describe('compra no app está desligada em todas as portas', () => {
     expect(iap).toContain('if (!COMPRAS_NO_APP_ATIVAS) return;');
   });
 
-  it('hides the profile entry point instead of leading to a dead paywall', () => {
-    expect(perfil).toContain('COMPRAS_NO_APP_ATIVAS ? (');
-    expect(perfil).toContain("router.push('/pricing')");
+  /**
+   * A porta mudou de tela em 08/08: os ajustes saíram do perfil para
+   * `app/settings`, atrás da engrenagem. O que este teste protege é o
+   * comportamento, não o endereço — "Meu plano" só existe quando há plano.
+   */
+  it('hides the settings entry point instead of leading to a dead paywall', () => {
+    expect(ajustes).toContain('COMPRAS_NO_APP_ATIVAS ? (');
+    expect(ajustes).toContain("router.push('/pricing')");
+    // E não sobrou nenhuma segunda porta no perfil.
+    expect(perfil).not.toContain("router.push('/pricing')");
   });
 
   it('bounces the paywall even when reached by deep link', () => {

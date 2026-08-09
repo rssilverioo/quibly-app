@@ -1,18 +1,44 @@
 import type { Metadata } from 'next';
-import { Inter, EB_Garamond } from 'next/font/google';
+import { Bricolage_Grotesque, Nunito, Azeret_Mono } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const ebGaramond = EB_Garamond({
+/**
+ * Três faces, três papéis.
+ *
+ * Estava Inter + EB Garamond — o par que aparece em praticamente toda página
+ * gerada, e que não diz nada sobre este produto.
+ *
+ * **Bricolage Grotesque** no display: variável, com largura e peso ajustáveis,
+ * e um desenho levemente irregular que soa editorial em vez de corporativo.
+ *
+ * **Nunito** no corpo, porque é a fonte do app. Quem sai do site e abre o
+ * Quibly encontra a mesma letra — continuidade de marca vale mais aqui do que
+ * qualquer ganho de legibilidade marginal.
+ *
+ * **Azeret Mono** só nos contadores. Contar dias é a mecânica do produto, e
+ * número em mono lê como placar; em fonte de texto, lê como parágrafo.
+ */
+const display = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-display',
+  variable: '--fonte-display',
+  display: 'swap',
+});
+const corpo = Nunito({
+  subsets: ['latin'],
+  variable: '--fonte-corpo',
+  display: 'swap',
+});
+const mono = Azeret_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--fonte-mono',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Quibly — Turn PDFs into Interactive Study with AI',
+  title: 'Quibly — Study rooms that count the days you show up',
   description:
-    'Upload any PDF and AI creates flashcards with images and quizzes automatically. Study smarter with gamification, XP, and streaks.',
+    'Create a room, bring the people you study with, and start a challenge. The timer keeps running with the app closed, and the ranking counts days you turned up — not the one night you crammed.',
   other: {
     // O azul do coelho novo. `#3B82F6` era um azul do Tailwind, não da marca —
     // ele pintava a barra do navegador de uma cor que não existe em lugar nenhum
@@ -24,7 +50,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${ebGaramond.variable} ${inter.className}`}>
+      <body className={`${display.variable} ${corpo.variable} ${mono.variable} ${corpo.className}`}>
         {children}
       </body>
     </html>

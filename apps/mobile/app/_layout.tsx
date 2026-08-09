@@ -338,6 +338,7 @@ function RootLayoutNav() {
       <Stack.Screen name="flashcards" options={{ headerShown: false }} />
       <Stack.Screen name="quizzes" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
     </Stack>
     {aberturaViva ? (
       <CitySplash encerrando={aberturaCumpriuOMinimo} aoSair={() => setAberturaViva(false)} />

@@ -23,9 +23,9 @@ import { createRoom, type CreatedRoom } from '../../services/rooms';
 import { inviteUrl } from '@quibly/shared/constants';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import { ApiError } from '../../lib/http-errors';
-import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import { track } from '../../lib/analytics';
 import { diasAte, emDias } from '../../lib/prazo-desafio';
+import FolhaDoPro from '../../components/plano/FolhaDoPro';
 
 /**
  * Criar sala — e, com ela, o desafio.
@@ -78,6 +78,14 @@ export default function CreateRoomScreen() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedRoom | null>(null);
+  /**
+   * Quantas salas o plano grátis inclui, quando o servidor recusa por limite.
+   *
+   * O número vem dele e não de uma constante daqui: ele mora em
+   * `quibly_entitlements` e muda por escrita no banco, sem deploy. Repetir o
+   * `3` no app significaria que mudá-lo em produção passaria a exigir um build.
+   */
+  const [limiteDeSalas, setLimiteDeSalas] = useState<number | null>(null);
 
   // O que sobe é sempre `duration_days` — a data escolhida vira dias aqui.
   const prazoEmDias = prazoCustom ? diasAte(dataFinal) : days;
@@ -151,32 +159,20 @@ export default function CreateRoomScreen() {
       track('room_created', { duration_days: prazoEmDias });
     } catch (err) {
       /*
-       Bater no limite do plano não é um erro, e tratá-lo como um seria a
-       maneira mais rápida de perder a venda: a pessoa lê "não deu certo",
-       tenta de novo, e desiste sem nunca ver que existe um plano.
+       Bater no limite do plano não é erro, é oferta.
+
+       A primeira versão pintava esta recusa como a mesma linha vermelha de
+       "faltou preencher o nome". Quem lê vermelho conclui que quebrou alguma
+       coisa, tenta de novo, e desiste sem descobrir que existe um plano — foi
+       exatamente o que aconteceu quando o dono do produto bateu no limite.
+       Agora quem responde é `FolhaDoPro`.
 
        O desvio olha o `code`, não a mensagem. A API manda `ROOM_LIMIT_REACHED`
        justamente para o app distinguir este 403 de "você não tem permissão", e
        casar o texto quebraria na primeira tradução.
-
-       **Mas só desvia se houver plano para vender.** Com
-       `COMPRAS_NO_APP_ATIVAS` desligado, `/pricing` se redireciona sozinho para
-       a home — de propósito, para o paywall sem preços não aparecer por deep
-       link. Mandar alguém para lá ao bater no limite jogaria a pessoa na lista
-       de salas sem uma palavra de explicação, que é pior do que a mensagem de
-       erro que ela via antes. Enquanto a compra não está no ar, o limite se
-       explica em texto.
-
-       Quando estiver, o gatilho vai pela rota: quem registra a visita é a
-       própria tela do plano, e disparar `paywall_viewed` daqui contaria duas
-       vezes a mesma abertura.
       */
       if (err instanceof ApiError && err.body?.code === 'ROOM_LIMIT_REACHED') {
-        if (COMPRAS_NO_APP_ATIVAS) {
-          router.push('/pricing?trigger=quota');
-          return;
-        }
-        setError(t('rooms.roomLimitReached', { limit: err.body.limit ?? 3 }));
+        setLimiteDeSalas(err.body.limit ?? 3);
         return;
       }
       // §5.6: erro é uma linha abaixo do campo, nunca `Alert.alert` — alerta é
@@ -231,6 +227,16 @@ export default function CreateRoomScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {header}
       {folhaDoCalendario}
+      {/*
+        Bater no limite não é erro, é oferta. Antes isto era a mesma linha
+        vermelha de "faltou preencher o nome", e quem lia vermelho concluía que
+        tinha quebrado alguma coisa.
+      */}
+      <FolhaDoPro
+        visivel={limiteDeSalas !== null}
+        limite={limiteDeSalas ?? 3}
+        aoFechar={() => setLimiteDeSalas(null)}
+      />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextInput

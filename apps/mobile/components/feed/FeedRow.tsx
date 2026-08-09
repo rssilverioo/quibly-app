@@ -12,9 +12,16 @@ interface FeedRowProps {
   post: FirebaseFeedPost;
   locale: string;
   onPress: () => void;
+  /**
+   * Segurar abre denunciar e bloquear.
+   *
+   * Opcional porque nem toda lista é de outras pessoas — e não faz sentido
+   * oferecer "denunciar" sobre o próprio check-in.
+   */
+  onLongPress?: () => void;
 }
 
-export default function FeedRow({ post, locale, onPress }: FeedRowProps) {
+export default function FeedRow({ post, locale, onPress, onLongPress }: FeedRowProps) {
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const title = post.caption?.trim() || post.subject_name || 'Estudo';
@@ -62,7 +69,7 @@ export default function FeedRow({ post, locale, onPress }: FeedRowProps) {
   // contraste não fecha (`DESIGN-GYMRATS §3.2.4`, regra do `fgOnScrim`).
   // Título, autor e hora ficam ao lado da foto, nunca por cima.
   return (
-    <Press onPress={onPress} style={styles.row}>
+    <Press onPress={onPress} onLongPress={onLongPress} style={styles.row}>
       {mostraFoto ? (
         <Image
           source={{ uri: photo! }}

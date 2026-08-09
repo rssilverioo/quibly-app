@@ -9,12 +9,10 @@ import { useTranslation } from 'react-i18next';
 import {
   Clock, Flame, LogOut, ChevronRight, Camera, Trophy, BookOpen, Crown, Users,
   Award, GraduationCap, Skull, Shield, ShieldCheck, Target, Zap, Star, Lock,
-  Pencil, Globe, Trash2, Moon,
+  Pencil, Settings,
 } from 'lucide-react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { logout as firebaseLogout, deleteAccount } from '../../services/auth';
-import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import { uploadAvatar } from '../../services/storage';
 import { getAllAchievements, seedAchievements, type AchievementWithStatus } from '../../services/achievements';
 import { xpForLevel, calculateTitle } from '@quibly/shared/constants';
@@ -45,7 +43,7 @@ const ACHIEVEMENT_ICONS: Record<string, any> = {
 
 export default function ProfileScreen() {
   const { t } = useTranslation('profile');
-  const { c, mode, setMode } = useTheme();
+  const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
   const tabBarClearance = useTabBarClearance();
   const { user, profile, refreshProfile, setProfile } = useAuth();
@@ -109,44 +107,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Alerta continua aqui, e só aqui: `§4.4` proíbe alerta para erro de
-  // carregamento, não para ação destrutiva — que é exatamente o que estas duas
-  // são.
-  const handleLogout = () => {
-    Alert.alert(t('logOutConfirmTitle'), t('logOutConfirmMessage'), [
-      { text: t('common:cancel'), style: 'cancel' },
-      { text: t('logOut'), style: 'destructive', onPress: async () => {
-        await firebaseLogout();
-        router.replace('/(auth)/login');
-      }},
-    ]);
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(t('deleteAccountConfirmTitle'), t('deleteAccountConfirmMessage'), [
-      { text: t('common:cancel'), style: 'cancel' },
-      { text: t('deleteAccount'), style: 'destructive', onPress: async () => {
-        try {
-          await deleteAccount();
-          router.replace('/(auth)/login');
-        } catch (err) {
-          /*
-           A causa importa mais aqui do que em qualquer outro lugar da tela.
-
-           O Firebase recusa apagar a conta de quem não fez login há pouco
-           (`auth/requires-recent-login`) — e a saída é sair e entrar de novo,
-           que é uma instrução que a pessoa consegue seguir. A frase genérica
-           escondia isso, e quem batia nela só podia tentar de novo e falhar
-           igual.
-
-           E esta é a porta que a Apple exige existir dentro do app desde 2022.
-           Ela precisa funcionar, e quando não funcionar precisa dizer por quê.
-          */
-          Alert.alert(t('common:error'), (err as Error)?.message || t('deleteAccountError'));
-        }
-      }},
-    ]);
-  };
 
   // Esqueleto no lugar do spinner: a forma do conteúdo é conhecida (§4.4).
   if (!profile) {
@@ -199,6 +159,21 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/*
+        A engrenagem, e o que ela significa.
+
+        Os ajustes moravam no fim desta rolagem: para chegar ao mapa de
+        constância era preciso passar por cima do botão de apagar a conta. São
+        duas naturezas opostas — uma tela que a pessoa mostra e uma que ela
+        configura uma vez e esquece.
+      */}
+      <View style={styles.barraTopo}>
+        <View style={styles.barraEspaco} />
+        <Press onPress={() => router.push('/settings')} style={styles.engrenagem}>
+          <Settings size={21} color={c.fg} strokeWidth={2.2} />
+        </Press>
+      </View>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarClearance }]}
@@ -316,56 +291,6 @@ export default function ProfileScreen() {
             rede, e ela avisa antes de sumir (ver `StudyHeatmap`). */}
         <StudyHeatmap />
 
-        <Text style={styles.sectionTitle}>{t('settings')}</Text>
-
-        {/* Conta. "Minhas Ligas" saiu daqui: era a única porta para
-            `app/league/index.tsx`, que `FLUXO §10` já matou (§3.4). */}
-        <View style={styles.group}>
-          {/* "Meu plano" só aparece quando há plano a comprar. Compra no app
-              está desligada desde 06/08 (`services/iap.ts`), e uma porta para
-              um paywall que não vende é pior que porta nenhuma. */}
-          {COMPRAS_NO_APP_ATIVAS ? (
-            <SettingsRow styles={styles} c={c} Icon={Crown} label={t('pricing:myPlan')} onPress={() => router.push('/pricing')} divider />
-          ) : null}
-          <SettingsRow styles={styles} c={c} Icon={Pencil} label={t('editProfile')} onPress={() => router.push('/profile/edit')} divider />
-          {/* O escuro não sumiu — está a um toque (`theme/index.ts`). */}
-          <SettingsRow
-            styles={styles}
-            c={c}
-            Icon={Moon}
-            label={t('appearance')}
-            value={mode === 'dark' ? t('themeDark') : t('themeLight')}
-            onPress={() => setMode(mode === 'dark' ? 'light' : 'dark')}
-          />
-        </View>
-
-        <View style={styles.group}>
-          <View style={styles.settingsRow}>
-            <View style={styles.settingsIcon}><Globe size={17} color={c.fgMuted} strokeWidth={2.2} /></View>
-            <Text style={styles.settingsLabel}>{t('language')}</Text>
-          </View>
-          <View style={styles.segmented}>
-            {([['en', 'English'], ['pt-BR', 'Português (BR)']] as const).map(([code, label]) => {
-              const active = i18n.language === code;
-              return (
-                <Press
-                  key={code}
-                  haptic={false}
-                  scale={0.97}
-                  onPress={() => i18n.changeLanguage(code)}
-                  style={[styles.segment, active && styles.segmentActive]}
-                >
-                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
-                </Press>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.group}>
-          <SettingsRow styles={styles} c={c} Icon={LogOut} label={t('logOut')} onPress={handleLogout} destructive divider />
-          <SettingsRow styles={styles} c={c} Icon={Trash2} label={t('deleteAccount')} onPress={handleDeleteAccount} destructive />
-        </View>
       </ScrollView>
 
       <StreakCalendarModal
@@ -379,34 +304,6 @@ export default function ProfileScreen() {
 }
 
 /** Linha de ajuste: 56 de altura, ícone neutro, chevron 18 em `c.fgSubtle`. */
-function SettingsRow({
-  styles, c, Icon, label, value, onPress, destructive, divider,
-}: {
-  styles: ReturnType<typeof makeStyles>;
-  c: Palette;
-  Icon: typeof Crown;
-  label: string;
-  value?: string;
-  onPress: () => void;
-  destructive?: boolean;
-  divider?: boolean;
-}) {
-  return (
-    <Press
-      haptic="light"
-      scale={0.99}
-      onPress={onPress}
-      style={[styles.settingsRow, divider && styles.settingsRowDivider]}
-    >
-      <View style={styles.settingsIcon}>
-        <Icon size={17} color={destructive ? c.danger : c.fgMuted} strokeWidth={2.2} />
-      </View>
-      <Text style={[styles.settingsLabel, destructive && { color: c.danger }]}>{label}</Text>
-      {value ? <Text style={styles.settingsValue}>{value}</Text> : null}
-      {!destructive && <ChevronRight size={18} color={c.fgSubtle} />}
-    </Press>
-  );
-}
 
 const makeStyles = (c: Palette) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: c.bg },
@@ -439,6 +336,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   handle: { ...text.caption, color: c.fgMuted },
   bio: { ...text.caption, color: c.fgMuted, marginTop: space.xs, lineHeight: 18 },
 
+  barraTopo: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, height: 44 },
+  barraEspaco: { flex: 1 },
+  engrenagem: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   numbersCard: {
     backgroundColor: c.surface,
     borderRadius: radius.sm,
@@ -475,29 +375,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   chipIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   chipName: { ...text.caption, color: c.fg },
 
-  group: {
-    backgroundColor: c.surface,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: c.border,
-    overflow: 'hidden',
-    marginBottom: space.xl,
-  },
-  settingsRow: { height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg, gap: space.md },
   settingsRowDivider: { borderBottomWidth: 1, borderBottomColor: c.border },
-  settingsIcon: { width: 24, alignItems: 'center', justifyContent: 'center' },
-  settingsLabel: { ...text.body, color: c.fg, flex: 1 },
   settingsValue: { ...text.label, color: c.fgMuted },
 
-  segmented: {
-    flexDirection: 'row', gap: space.xs,
-    marginHorizontal: space.lg, marginBottom: space.lg,
-    backgroundColor: c.surfaceRaised, borderRadius: radius.sm, padding: space.xs,
-  },
-  segment: { flex: 1, height: 40, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
-  segmentActive: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
-  segmentText: { ...text.label, color: c.fgMuted },
-  segmentTextActive: { color: c.fg },
 
   skeletonAvatar: { width: 72, height: 72, borderRadius: radius.full, backgroundColor: c.skeleton },
   skeletonBar: { height: 16, borderRadius: radius.sm, backgroundColor: c.skeleton },

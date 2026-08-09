@@ -118,3 +118,348 @@ body {
 .orb-1 { animation: orb-float-1 12s ease-in-out infinite; }
 .orb-2 { animation: orb-float-2 15s ease-in-out infinite; }
 .orb-3 { animation: orb-float-3 10s ease-in-out infinite; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   A landing page.
+
+   CSS próprio e não utilitários: a página tem um sistema pequeno e fechado —
+   seis cores, três faces, um ritmo de sete — e escrever isso em classes
+   utilitárias espalharia as decisões por dentro do JSX, onde ninguém consegue
+   ver o sistema inteiro de uma vez.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.pagina {
+  /* A paleta sai do próprio coelho: o contorno, a orelha, o azul do splash. */
+  --tinta: #0B1B3A;
+  --marca: #015FFD;
+  --vivo: #4C9AFF;
+  --orelha: #BBD5FF;
+  --papel: #EEF3FF;
+  --branco: #FFFFFF;
+  --celula-vazia: rgba(11, 27, 58, 0.07);
+
+  --texto: var(--tinta);
+  --texto-suave: rgba(11, 27, 58, 0.62);
+
+  background: var(--branco);
+  color: var(--texto);
+  font-family: var(--fonte-corpo), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+.display {
+  font-family: var(--fonte-display), Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+  font-size: clamp(2.6rem, 7vw, 5.2rem);
+  margin: 0.2em 0 0.4em;
+}
+.display em {
+  font-style: normal;
+  color: var(--marca);
+}
+.display-medio { font-size: clamp(2rem, 4.4vw, 3.4rem); }
+.centro { text-align: center; }
+
+.mono { font-family: var(--fonte-mono), ui-monospace, monospace; }
+
+.etiqueta {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--marca);
+  display: block;
+}
+.etiqueta-clara { color: var(--vivo); }
+
+.lead {
+  font-size: clamp(1.02rem, 1.5vw, 1.22rem);
+  line-height: 1.62;
+  color: var(--texto-suave);
+  max-width: 54ch;
+  margin: 0 0 1.8rem;
+}
+.lead-claro { color: rgba(255, 255, 255, 0.74); }
+.lead.centro { margin-left: auto; margin-right: auto; }
+
+.nota {
+  font-size: 0.86rem;
+  color: var(--texto-suave);
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* ── navegação ── */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.1rem clamp(1.2rem, 5vw, 4rem);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--celula-vazia);
+}
+.nav-marca {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--fonte-display), serif;
+  font-weight: 700;
+  font-size: 1.16rem;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+  text-decoration: none;
+}
+.nav-links { display: flex; gap: 1.6rem; margin-left: auto; }
+.nav-links a {
+  color: var(--texto-suave);
+  text-decoration: none;
+  font-size: 0.94rem;
+}
+.nav-links a:hover { color: var(--marca); }
+
+/* ── botões ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.92rem 1.6rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-primario { background: var(--marca); color: var(--branco); }
+.btn-primario:hover { background: #0150d8; }
+.btn-fantasma { color: var(--tinta); border: 1.5px solid var(--celula-vazia); }
+.btn-fantasma:hover { border-color: var(--marca); color: var(--marca); }
+.btn-pequeno { padding: 0.6rem 1.15rem; font-size: 0.9rem; }
+.btn-grande { padding: 1.1rem 2.4rem; font-size: 1.1rem; }
+
+/* ── herói ── */
+.hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+  padding: clamp(3rem, 7vw, 6rem) clamp(1.2rem, 5vw, 4rem) 0;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.hero-acoes { display: flex; gap: 0.9rem; flex-wrap: wrap; }
+.hero-fone { display: flex; justify-content: center; }
+.hero-mapa {
+  grid-column: 1 / -1;
+  margin: clamp(2.5rem, 6vw, 4.5rem) 0 0;
+}
+.hero-mapa figcaption {
+  font-family: var(--fonte-mono), monospace;
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+  margin-top: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+/* ── o mapa: a assinatura ── */
+.mapa {
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+}
+.mapa-semana { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.mapa-celula {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  /* `backwards` é o que faz isto funcionar sem JS: a célula fica no quadro
+     inicial durante o próprio atraso, e sem animação nenhuma ela está cheia. */
+  animation: entra 0.45s ease backwards;
+}
+@keyframes entra {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+.mapa-hoje { animation: pulsa 2.4s ease-in-out infinite; }
+@keyframes pulsa {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(1, 95, 253, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(1, 95, 253, 0); }
+}
+
+/* ── o separador: sete células, uma semana ──
+   Redondinho e pequeno, ele lia como indicador de carrossel. Quadrado, maior e
+   com a régua atravessando, lê como o que é: uma semana de dias, e a mesma
+   célula do mapa lá em cima. */
+.semana {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  padding: clamp(2.6rem, 6vw, 4.5rem) clamp(1.2rem, 5vw, 4rem);
+  position: relative;
+}
+.semana::before {
+  content: '';
+  position: absolute;
+  left: clamp(1.2rem, 5vw, 4rem);
+  right: clamp(1.2rem, 5vw, 4rem);
+  height: 1px;
+  background: var(--celula-vazia);
+}
+.semana span {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--marca);
+  position: relative;
+  /* O fundo branco isola a fileira da régua que passa por trás. */
+  box-shadow: 0 0 0 5px var(--branco);
+}
+.secao-escura + .semana span { box-shadow: 0 0 0 5px var(--branco); }
+
+/* ── seções ── */
+.secao {
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.2rem, 5vw, 4rem);
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.secao-par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+}
+.secao-arte { display: flex; justify-content: center; }
+.secao-escura {
+  background: var(--tinta);
+  color: var(--branco);
+  max-width: none;
+  padding-left: max(1.2rem, calc((100vw - 1240px) / 2 + 1.2rem));
+  padding-right: max(1.2rem, calc((100vw - 1240px) / 2 + 1.2rem));
+  padding-top: clamp(3.5rem, 8vw, 6rem);
+  padding-bottom: clamp(3.5rem, 8vw, 6rem);
+}
+.secao-escura .display { color: var(--branco); }
+
+.lista { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.9rem; }
+.lista li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.55;
+}
+.marca-dia {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--vivo);
+  flex: 0 0 auto;
+  margin-top: 0.42rem;
+}
+
+.coelho-linha { display: flex; align-items: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+
+/* ── passos ── */
+.passos {
+  list-style: none;
+  padding: 0;
+  margin: 2.5rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+}
+.passos li {
+  background: var(--papel);
+  border-radius: 18px;
+  padding: 1.8rem;
+}
+.passo-numero {
+  font-size: 0.8rem;
+  color: var(--marca);
+  letter-spacing: 0.1em;
+}
+.passos h3 {
+  font-family: var(--fonte-display), serif;
+  font-size: 1.24rem;
+  margin: 0.7rem 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+.passos p { color: var(--texto-suave); line-height: 1.55; margin: 0; }
+
+.secao-plano { text-align: center; display: grid; justify-items: center; }
+.secao-fim { text-align: center; display: grid; justify-items: center; gap: 0.4rem; }
+
+/* ── o aparelho ── */
+.fone {
+  position: relative;
+  width: min(300px, 78vw);
+  border-radius: 44px;
+  padding: 10px;
+  background: linear-gradient(160deg, #2A3550, var(--tinta));
+  box-shadow: 0 28px 70px rgba(11, 27, 58, 0.28);
+}
+.fone-tela {
+  border-radius: 35px;
+  overflow: hidden;
+  background: #000;
+  line-height: 0;
+}
+.fone-tela img { width: 100%; height: auto; display: block; }
+.fone-ilha {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 78px;
+  height: 23px;
+  border-radius: 999px;
+  background: #000;
+}
+
+/* ── rodapé ── */
+.rodape {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+  padding: 2.4rem clamp(1.2rem, 5vw, 4rem);
+  border-top: 1px solid var(--celula-vazia);
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+.rodape-marca { display: flex; align-items: center; gap: 0.6rem; }
+.rodape nav { display: flex; gap: 1.4rem; margin-left: auto; }
+.rodape a { color: var(--texto-suave); text-decoration: none; }
+.rodape a:hover { color: var(--marca); }
+
+/* ── piso de qualidade ── */
+.pagina a:focus-visible,
+.pagina button:focus-visible {
+  outline: 3px solid var(--marca);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (max-width: 880px) {
+  .hero, .secao-par { grid-template-columns: 1fr; }
+  .hero-fone { order: -1; }
+  .passos { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  /* No celular a arte do "por que dias" vem depois do texto: a tela é estreita
+     e o argumento vale mais que a ilustração. */
+  .secao-par > .secao-arte:first-child { order: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina *, .pagina *::before, .pagina *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -68,5 +68,9 @@
     "savedMessage": "Seu perfil foi atualizado.",
     "handleTaken": "Este handle já está em uso. Tente outro.",
     "updateError": "Falha ao atualizar perfil."
-  }
+  },
+  "terms": "Termos de uso",
+  "privacy": "Política de privacidade",
+  "version": "Quibly {{version}} ({{build}})",
+  "logOutError": "Não deu para sair."
 }

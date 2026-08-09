@@ -20,6 +20,7 @@ import { formatarTempoDeEstudo } from '../../../lib/study-time';
 import { getLiveMembers, type LiveMember } from '../../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+import FolhaDeDenuncia from '../../../components/moderation/FolhaDeDenuncia';
 
 /** Altura da barra da sala (`RoomTabBar`), para o FAB pousar 16pt acima dela. */
 const ROOM_TAB_BAR_HEIGHT = 66;
@@ -37,6 +38,14 @@ export default function RoomFeedScreen() {
   const [live, setLive] = useState<LiveMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  /**
+   * O post que a pessoa segurou, ou `null`.
+   *
+   * Guarda o post inteiro e não só o id: a folha precisa do autor para
+   * oferecer o bloqueio, e buscar de novo o que já está na mão seria uma ida à
+   * rede para responder o que a lista já sabe.
+   */
+  const [denunciando, setDenunciando] = useState<(typeof posts)[number] | null>(null);
   // Falha de carregamento. Só vira tela de erro quando ainda não há sala em
   // mão: uma atualização de fundo que falha não pode apagar o feed que já está
   // desenhado.
@@ -234,6 +243,17 @@ export default function RoomFeedScreen() {
           </Press>
         ) : null}
       </View>
+      <FolhaDeDenuncia
+        visivel={denunciando !== null}
+        alvo="post"
+        alvoId={denunciando?.id ?? ''}
+        autorId={denunciando?.user_id}
+        autorNome={denunciando?.username}
+        aoFechar={() => setDenunciando(null)}
+        // Recarrega: quem bloqueou não deve continuar vendo o post na tela que
+        // acabou de deixar de mostrá-lo no servidor.
+        aoConcluir={refresh}
+      />
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
@@ -248,7 +268,14 @@ export default function RoomFeedScreen() {
                 lá, então cada linha vinha com duas. Quem desenha o card é o
                 `FeedRow`; aqui fica só o respiro entre um e outro. */}
             <View style={styles.postCard}>
-              <FeedRow post={item} locale={i18n.language} onPress={() => { cacheFeedPost(item); router.push(`/league/feed/post/${item.id}`); }} />
+              <FeedRow
+                post={item}
+                locale={i18n.language}
+                onPress={() => { cacheFeedPost(item); router.push(`/league/feed/post/${item.id}`); }}
+                // Não sobre o próprio check-in: oferecer "denunciar" para si
+                // mesmo é um menu que nunca leva a nada.
+                onLongPress={item.user_id === user?.uid ? undefined : () => setDenunciando(item)}
+              />
             </View>
           </View>
         )}
