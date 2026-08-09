@@ -38,7 +38,8 @@
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.com.quibly.app"
-        ]
+        ],
+        "com.apple.developer.family-controls": true
       }
     },
     "android": {

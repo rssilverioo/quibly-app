@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { LogBox, Platform, StyleSheet, Text, View } from 'react-native';
+import { AppState, LogBox, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -27,6 +27,7 @@ import { initRevenueCat } from '../services/iap';
 import '../lib/i18n';
 import { initAnalytics } from '../lib/analytics';
 import { initSentry, captureException } from '../lib/sentry';
+import { reconciliarFoco } from '../modules/foco-profundo/src';
 
 // Raised by expo-router's own ErrorBoundary/Toast/Sitemap views, which still
 // use React Native's SafeAreaView. Every screen we own already imports it from
@@ -133,6 +134,27 @@ function RootLayoutNav() {
   // Initialize notifications
   useEffect(() => {
     configureNotifications();
+  }, []);
+
+  /**
+   * Derruba um escudo de foco esquecido — a garantia (3) das quatro descritas
+   * em `FocoProfundoModule.swift`.
+   *
+   * Roda na abertura **e** a cada volta ao primeiro plano, e não junto da
+   * sessão: é justamente quando a sessão **não** foi restaurada que ela
+   * importa. Aparelho reiniciado no meio do foco, app morto pelo iOS, extensão
+   * que não acordou — em todos, o escudo continuaria de pé sem nada marcado
+   * para desfazê-lo.
+   *
+   * Antes da autenticação, de propósito. Um telefone bloqueado não pode
+   * depender de a pessoa conseguir entrar na conta para ser liberado.
+   */
+  useEffect(() => {
+    reconciliarFoco();
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') reconciliarFoco();
+    });
+    return () => sub.remove();
   }, []);
 
   // Pick a live session back up on launch.
