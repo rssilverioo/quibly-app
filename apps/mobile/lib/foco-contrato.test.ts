@@ -61,3 +61,34 @@ describe('o estado do foco é o mesmo nos três processos', () => {
     expect(escudo).toBeGreaterThan(marca);
   });
 });
+
+/**
+ * A classe principal de cada extensão é nomeada **no `Info.plist`**, e é por
+ * esse nome que o sistema a instancia.
+ *
+ * Se o Swift declarar outro nome, nada quebra: a extensão é compilada,
+ * assinada, embarcada e carregada — e nunca instanciada. Para o foco profundo
+ * isso apaga a garantia (2) inteira, e apaga em silêncio; a única evidência
+ * seria o escudo continuar de pé depois de o app ser encerrado, que é
+ * exatamente o desastre que este recurso existe para não permitir.
+ *
+ * Os `Info.plist` são gerados pelo `@bacons/apple-targets`, que escolhe os
+ * nomes — então quem tem que ceder é o nosso Swift, e uma regeneração pode
+ * mudar o plist sem avisar. Daí o teste, e não um comentário.
+ */
+describe('cada extensão declara a classe que o Info.plist manda instanciar', () => {
+  const casos = [
+    { plist: '../targets/foco-monitor/Info.plist', swift: '../targets/foco-monitor/FocoMonitor.swift' },
+    { plist: '../targets/foco-escudo/Info.plist', swift: '../targets/foco-escudo/FocoEscudo.swift' },
+  ];
+
+  for (const { plist, swift } of casos) {
+    it(`casa ${plist.split('/')[2]} com o Swift dele`, () => {
+      const pedida = ler(plist).match(
+        /<key>NSExtensionPrincipalClass<\/key>\s*<string>\$\(PRODUCT_MODULE_NAME\)\.([A-Za-z0-9_]+)<\/string>/,
+      );
+      expect(pedida, 'o Info.plist precisa nomear a classe principal').not.toBeNull();
+      expect(ler(swift)).toContain(`class ${pedida![1]}:`);
+    });
+  }
+});

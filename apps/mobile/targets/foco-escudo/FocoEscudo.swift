@@ -27,7 +27,17 @@ import UIKit
  Isso é atrito, não cadeia — e a diferença importa: quem realmente quiser sair
  desliga nos Ajustes, e está certo que consiga.
  */
-class FocoEscudo: ShieldConfigurationDataSource {
+/*
+ O **nome desta classe não é nosso**: ele está escrito no `Info.plist` do alvo,
+ em `NSExtensionPrincipalClass`, e é por ele que o sistema instancia a extensão.
+
+ Divergir não quebra o build. A extensão é assinada, embarcada e carregada — e
+ nunca instanciada, porque a classe que o plist pede não existe. Para o foco
+ profundo isso significa que o escudo **nunca cai pelo relógio do sistema**: a
+ garantia (2) some sem deixar rastro. Um teste guarda os dois lados.
+*/
+
+class ShieldConfigurationExtension: ShieldConfigurationDataSource {
   private func configuracao() -> ShieldConfiguration {
     let restante = EstadoDoFoco.expiraEm?.timeIntervalSinceNow ?? 0
     let minutos = max(0, Int(ceil(restante / 60)))

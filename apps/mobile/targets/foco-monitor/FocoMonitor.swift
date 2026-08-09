@@ -22,7 +22,17 @@ import Foundation
  `EstadoDoFoco.venceu` responde isso, e responde `true` também quando não há
  marca nenhuma, que é o estado de um escudo órfão.
  */
-class FocoMonitor: DeviceActivityMonitor {
+/*
+ O **nome desta classe não é nosso**: ele está escrito no `Info.plist` do alvo,
+ em `NSExtensionPrincipalClass`, e é por ele que o sistema instancia a extensão.
+
+ Divergir não quebra o build. A extensão é assinada, embarcada e carregada — e
+ nunca instanciada, porque a classe que o plist pede não existe. Para o foco
+ profundo isso significa que o escudo **nunca cai pelo relógio do sistema**: a
+ garantia (2) some sem deixar rastro. Um teste guarda os dois lados.
+*/
+
+class DeviceActivityMonitorExtension: DeviceActivityMonitor {
   override func intervalDidEnd(for activity: DeviceActivityName) {
     super.intervalDidEnd(for: activity)
     EstadoDoFoco.liberar()
