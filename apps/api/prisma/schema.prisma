@@ -142,10 +142,21 @@ model Profile {
    * apaga o significado das duas.
    */
   verification         VerificationBadge?
-  onboardingCompleted  Boolean            @default(false) @map("onboarding_completed")
-  educationLevel       String?            @map("education_level") // high_school | college | graduate | professional
-  studyGoal            String?            @map("study_goal") // exam_prep | school | certification | fun
-  dailyGoalMinutes     Int                @default(15) @map("daily_goal_minutes")
+  /**
+   * Suspensão. `null` = conta normal.
+   * Suspender e não apagar: apagar levaria junto os posts que essa pessoa
+   * deixou nas salas de outras, e punir quem convive não é o objetivo. A conta
+   * fica de pé, sem conseguir entrar, e a decisão é reversível — que é o que
+   * uma decisão tomada com pressa precisa ser.
+   */
+  bannedAt             DateTime?          @map("banned_at") @db.Timestamptz()
+  /// O motivo, para quem vier depois entender a decisão sem adivinhar.
+  bannedReason         String?            @map("banned_reason") @db.VarChar(500)
+
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  educationLevel      String? @map("education_level") // high_school | college | graduate | professional
+  studyGoal           String? @map("study_goal") // exam_prep | school | certification | fun
+  dailyGoalMinutes    Int     @default(15) @map("daily_goal_minutes")
 
   /// ISO 3166-1 alpha-2, resolvido no onboarding por locale + IP.
   countryCode String?   @map("country_code") @db.Char(2)
@@ -1017,6 +1028,35 @@ model ContentReport {
   /// 'PENDING' | 'REVIEWED' | 'DISMISSED'
   status     String   @default("PENDING")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  /// ─────────────────────────────────────────────────────────────────────
+  /// A **prova**, fotografada no instante da denúncia.
+  ///
+  /// Sem isto a denúncia é um ponteiro: `targetId` aponta para um conteúdo que
+  /// a pessoa denunciada apaga em dois toques. Quem fosse analisar abriria o
+  /// painel e não veria nada — e o caminho para escapar de uma denúncia seria
+  /// apagar a mensagem, que é exatamente o que alguém denunciado faz.
+  ///
+  /// Guardar cópia é decisão de produto, não descuido: o conteúdo continua
+  /// apagado para todo mundo no app; o que sobrevive é a evidência, e só para
+  /// quem for julgar.
+  /// ─────────────────────────────────────────────────────────────────────
+
+  /// O texto no momento da denúncia. Truncado — prova, não arquivo.
+  snapshotText       String?   @map("snapshot_text") @db.VarChar(2000)
+  /// Quem escreveu o conteúdo denunciado. É contra ele que a ação recai.
+  snapshotAuthorId   String?   @map("snapshot_author_id")
+  snapshotAuthorName String?   @map("snapshot_author_name")
+  /// Quando o conteúdo foi criado, não quando foi denunciado.
+  snapshotAt         DateTime? @map("snapshot_at") @db.Timestamptz()
+  /// A sala onde aconteceu, quando há uma. Dá o "onde" sem dar a conversa.
+  snapshotRoomId     String?   @map("snapshot_room_id")
+
+  /// Quem julgou e quando. `null` enquanto `PENDING`.
+  reviewedAt DateTime? @map("reviewed_at") @db.Timestamptz()
+  reviewedBy String?   @map("reviewed_by")
+  /// Nota de quem julgou — por que arquivou, o que fez.
+  reviewNote String?   @map("review_note") @db.VarChar(500)
 
   reporter Profile @relation("ReportAuthor", fields: [reporterId], references: [id], onDelete: Cascade)
 

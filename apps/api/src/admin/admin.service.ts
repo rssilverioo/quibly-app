@@ -556,4 +556,94 @@ export class AdminService {
       },
     };
   }
+
+  /**
+   * A fila de denúncias.
+   *
+   * Ordenada por mais antiga primeiro dentro de `PENDING`: uma fila que mostra
+   * as novas primeiro deixa as antigas apodrecendo no fundo, e denúncia velha é
+   * justamente a que já custou paciência de alguém.
+   *
+   * Devolve a **prova fotografada**, não o conteúdo ao vivo. O conteúdo pode
+   * ter sido apagado — e se foi, a denúncia continua julgável, que é a razão de
+   * a foto existir.
+   */
+  async getReports(params: { status?: string; page?: number; limit?: number }) {
+    const { status = 'PENDING', page = 1, limit = 30 } = params;
+    const where = status === 'ALL' ? {} : { status };
+
+    const [reports, total] = await Promise.all([
+      this.prisma.contentReport.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          reporter: { select: { id: true, username: true, handle: true } },
+        },
+      }),
+      this.prisma.contentReport.count({ where }),
+    ]);
+
+    // O estado da conta do autor vem junto: quem julga precisa saber se aquela
+    // pessoa já está suspensa antes de decidir suspender de novo.
+    const autores = [...new Set(reports.map((r) => r.snapshotAuthorId).filter(Boolean))] as string[];
+    const perfis = autores.length
+      ? await this.prisma.profile.findMany({
+          where: { id: { in: autores } },
+          select: { id: true, username: true, handle: true, bannedAt: true },
+        })
+      : [];
+    const porId = new Map(perfis.map((p) => [p.id, p]));
+
+    return {
+      reports: reports.map((r) => ({
+        ...r,
+        author: r.snapshotAuthorId ? (porId.get(r.snapshotAuthorId) ?? null) : null,
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /** Julgar: `REVIEWED` (agi) ou `DISMISSED` (não era nada). */
+  async reviewReport(
+    adminId: string,
+    reportId: string,
+    status: 'REVIEWED' | 'DISMISSED',
+    note?: string,
+  ) {
+    return this.prisma.contentReport.update({
+      where: { id: reportId },
+      data: {
+        status,
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+        reviewNote: note?.trim()?.slice(0, 500) || null,
+      },
+    });
+  }
+
+  /**
+   * Suspender uma conta, e desfazer.
+   *
+   * Suspende, não apaga: apagar levaria junto os posts que a pessoa deixou nas
+   * salas de outras, e punir quem convive não é o objetivo. A conta fica de pé
+   * sem conseguir entrar, e a decisão volta atrás com um toque — que é o que
+   * uma decisão tomada com pressa precisa poder fazer.
+   *
+   * O motivo é obrigatório na prática, ainda que opcional no tipo: quem vier
+   * depois precisa entender a decisão sem adivinhar.
+   */
+  async setBan(userId: string, banido: boolean, motivo?: string) {
+    return this.prisma.profile.update({
+      where: { id: userId },
+      data: {
+        bannedAt: banido ? new Date() : null,
+        bannedReason: banido ? (motivo?.trim()?.slice(0, 500) || null) : null,
+      },
+      select: { id: true, username: true, handle: true, bannedAt: true, bannedReason: true },
+    });
+  }
 }

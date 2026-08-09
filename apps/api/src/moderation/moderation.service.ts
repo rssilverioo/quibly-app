@@ -112,6 +112,8 @@ export class ModerationService {
       throw new BadRequestException('Unknown reason');
     }
 
+    const prova = await this.fotografar(dados.targetType, dados.targetId);
+
     await this.prisma.contentReport.upsert({
       where: {
         reporterId_targetType_targetId: {
@@ -126,11 +128,114 @@ export class ModerationService {
         targetId: dados.targetId,
         reason: dados.reason,
         details: dados.details?.trim()?.slice(0, 500) || null,
+        ...prova,
       },
-      // Denunciar de novo não empilha na fila; atualiza o motivo.
+      // Denunciar de novo não empilha na fila; atualiza o motivo. A prova
+      // **não** é refotografada: a primeira é a do momento em que a pessoa se
+      // sentiu ofendida, e é essa que interessa. Refazer permitiria "limpar" a
+      // evidência editando o conteúdo e pedindo para ser denunciado de novo.
       update: { reason: dados.reason, details: dados.details?.trim()?.slice(0, 500) || null },
     });
 
     return { reported: true };
+  }
+
+  /**
+   * A prova, no instante da denúncia.
+   *
+   * ## Por que copiar em vez de apontar
+   *
+   * A denúncia guardava só `targetId`. Quem foi denunciado apaga a mensagem em
+   * dois toques, e a denúncia vira um ponteiro para o nada — quem fosse julgar
+   * abriria o painel e não veria nada. Apagar viraria o caminho para escapar,
+   * e é literalmente o que alguém denunciado faz.
+   *
+   * O conteúdo continua apagado para todo mundo no app. O que sobrevive é a
+   * cópia, e só para quem for julgar.
+   *
+   * ## O que **não** é copiado
+   *
+   * A conversa em volta. Decisão do dono do produto em 09/08: o admin vê o que
+   * foi denunciado e nada além disso. Salas são grupos privados, e a diferença
+   * entre "temos moderação" e "lemos as conversas dos usuários" é essa linha.
+   *
+   * ## Por que falhar aqui não derruba a denúncia
+   *
+   * Sem prova a denúncia ainda vale — ela registra que alguém se incomodou, e
+   * isso é informação. Recusar a denúncia porque a foto falhou seria perder as
+   * duas coisas.
+   */
+  private async fotografar(tipo: string, alvo: string) {
+    const vazio = {};
+    try {
+      if (tipo === 'chat_message') {
+        const m = await this.prisma.chatMessage.findUnique({
+          where: { id: alvo },
+          select: {
+            content: true,
+            createdAt: true,
+            leagueId: true,
+            user: { select: { id: true, username: true } },
+          },
+        });
+        if (!m) return vazio;
+        return {
+          snapshotText: m.content?.slice(0, 2000) ?? null,
+          snapshotAuthorId: m.user?.id ?? null,
+          snapshotAuthorName: m.user?.username ?? null,
+          snapshotAt: m.createdAt,
+          snapshotRoomId: m.leagueId,
+        };
+      }
+
+      if (tipo === 'post' || tipo === 'comment') {
+        const registro = tipo === 'post'
+          ? await this.prisma.feedPost.findUnique({
+              where: { id: alvo },
+              select: {
+                caption: true,
+                createdAt: true,
+                leagueId: true,
+                user: { select: { id: true, username: true } },
+              },
+            })
+          : await this.prisma.feedComment.findUnique({
+              where: { id: alvo },
+              select: {
+                content: true,
+                createdAt: true,
+                post: { select: { leagueId: true } },
+                user: { select: { id: true, username: true } },
+              },
+            });
+        if (!registro) return vazio;
+        const texto = 'caption' in registro ? registro.caption : registro.content;
+        const sala = 'leagueId' in registro ? registro.leagueId : registro.post?.leagueId;
+        return {
+          snapshotText: texto?.slice(0, 2000) ?? null,
+          snapshotAuthorId: registro.user?.id ?? null,
+          snapshotAuthorName: registro.user?.username ?? null,
+          snapshotAt: registro.createdAt,
+          snapshotRoomId: sala ?? null,
+        };
+      }
+
+      if (tipo === 'profile') {
+        const p = await this.prisma.profile.findUnique({
+          where: { id: alvo },
+          select: { id: true, username: true, bio: true, createdAt: true },
+        });
+        if (!p) return vazio;
+        return {
+          snapshotText: p.bio?.slice(0, 2000) ?? null,
+          snapshotAuthorId: p.id,
+          snapshotAuthorName: p.username,
+          snapshotAt: p.createdAt,
+        };
+      }
+    } catch {
+      // Ver o cabeçalho: a denúncia vale mesmo sem prova.
+    }
+    return vazio;
   }
 }

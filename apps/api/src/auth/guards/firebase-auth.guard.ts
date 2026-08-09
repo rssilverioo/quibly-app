@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -36,6 +37,36 @@ export class FirebaseAuthGuard implements CanActivate {
       const userId = decodedToken.uid;
       const email = decodedToken.email || '';
 
+      /**
+       * Conta suspensa não passa daqui.
+       *
+       * ## Por que no guard, e não em cada rota
+       *
+       * Suspensão que só cobre algumas rotas não é suspensão: quem quisesse
+       * continuar postando acharia o caminho que ninguém protegeu. Aqui vale
+       * para tudo que exige login, de uma vez.
+       *
+       * ## Por que não usa o cache de perfis conhecidos
+       *
+       * `knownProfiles` existe para evitar o `upsert` a cada requisição, e é
+       * povoado uma vez por processo. Se a suspensão dependesse dele, banir
+       * alguém que já usou o app naquele processo não teria efeito **até o
+       * próximo deploy** — a pior forma de uma punição falhar, porque parece
+       * aplicada.
+       *
+       * Custa uma consulta por requisição. É o preço de a decisão valer no
+       * instante em que é tomada.
+       */
+      const suspensao = await this.prisma.profile.findUnique({
+        where: { id: userId },
+        select: { bannedAt: true },
+      });
+      if (suspensao?.bannedAt) {
+        // 403 e não 401: 401 faria o app tentar renovar o token e entrar num
+        // laço de login que nunca conclui, sem nunca dizer o que houve.
+        throw new ForbiddenException('Account suspended');
+      }
+
       // Auto-create profile if it doesn't exist yet (cached to avoid DB hit on every request)
       if (!this.knownProfiles.has(userId)) {
         await this.prisma.profile.upsert({
@@ -59,6 +90,9 @@ export class FirebaseAuthGuard implements CanActivate {
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
+      // A suspensão não é falha de token — deixar cair no `catch` a
+      // transformaria em "token inválido", e o app pediria login de novo.
+      if (error instanceof ForbiddenException) throw error;
       throw new UnauthorizedException('Invalid or expired Firebase token');
     }
   }

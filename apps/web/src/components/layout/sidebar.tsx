@@ -11,6 +11,9 @@ const navItems = [
   { href: '/admin/content', label: 'Content', icon: '📚' },
   { href: '/admin/leagues', label: 'Leagues', icon: '🏆' },
   { href: '/admin/notifications', label: 'Notifications', icon: '🔔' },
+  // Fica por último e é a primeira que alguém abre de manhã: é a única fila
+  // do painel em que alguém do outro lado está esperando uma decisão.
+  { href: '/admin/reports', label: 'Reports', icon: '🚩' },
 ];
 
 export function Sidebar() {

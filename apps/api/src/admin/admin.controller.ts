@@ -14,6 +14,7 @@ import {
 import { Plan } from '@prisma/client';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AdminService } from './admin.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
@@ -182,5 +183,49 @@ export class AdminController {
       body.body,
       body.segment,
     );
+  }
+
+  /** A fila de denúncias. `status=PENDING|REVIEWED|DISMISSED|ALL`. */
+  @Get('reports')
+  getReports(
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.getReports({
+      status: status ?? 'PENDING',
+      page: Number.parseInt(page ?? '1', 10) || 1,
+      limit: Math.min(100, Number.parseInt(limit ?? '30', 10) || 30),
+    });
+  }
+
+  @Patch('reports/:id')
+  reviewReport(
+    @CurrentUser() user: { userId: string },
+    @Param('id') id: string,
+    @Body() body: { status: 'REVIEWED' | 'DISMISSED'; note?: string },
+  ) {
+    if (body.status !== 'REVIEWED' && body.status !== 'DISMISSED') {
+      throw new BadRequestException('status must be REVIEWED or DISMISSED');
+    }
+    return this.adminService.reviewReport(user.userId, id, body.status, body.note);
+  }
+
+  /**
+   * Suspender e reativar.
+   *
+   * `banned: false` desfaz. Um verbo só para as duas direções porque desfazer
+   * **tem** que ser tão fácil quanto fazer — uma rota separada para reativar
+   * seria uma a mais para alguém esquecer de construir na interface.
+   */
+  @Patch('users/:id/ban')
+  setBan(
+    @Param('id') id: string,
+    @Body() body: { banned: boolean; reason?: string },
+  ) {
+    if (typeof body.banned !== 'boolean') {
+      throw new BadRequestException('banned must be a boolean');
+    }
+    return this.adminService.setBan(id, body.banned, body.reason);
   }
 }
