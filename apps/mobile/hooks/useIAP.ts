@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import {
   getOfferings,
@@ -62,6 +62,34 @@ export function useIAP() {
     }
   }, []);
 
+  /**
+   * Quanto o anual economiza, calculado dos preços de verdade.
+   *
+   * A tela mostrava `17%` escrito no código, e isso não sobrevive a nenhuma
+   * mudança de preço.
+   *
+   * Os preços de 09/08 são US$ 9,99 e R$ 19,99 no mês, com o anual mirando
+   * **48%** de desconto: US$ 61,99 e R$ 124,99. Só que a Apple converte esses
+   * valores para as outras dezenas de moedas com câmbio próprio, e o desconto
+   * resultante muda em cada uma. Nenhum número escrito aqui poderia estar
+   * certo em todas — e um número errado numa oferta de assinatura não é
+   * detalhe, é promessa quebrada no lugar onde a pessoa decide pagar.
+   *
+   * Calculado dos preços que a loja devolve, o texto não tem como mentir —
+   * mexer no preço no App Store Connect atualiza a promessa sozinho.
+   *
+   * `null` quando falta um dos dois: sem os dois preços não há desconto a
+   * afirmar, e a etiqueta some em vez de exibir um número inventado.
+   */
+  const economiaAnual = useMemo(() => {
+    const mes = monthlyPackage?.product.price;
+    const ano = yearlyPackage?.product.price;
+    if (!mes || !ano) return null;
+    const percentual = Math.round((1 - ano / (mes * 12)) * 100);
+    // Um "economize 0%" ou um desconto negativo é pior que etiqueta nenhuma.
+    return percentual > 0 ? percentual : null;
+  }, [monthlyPackage, yearlyPackage]);
+
   const getPrice = useCallback(
     (type: 'monthly' | 'yearly'): string | null => {
       const pkg = type === 'monthly' ? monthlyPackage : yearlyPackage;
@@ -85,6 +113,7 @@ export function useIAP() {
     purchase,
     restore,
     getPrice,
+    economiaAnual,
     getManageSubscriptionUrl,
   };
 }

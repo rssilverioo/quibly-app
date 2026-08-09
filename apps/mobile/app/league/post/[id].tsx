@@ -202,7 +202,11 @@ export default function RoomPhotoPostScreen() {
         >
           {/* Toque em área vazia fecha o teclado. `Pressable` sem estilo de
               toque: é área de descarte, não botão. */}
-          <Pressable onPress={Keyboard.dismiss} accessible={false}>
+          {/* O `gap` mora aqui, e não no `contentContainerStyle`.
+              Ele estava lá — e não fazia nada: o `ScrollView` tem **um** filho
+              só, este `Pressable`, então o vão era aplicado entre um elemento e
+              o vazio. Os dois cards ficavam colados, encostados pela borda. */}
+          <Pressable onPress={Keyboard.dismiss} accessible={false} style={styles.blocos}>
 
             <View style={styles.trio}>
               {/* Para onde vai */}
@@ -305,7 +309,10 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   title: { ...text.bodyStrong, color: c.fg, flex: 1, textAlign: 'center' },
   acao: { ...text.bodyStrong, color: c.accent },
   acaoInativa: { color: c.fgSubtle },
-  rolagem: { padding: space.lg, gap: space.lg },
+  // Sem `gap`: quem espaça os blocos é o `Pressable` que os contém, porque é
+  // ele o único filho deste container.
+  rolagem: { padding: space.lg },
+  blocos: { gap: space.lg },
 
   // `zIndex` sobe com a mídia: o irmão que contém o lápis precisa vencer o
   // card da legenda, e no RN a disputa acontece entre irmãos do mesmo pai.

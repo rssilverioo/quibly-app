@@ -24,7 +24,7 @@ export default function PricingScreen() {
   const router = useRouter();
   const { t } = useTranslation('pricing');
   const { usage, refresh: refreshUsage } = useUsage();
-  const { monthlyPackage, yearlyPackage, purchasing, purchase, restore, getPrice, getManageSubscriptionUrl } = useIAP();
+  const { monthlyPackage, yearlyPackage, purchasing, purchase, restore, getPrice, economiaAnual, getManageSubscriptionUrl } = useIAP();
   const [billing, setBilling] = useState<Billing>('monthly');
   const [restoring, setRestoring] = useState(false);
 
@@ -156,7 +156,13 @@ export default function PricingScreen() {
               onPress={() => handleSelectBilling('yearly')}
             >
               <Text style={[styles.billingText, billing === 'yearly' && styles.billingTextActive]}>{t('yearly')}</Text>
-              {billing === 'yearly' && <Text style={styles.saveTag}>{t('savePercent', { percent: 17 })}</Text>}
+              {/* O percentual vem dos preços reais, não do código: com US$ 9,99
+                  contra US$ 69,99 o desconto é 42%, e com R$ 19,99 contra
+                  R$ 99,99 é 58% — um número fixo estaria errado nos dois. Sem
+                  os dois preços, a etiqueta some. */}
+              {billing === 'yearly' && economiaAnual
+                ? <Text style={styles.saveTag}>{t('savePercent', { percent: economiaAnual })}</Text>
+                : null}
             </TouchableOpacity>
           </View>
         )}
