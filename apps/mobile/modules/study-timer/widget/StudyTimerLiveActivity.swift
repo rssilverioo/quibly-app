@@ -62,15 +62,8 @@ struct StudyTimerLiveActivity: Widget {
         }
 
         DynamicIslandExpandedRegion(.bottom) {
-          VStack(spacing: 8) {
-            if context.state.temFase {
-              BarraDaFase(state: context.state)
-            }
-            ActionRow(
-              isRunning: context.state.isRunning,
-              acaoLabel: context.state.acaoLabel,
-              encerrarLabel: context.state.encerrarLabel
-            )
+          if context.state.temFase {
+            BarraDaFase(state: context.state)
           }
         }
       } compactLeading: {
@@ -155,15 +148,6 @@ private struct LockScreenView: View {
         }
 
         Spacer(minLength: 8)
-
-        VStack(spacing: 6) {
-          LinkButton(
-            systemName: context.state.isRunning ? "pause.fill" : "play.fill",
-            url: context.state.isRunning ? "quibly://session/pause" : "quibly://session/resume",
-            acao: context.state.isRunning ? "pause" : "resume"
-          )
-          LinkButton(systemName: "stop.fill", url: "quibly://session/end", acao: "end", tint: .red)
-        }
       }
 
       // A barra só existe quando há bloco. No cronômetro livre não há fração a
@@ -282,124 +266,21 @@ private struct TimerText: View {
   }
 }
 
-/**
- Um controle da Live Activity, no melhor caminho que o aparelho oferece.
+/*
+ Os botões de pausar e encerrar saíram da Live Activity.
 
- **iOS 17+** usa `Button(intent:)`: a ação acontece sem abrir o app, chamando a
- API direto do Swift com o token de sessão (`SessionActionIntent`).
+ O card da tela bloqueada é **mostrador**, e virou só isso: coelho, cronômetro,
+ rótulo e a barra do bloco. Dois controles ali disputavam espaço com a única
+ informação que a pessoa olha de relance — e, com o foco profundo, a saída da
+ sessão passou a ser uma decisão que merece a tela do app, não um toque cego na
+ tela bloqueada.
 
- **iOS 16** não tem `Button(intent:)` em Live Activity, então cai no `Link`, que
- abre o app e deixa o store fazer o resto. Mais lento, e é o que existe — até
- este commit, esse caminho estava quebrado: nada tratava as rotas
- `quibly://session/…` e o app mostrava "Unmatched Route".
-
- Os dois terminam no **mesmo** serviço no servidor, então não há como as duas
- rotas produzirem estados diferentes.
- */
-@available(iOS 16.1, *)
-private struct LinkButton: View {
-  let systemName: String
-  let url: String
-  /// `pause` | `resume` | `end` — o que o App Intent vai pedir no iOS 17+.
-  let acao: String
-  var tint: Color = .quiblyAccent
-
-  var body: some View {
-    if #available(iOS 17.0, *) {
-      Button(intent: SessionActionIntent(acao: acao)) { rotulo }
-        .buttonStyle(.plain)
-    } else {
-      Link(destination: URL(string: url)!) { rotulo }
-    }
-  }
-
-  private var rotulo: some View {
-    Image(systemName: systemName)
-      .font(.system(size: 14, weight: .bold))
-      .foregroundStyle(tint)
-      // 40×30 e não 34×26: são os dois controles reais do card, e na tela
-      // bloqueada o dedo chega sem mira.
-      .frame(width: 40, height: 30)
-      .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 9))
-  }
-}
-
-@available(iOS 16.1, *)
-private struct ActionRow: View {
-  let isRunning: Bool
-  /// Já traduzidos pelo app — a extensão não tem i18n. Ver `StudyTimerAttributes`.
-  let acaoLabel: String
-  let encerrarLabel: String
-
-  var body: some View {
-    HStack(spacing: 10) {
-      AcaoLarga(
-        titulo: acaoLabel,
-        icone: isRunning ? "pause.fill" : "play.fill",
-        url: isRunning ? "quibly://session/pause" : "quibly://session/resume",
-        acao: isRunning ? "pause" : "resume",
-        fundo: Color.quiblyAccent,
-        texto: .black
-      )
-
-      AcaoLarga(
-        titulo: encerrarLabel,
-        icone: "stop.fill",
-        url: "quibly://session/end",
-        acao: "end",
-        fundo: Color.white.opacity(0.14),
-        texto: .white
-      )
-    }
-    .padding(.top, 4)
-  }
-}
-
-/// O botão em cápsula da Ilha expandida. Mesma escolha de caminho do `LinkButton`.
-@available(iOS 16.1, *)
-private struct AcaoLarga: View {
-  let titulo: String
-  let icone: String
-  let url: String
-  let acao: String
-  let fundo: Color
-  let texto: Color
-
-  var body: some View {
-    if #available(iOS 17.0, *) {
-      Button(intent: SessionActionIntent(acao: acao)) { rotulo }
-        .buttonStyle(.plain)
-    } else {
-      Link(destination: URL(string: url)!) { rotulo }
-    }
-  }
-
-  private var rotulo: some View {
-    Label(titulo, systemImage: icone)
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundStyle(texto)
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 9)
-      .background(fundo, in: Capsule())
-  }
-}
-
-extension Color {
-  /**
-   O accent do tema **escuro** de `theme/colors.ts` — `#4C9AFF`.
-
-   Escuro e não claro porque a Live Activity é sempre sobre fundo escuro: na
-   Dynamic Island é preto, e o card da tela bloqueada usa
-   `activityBackgroundTint` preto. O accent claro (`#0043BA`) é um azul fundo,
-   pensado para texto sobre branco — ali ele quase desaparece.
-
-   Isto estava em `BRAND_LIME` com um comentário dizendo "a mesma cor no app e
-   fora dele". O app trocou o accent pelo azul do coelho em 31/07 e a Live
-   Activity ficou para trás, então o comentário virou mentira e o cronômetro na
-   tela de bloqueio era a única superfície do produto ainda em verde-limão.
-   */
-  static let quiblyAccent = Color(red: 0.298, green: 0.604, blue: 1.0)
-}
+ `SessionActionIntent` continua no alvo, sem chamador. Ele é `LiveActivityIntent`
+ e só é acionável a partir de um botão de Live Activity, então sem botão ele
+ nunca roda. Fica porque o dia em que um controle voltar, ele volta pronto — e
+ porque apagá-lo levaria junto o `setActionContext` do módulo e os deep links de
+ sessão, que ainda servem às notificações.
+*/
 
 // MARK: - bundle da extensão
 

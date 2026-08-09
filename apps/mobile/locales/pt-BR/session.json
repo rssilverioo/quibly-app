@@ -22,7 +22,13 @@
     "batteryTitle": "Mantenha seu cronômetro rodando",
     "batteryBody": "O Android pode parar o cronômetro em segundo plano. Permitir que o Quibly rode sem restrição de bateria mantém seu tempo de estudo correto.",
     "batteryBodyAggressive": "Aparelhos {{manufacturer}} interrompem cronômetros em segundo plano de forma agressiva. Sem a permissão, o Quibly pode perder seu tempo de estudo. É um toque só.",
-    "batteryOpenSettings": "Abrir ajustes"
+    "batteryOpenSettings": "Abrir ajustes",
+    "deepFocus": "Bloquear os outros apps",
+    "deepFocusSubtitle": "Tudo o mais fica bloqueado até a sessão acabar. Você pode parar pelo Quibly quando quiser.",
+    "deepFocusPermission": "Bloquear apps precisa da permissão do Tempo de Uso. Nada sai do seu telefone — o Quibly nunca vê quais apps você tem.",
+    "deepFocusDenied": "A permissão do Tempo de Uso não foi dada, então a sessão começa sem bloqueio.",
+    "focusCancel": "Encerrar o foco",
+    "focusCancelIn": "Encerrar o foco ({{count}})"
   },
   "active": {
     "work": "TRABALHO",

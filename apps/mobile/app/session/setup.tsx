@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
+import { Switch,
   View, Text, StyleSheet, ScrollView, Modal, TextInput,
   ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
@@ -22,6 +22,12 @@ import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius, SUBJECT_COLORS } from '../../theme';
 import { track } from '../../lib/analytics';
 import { voltar } from '../../lib/navegacao';
+import {
+  comecarFoco,
+  focoDisponivel,
+  pedirPermissaoDeFoco,
+  temPermissaoDeFoco,
+} from '../../modules/foco-profundo/src';
 
 /** One prompt per install, not per session. */
 const BATTERY_PROMPT_KEY = '@quibly/battery-optimization-prompted';
@@ -36,6 +42,7 @@ export default function SessionSetupScreen() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [bloquear, setBloquear] = useState(false);
   const [showNewSubject, setShowNewSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState<string>(SUBJECT_COLORS[0]);
@@ -149,6 +156,24 @@ export default function SessionSetupScreen() {
     });
   };
 
+  /**
+   * Ligar o bloqueio pede a permissão do sistema **na hora do toque**, e não no
+   * começo da sessão.
+   *
+   * Pedir depois faria a folha do Tempo de Uso aparecer por cima do cronômetro
+   * já rodando, quando a pessoa acha que terminou de decidir. Aqui ela está
+   * justamente escolhendo, e a folha é a continuação do toque.
+   *
+   * Negar não é erro: desliga o interruptor e a sessão segue sem bloqueio.
+   */
+  const alternarFoco = async () => {
+    if (bloquear) { setBloquear(false); return; }
+    if (temPermissaoDeFoco()) { setBloquear(true); return; }
+    const concedida = await pedirPermissaoDeFoco();
+    setBloquear(concedida);
+    if (!concedida) Alert.alert('', tr('setup.deepFocusDenied'));
+  };
+
   const handleStart = async () => {
     if (!store.subjectId) return;
     setStarting(true);
@@ -157,6 +182,19 @@ export default function SessionSetupScreen() {
       const isFirstSession = (profile?.total_study_minutes ?? 0) === 0;
       store.setIsFirstSession(isFirstSession);
       await store.startSession();
+
+      /*
+       O escudo sobe **depois** de a sessão existir no servidor.
+
+       Na ordem inversa, um erro em `startSession` deixaria os apps bloqueados
+       sem sessão nenhuma para justificar — e sem tela de sessão de onde
+       desfazer. Bloquear é consequência de estar estudando, nunca a causa.
+
+       Falhar aqui não derruba a sessão: foco é acessório do estudo.
+      */
+      if (bloquear) {
+        await comecarFoco(store.workDuration * 60);
+      }
       track('session_started', {
         timer_mode: store.timerMode,
         work_minutes: store.workDuration,
@@ -370,6 +408,29 @@ export default function SessionSetupScreen() {
             </Animated.View>
           )}
 
+          {/* O bloqueio some no Android e em iPhone sem Tempo de Uso. Um
+              interruptor desligado que nunca liga ensina desconfiança — pior
+              que a ausência dele. */}
+          {focoDisponivel() && (
+            <Press
+              scale={0.99}
+              onPress={alternarFoco}
+              style={[styles.customCard, styles.focoCard, { backgroundColor: c.surface, borderColor: bloquear ? c.accent : c.border }]}
+            >
+              <View style={styles.focoTexto}>
+                <Text style={{ ...t.bodyStrong, color: c.fg }}>{tr('setup.deepFocus')}</Text>
+                <Text style={{ ...t.caption, color: c.fgMuted, lineHeight: 17 }}>
+                  {tr('setup.deepFocusSubtitle')}
+                </Text>
+              </View>
+              <Switch
+                value={bloquear}
+                onValueChange={alternarFoco}
+                trackColor={{ true: c.accent, false: c.border }}
+              />
+            </Press>
+          )}
+
           <View style={{ height: 120 }} />
         </ScrollView>
 
@@ -540,6 +601,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  focoCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  focoTexto: { flex: 1, gap: 2 },
   ctaWrap: {
     position: 'absolute',
     bottom: 0,

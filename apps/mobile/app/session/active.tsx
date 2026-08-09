@@ -17,6 +17,7 @@ import { track } from '../../lib/analytics';
 import { onLiveTimerAction } from '../../services/study-timer';
 import { mascotForSession, milestoneForMinutes, minutesToNextMilestone } from '@quibly/shared';
 import { voltar } from '../../lib/navegacao';
+import { pararFoco, segundosDeFocoRestantes } from '../../modules/foco-profundo/src';
 
 const { width: SW } = Dimensions.get('window');
 const TIMER_SIZE = Math.min(SW * 0.72, 300);
@@ -165,6 +166,19 @@ export default function ActiveSessionScreen() {
     // que liga a sessão encerrada aos posts que ela acabou de criar — a
     // resposta do `end` não devolve id de post (ver `lib/published-post.ts`).
     const sessionId = useSessionStore.getState().currentSession?.id ?? '';
+    /*
+     O escudo cai **antes** da chamada, e fora do `try`.
+
+     Se `endSession` falhar — rede caída, servidor fora —, a tela mostra "não
+     deu para encerrar" e a pessoa tenta de novo. Derrubar o escudo só no
+     sucesso deixaria os apps bloqueados exatamente no momento em que o app
+     está sem resposta, que é quando a pessoa mais precisa do telefone.
+
+     Errar para o lado de liberar custa um bloqueio encurtado. Errar para o
+     outro custa um telefone preso por causa de uma falha de rede.
+    */
+    pararFoco();
+
     // No local pause first — `end` is itself terminal on the server, and
     // pausing would only add a stray interval to the session's record.
     try {
@@ -196,6 +210,38 @@ export default function ActiveSessionScreen() {
       setEndFailed(true);
     }
   }, [endSession, isEnding, router, subjectColor, subjectName]);
+
+  /**
+   * Sair do foco custa dez segundos — e só quando há foco.
+   *
+   * É o atrito do Focus Friend, e ele tem uma função exata: a vontade de largar
+   * o estudo dura menos que a contagem. Quem ainda quiser sair aos dez, sai; e
+   * é isso que separa atrito de cadeia.
+   *
+   * O primeiro toque arma, o segundo desarma. Nunca é um caminho de mão única:
+   * um botão que, uma vez tocado, encerra sozinho seria pior que não ter atrito
+   * nenhum, porque tiraria a decisão da pessoa em vez de adiá-la.
+   *
+   * Sem bloqueio ativo nada disso aparece — a sessão continua a um "segurar",
+   * que é o atrito proporcional a encerrar um cronômetro.
+   */
+  /**
+   * Se há escudo de pé agora.
+   *
+   * Perguntado ao nativo e não guardado num estado do JS: a sessão pode ter sido
+   * restaurada depois de o app morrer, e aí o React não tem memória nenhuma do
+   * que foi escolhido lá atrás — mas o escudo continua de pé, e o botão precisa
+   * saber disso para pedir os dez segundos.
+   */
+  const comFoco = segundosDeFocoRestantes() > 0;
+
+  const [contagem, setContagem] = useState<number | null>(null);
+  useEffect(() => {
+    if (contagem === null) return;
+    if (contagem <= 0) { setContagem(null); handleEndSession(); return; }
+    const id = setTimeout(() => setContagem((n) => (n === null ? null : n - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [contagem, handleEndSession]);
 
   // Segurar. Solta antes dos 400ms, o anel vermelho recolhe e nada acontece.
   const startHold = useCallback(() => {
@@ -376,22 +422,44 @@ export default function ActiveSessionScreen() {
         )}
       </Press>
 
-      {/* Segurar, não tocar. Ver `HOLD_TO_END_MS`. */}
-      <Pressable
-        onPressIn={startHold}
-        onPressOut={cancelHold}
-        disabled={isEnding}
-        style={[styles.endBtn, { opacity: isEnding ? 0.4 : 1 }]}
-      >
-        {isEnding ? (
-          <Text style={{ ...t.label, color: c.fgMuted }}>{tr('active.ending')}</Text>
-        ) : (
-          <>
-            <Square size={14} color={c.danger} />
-            <Text style={{ ...t.label, color: c.danger }}>{tr('active.holdToEnd')}</Text>
-          </>
-        )}
-      </Pressable>
+      {/* Com bloqueio, tocar e esperar dez segundos. Sem bloqueio, segurar —
+          ver `HOLD_TO_END_MS`. */}
+      {comFoco ? (
+        <Pressable
+          onPress={() => setContagem((n) => (n === null ? 10 : null))}
+          disabled={isEnding}
+          style={[styles.endBtn, { opacity: isEnding ? 0.4 : 1 }]}
+        >
+          {isEnding ? (
+            <Text style={{ ...t.label, color: c.fgMuted }}>{tr('active.ending')}</Text>
+          ) : (
+            <>
+              <Square size={14} color={c.danger} />
+              <Text style={{ ...t.label, color: c.danger }}>
+                {contagem === null
+                  ? tr('setup.focusCancel')
+                  : tr('setup.focusCancelIn', { count: contagem })}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      ) : (
+        <Pressable
+          onPressIn={startHold}
+          onPressOut={cancelHold}
+          disabled={isEnding}
+          style={[styles.endBtn, { opacity: isEnding ? 0.4 : 1 }]}
+        >
+          {isEnding ? (
+            <Text style={{ ...t.label, color: c.fgMuted }}>{tr('active.ending')}</Text>
+          ) : (
+            <>
+              <Square size={14} color={c.danger} />
+              <Text style={{ ...t.label, color: c.danger }}>{tr('active.holdToEnd')}</Text>
+            </>
+          )}
+        </Pressable>
+      )}
 
       {/* O timer não some quando o `end` falha. */}
       {endFailed && (

@@ -150,9 +150,23 @@ describe('a Dynamic Island compacta não pode reservar largura infinita', () => 
     for (const palavra of ['"Pausar"', '"Retomar"', '"Encerrar"', '"Estudando"']) {
       expect(codigo).not.toContain(palavra);
     }
-    // Os rótulos chegam prontos, como a fase já chegava.
-    expect(codigo).toContain('context.state.acaoLabel');
-    expect(codigo).toContain('context.state.encerrarLabel');
+  });
+
+  /**
+   * O card é **mostrador**, não controle — decisão do dono do produto em 09/08.
+   *
+   * Os dois botões disputavam espaço com a única informação que se olha de
+   * relance, e com o foco profundo a saída da sessão passou a ser uma decisão
+   * que merece a tela do app: lá ela custa dez segundos, aqui custaria um toque
+   * cego na tela bloqueada.
+   *
+   * O teste existe porque "botão de novo na Live Activity" é o tipo de coisa
+   * que volta sem querer, num merge ou numa cópia de exemplo.
+   */
+  it('não tem controle nenhum — só mostrador', () => {
+    expect(codigo).not.toContain('Button(intent:');
+    expect(codigo).not.toContain('Link(destination:');
+    expect(codigo).not.toContain('quibly://session/');
   });
 
   it('usa o accent azul do app, e não o lime aposentado em 31/07', () => {
@@ -175,10 +189,14 @@ describe('o deep link da Live Activity tem que cair em algum lugar', () => {
   const layout = ler('../app/_layout.tsx');
   const widget = ler('../targets/widget/StudyTimerLiveActivity.swift');
 
-  it('o app entende as três ações que o widget dispara', () => {
-    for (const acao of ['pause', 'resume', 'end']) {
-      expect(widget).toContain(`quibly://session/${acao}`);
-    }
+  /**
+   * O widget deixou de disparar estas ações — ver "só mostrador", acima. O
+   * tratamento no app **fica**: os mesmos deep links chegam de notificação e da
+   * Ilha Dinâmica de builds antigas ainda instaladas, e um link que ninguém
+   * trata abre o app numa tela em branco.
+   */
+  it('o app continua entendendo os deep links de sessão', () => {
+    expect(widget).not.toContain('quibly://session/');
     expect(layout).toContain("path?.startsWith('session/')");
   });
 

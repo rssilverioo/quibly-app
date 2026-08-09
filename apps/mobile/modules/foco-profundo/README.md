@@ -39,9 +39,6 @@ cujo resultado nunca vemos.
 
 ## O que ainda falta
 
-- O botão no pomodoro (`app/session/`) que liga isto.
-- O `CANCEL (10)` — desistir do foco com dez segundos de atrito, como o Focus
-  Friend. Sem ele a única saída é esperar ou ir aos Ajustes.
 - O ícone `CoelhoEscudo` no asset catalog do alvo `foco-escudo`.
 - Verificação em **aparelho real**: Family Controls não funciona no simulador,
   porque depende do Tempo de Uso.
