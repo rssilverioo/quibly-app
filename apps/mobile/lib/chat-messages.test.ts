@@ -68,7 +68,7 @@ describe('autorDaMensagem', () => {
   it('não quebra quando não veio autor nenhum', () => {
     // Mensagem de sistema não tem autor, e a bolha só esconde o nome se ele for
     // string vazia — `undefined` viraria "undefined" na tela.
-    expect(autorDaMensagem(mensagem())).toEqual({ nome: '', avatar: null, selo: null });
+    expect(autorDaMensagem(mensagem())).toEqual({ nome: '', avatar: null, selo: null, pro: false });
   });
 });
 

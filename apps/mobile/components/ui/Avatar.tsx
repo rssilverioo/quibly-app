@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { useTheme, text } from '../../theme';
+import MolduraPro, { PROPORCAO_ESCUDO } from '../plano/MolduraPro';
 
 interface Props {
   uri?: string | null;
@@ -8,6 +9,15 @@ interface Props {
   size?: number;
   /** Colored ring, e.g. the subject color while someone is studying */
   ringColor?: string;
+  /**
+   * Quem assina aparece em **escudo**, não em círculo — ver `MolduraPro`.
+   *
+   * O dado vem do servidor em `plan`, e chega aqui já como pergunta de sim ou
+   * não porque é só isso que o desenho precisa saber. Quem recebe `plan`
+   * inteiro é quem decide o que é "assinante", e essa decisão é uma só, no
+   * ponto de chamada.
+   */
+  pro?: boolean;
 }
 
 function initials(name: string): string {
@@ -17,7 +27,7 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export default function Avatar({ uri, name, size = 44, ringColor }: Props) {
+export default function Avatar({ uri, name, size = 44, ringColor, pro }: Props) {
   const { c } = useTheme();
   // **Foto quebrada não é o mesmo que foto ausente, e era esse o defeito real.**
   // Sem `onError`, um `avatar_url` que existe mas falha (URL expirada, objeto
@@ -51,6 +61,28 @@ export default function Avatar({ uri, name, size = 44, ringColor }: Props) {
   // aresta ao disco — mesma regra da §3.2.4: a mesma linha serve os dois modos,
   // no claro ela desenha, no escuro ela some sozinha.
   const fontSize = Math.max(10, inner * 0.34);
+
+  // **O escudo herda a altura, não a largura.**
+  //
+  // Ele é 18% mais alto que largo. Manter a largura em `size` faria toda linha
+  // de lista com um assinante crescer 18% — e o ritmo de uma lista é o que
+  // menos pode depender de quem paga. Casando a altura, a linha não se mexe: o
+  // escudo fica um pouco mais estreito que o círculo que substituiu, e é a
+  // troca certa.
+  //
+  // A foto quebrada não cai para a inicial aqui: `onError` não existe na
+  // `Image` do SVG. O que sobra é o escudo em degradê, vazio — um estado
+  // **desenhado**, diferente do disco cinza que motivou o `onError` abaixo e
+  // que lia como "travado carregando".
+  if (pro) {
+    return (
+      <MolduraPro
+        uri={showPhoto ? uri! : null}
+        iniciais={initials(name)}
+        size={size / PROPORCAO_ESCUDO}
+      />
+    );
+  }
 
   const content = showPhoto ? (
     <Image

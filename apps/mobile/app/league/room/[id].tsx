@@ -30,7 +30,9 @@ export default function RoomFeedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t, i18n } = useTranslation('common');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  /** Só a forma do avatar depende disto — ver `components/plano/MolduraPro`. */
+  const ehPro = profile?.plan === 'PRO';
   const { c } = useTheme();
   const { width: larguraDaJanela } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(c), [c]);
@@ -169,11 +171,11 @@ export default function RoomFeedScreen() {
 
       <View style={styles.statsStrip}>
         <View style={styles.statColumn}>
-          <Avatar uri={challenge.leader?.avatar_url ?? null} name={challenge.leader?.display_name ?? ''} size={28} />
+          <Avatar uri={challenge.leader?.avatar_url ?? null} name={challenge.leader?.display_name ?? ''} size={28} pro={challenge.leader?.plan === 'PRO'} />
           <View><Text style={styles.statValue}>{challenge.leader?.metric_value ?? 0}</Text><Text style={styles.statLabel}>{t('rooms.leader')}</Text></View>
         </View>
         <View style={styles.statColumn}>
-          <Avatar uri={null} name={t('rooms.you')} size={28} />
+          <Avatar uri={null} name={t('rooms.you')} size={28} pro={ehPro} />
           <View><Text style={styles.statValue}>{challenge.me.metric_value}</Text><Text style={styles.statLabel}>{t('rooms.you')}</Text></View>
         </View>
         <View style={styles.statColumn}>
@@ -209,7 +211,7 @@ export default function RoomFeedScreen() {
       <Text style={styles.overline}>{t('rooms.studyingNow')}</Text>
       {live.map((member) => (
         <View key={member.session_id} style={styles.livePerson}>
-          <Avatar uri={member.avatar_url} name={member.display_name} size={36} />
+          <Avatar uri={member.avatar_url} name={member.display_name} size={36} pro={member.plan === 'PRO'} />
           <View style={{ flex: 1 }}><Text style={styles.liveName}>{member.display_name}</Text><Text style={styles.liveMeta}>{member.subject_name} · {t('rooms.timeNow', { time: formatarTempoDeEstudo(member.elapsed_minutes) })}</Text></View>
         </View>
       ))}

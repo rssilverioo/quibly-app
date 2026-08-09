@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
+import Avatar from '../ui/Avatar';
 
 export interface FirebaseFeedPost {
   id: string;
@@ -21,6 +22,11 @@ export interface FirebaseFeedPost {
   username: string;
   /** O selo do autor. `null` na esmagadora maioria — ver `SeloVerificado`. */
   verification?: 'BLUE' | 'GOLD' | null;
+  /**
+   * O plano. O app usa só para a **forma** do avatar — quem assina aparece em
+   * escudo, ver `components/plano/MolduraPro`.
+   */
+  plan?: 'FREE' | 'PRO';
   avatar_url: string | null;
   session_id: string;
   subject_id: string;
@@ -235,15 +241,15 @@ export default function PostCard({
       ) : null}
 
       <View style={styles.byline}>
-        {post.avatar_url ? (
-          <Image source={{ uri: post.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitials}>
-              {getInitials(post.username)}
-            </Text>
-          </View>
-        )}
+        {/* Pelo `Avatar` compartilhado, e não `Image` solta: é ele que dá o
+            escudo a quem assina, e de quebra a queda para a inicial quando a
+            foto existe mas falha ao carregar. */}
+        <Avatar
+          uri={post.avatar_url}
+          name={post.username}
+          size={32}
+          pro={post.plan === 'PRO'}
+        />
         <Text style={styles.username} numberOfLines={1}>
           {post.username || t('common:unknown')}
         </Text>
@@ -330,6 +336,8 @@ export default function PostCard({
 }
 
 const makeStyles = (c: Palette) => StyleSheet.create({
+  /** Só o esqueleto de carregamento — o avatar de verdade é `ui/Avatar`. */
+  avatar: { width: 32, height: 32, borderRadius: radius.full },
   // `detail`: nenhuma moldura. Sem fundo, sem borda, sem raio, sem padding — a
   // margem lateral é da tela, e é assim que a foto alcança os 361pt medidos na
   // referência em vez de perder 16pt para um padding duplicado.
@@ -358,13 +366,6 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     minHeight: 32,
     marginBottom: 14,
   },
-  avatar: { width: 32, height: 32, borderRadius: radius.full },
-  avatarPlaceholder: {
-    backgroundColor: c.surfaceRaised,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: { ...text.caption, color: c.fgMuted },
   username: { ...text.bodyStrong, color: c.fg, marginLeft: space.sm, flexShrink: 1 },
   relativeTime: { ...text.caption, color: c.fgMuted, marginLeft: space.xs },
   subjectRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: 14 },

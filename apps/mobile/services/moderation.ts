@@ -12,6 +12,8 @@ export interface PessoaBloqueada {
   username: string;
   handle: string;
   avatar_url: string | null;
+  /** O plano, só para a forma do avatar — ver `components/plano/MolduraPro`. */
+  plan?: 'FREE' | 'PRO';
   blocked_at: string;
 }
 

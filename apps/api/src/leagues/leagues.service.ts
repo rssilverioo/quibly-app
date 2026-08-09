@@ -13,6 +13,7 @@ import { CreateLeagueDto } from './dto/create-league.dto';
 import { UpdateLeagueDto } from './dto/update-league.dto';
 import { RematchDto } from './dto/rematch.dto';
 import { Prisma, type LeagueStatus } from '@prisma/client';
+import { AUTOR, AUTOR_COM_ID } from '../common/autor.select';
 
 export type SpResetScope = { leagueId: string } | { allLeagues: true };
 
@@ -295,7 +296,7 @@ export class LeaguesService {
         startedAt: true,
         proofMode: true,
         subject: { select: { name: true, color: true } },
-        user: { select: { username: true, handle: true, avatarUrl: true, verification: true } },
+        user: { select: AUTOR },
       },
       orderBy: { startedAt: 'asc' },
     });
@@ -318,6 +319,8 @@ export class LeaguesService {
         display_name: peer.displayName || session.user.username,
         handle: session.user.handle,
         avatar_url: session.user.avatarUrl,
+        verification: session.user.verification,
+        plan: session.user.plan,
         subject_name: session.subject.name,
         subject_color: session.subject.color,
         league_id: peer.league.id,
@@ -450,13 +453,7 @@ export class LeaguesService {
       where: { leagueId },
       include: {
         user: {
-          select: {
-            id: true,
-            username: true,
-            handle: true,
-            avatarUrl: true,
-            level: true,
-          },
+          select: { ...AUTOR_COM_ID, level: true },
         },
       },
       orderBy: { [orderByField]: 'desc' },
@@ -597,13 +594,7 @@ export class LeaguesService {
       where: { leagueId },
       include: {
         user: {
-          select: {
-            id: true,
-            username: true,
-            handle: true,
-            avatarUrl: true,
-            level: true,
-          },
+          select: { ...AUTOR_COM_ID, level: true },
         },
       },
       orderBy: { totalSp: 'desc' },

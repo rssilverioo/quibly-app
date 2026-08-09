@@ -374,6 +374,7 @@ export class RoomsService {
                     displayName: leaderboard.entries[0].displayName,
                     metricValue: leaderboard.entries[0].metricValue,
                     avatarUrl: leaderboard.entries[0].avatarUrl,
+                    plan: leaderboard.entries[0].plan,
                   }
                 : null,
               me: {

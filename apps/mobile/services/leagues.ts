@@ -81,6 +81,8 @@ export interface LiveMember {
   display_name: string;
   handle: string;
   avatar_url: string | null;
+  /** O plano, só para a forma do avatar — ver `components/plano/MolduraPro`. */
+  plan?: 'FREE' | 'PRO';
   subject_name: string;
   subject_color: string;
   league_id: string;

@@ -14,14 +14,13 @@ import type { FeedComment, ReactionEmoji } from '@quibly/shared';
 import { getComments } from '../../services/feed';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 import type { FirebaseFeedPost } from './PostCard';
-import { getInitials, timeAgo } from './PostCard';
+import { timeAgo } from './PostCard';
+import { autorDoComentario, type ComentarioComAutor } from '../../lib/comentario-autor';
+import Avatar from '../ui/Avatar';
 
 const REACTION_EMOJIS: ReactionEmoji[] = ['🔥', '🧠', '💀', '👑', '⚡'];
 
-type FeedCommentData = FeedComment & {
-  username?: string;
-  avatar_url?: string | null;
-};
+type FeedCommentData = FeedComment & ComentarioComAutor;
 
 interface PostSocialFooterProps {
   post: FirebaseFeedPost;
@@ -153,19 +152,16 @@ function CommentItem({ comment }: { comment: FeedCommentData }) {
   const { t } = useTranslation('feed');
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const name = comment.username ?? comment.profile?.username ?? t('common:unknown');
-  const avatarUrl = comment.avatar_url ?? comment.profile?.avatar_url;
+  // Pelo helper, e não lendo os campos aqui: a API manda o autor em `user`, e
+  // ler `username`/`profile` fazia todo comentário virar "desconhecido". Ver
+  // `lib/comentario-autor`.
+  const { nome, avatar, pro } = autorDoComentario(comment);
+  const name = nome ?? t('common:unknown');
   const label = timeAgo(comment.created_at, t);
 
   return (
     <View style={styles.commentItem}>
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={styles.commentAvatar} />
-      ) : (
-        <View style={[styles.commentAvatar, styles.commentAvatarPlaceholder]}>
-          <Text style={styles.commentAvatarInitials}>{getInitials(name)}</Text>
-        </View>
-      )}
+      <Avatar uri={avatar} name={name} size={28} pro={pro} />
       <View style={styles.commentBody}>
         <View style={styles.commentHeader}>
           <Text style={styles.commentName}>{name}</Text>
@@ -220,9 +216,6 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   commentsToggleText: { ...text.caption, color: c.fgMuted },
   commentsSection: { borderTopWidth: 1, borderTopColor: c.border, padding: space.md, gap: space.md },
   commentItem: { flexDirection: 'row' },
-  commentAvatar: { width: 28, height: 28, borderRadius: radius.full },
-  commentAvatarPlaceholder: { backgroundColor: c.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  commentAvatarInitials: { ...text.caption, color: c.fgMuted },
   commentBody: { flex: 1, marginLeft: space.sm },
   commentHeader: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   commentName: { ...text.caption, color: c.fg },

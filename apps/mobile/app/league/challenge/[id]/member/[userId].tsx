@@ -19,6 +19,8 @@ export default function ChallengeMemberFeedScreen() {
   const params = useLocalSearchParams<{
     id: string; userId: string; name?: string; avatar?: string;
     rank?: string; value?: string; unit?: string;
+    /** '1' quando a pessoa assina — ver `components/plano/MolduraPro`. */
+    pro?: string;
   }>();
   const router = useRouter();
   const { t } = useTranslation('common');
@@ -80,7 +82,7 @@ export default function ChallengeMemberFeedScreen() {
         onEndReachedThreshold={0.4}
         ListHeaderComponent={(
           <View style={styles.personHeader}>
-            <Avatar uri={params.avatar || null} name={params.name || ''} size={56} />
+            <Avatar uri={params.avatar || null} name={params.name || ''} size={56} pro={params.pro === '1'} />
             <Text style={styles.name}>{params.name}</Text>
             <Text style={styles.summary}>
               {t('rooms.memberChallengeSummary', {

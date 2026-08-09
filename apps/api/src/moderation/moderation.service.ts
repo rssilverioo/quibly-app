@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AUTOR_COM_ID } from '../common/autor.select';
 
 /** O que se pode denunciar. Mais que isto vira campo livre e não vira fila. */
 export const TIPOS_DENUNCIAVEIS = ['post', 'comment', 'chat_message', 'profile'] as const;
@@ -76,7 +77,7 @@ export class ModerationService {
       orderBy: { createdAt: 'desc' },
       select: {
         createdAt: true,
-        blocked: { select: { id: true, username: true, handle: true, avatarUrl: true } },
+        blocked: { select: AUTOR_COM_ID },
       },
     });
 

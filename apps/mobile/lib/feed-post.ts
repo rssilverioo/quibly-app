@@ -101,6 +101,9 @@ export function roomFeedPostToCardPost(
     user_id: post.user_id,
     username: post.user?.username ?? '',
     verification: post.user?.verification ?? null,
+    // Sem esta linha o escudo do assinante nunca chegaria ao card: este
+    // achatamento copia campo a campo, e o que não é nomeado aqui some.
+    plan: post.user?.plan,
     avatar_url: post.user?.avatar_url ?? null,
     session_id: post.session?.id ?? '',
     subject_id: post.session?.subject?.id ?? '',

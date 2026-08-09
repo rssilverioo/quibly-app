@@ -85,7 +85,7 @@ export default function FeedRow({ post, locale, onPress, onLongPress }: FeedRowP
       <View style={styles.content}>
         <Text numberOfLines={1} style={styles.title}>{title}</Text>
         <View style={styles.byline}>
-          <Avatar uri={post.avatar_url} name={post.username} size={18} />
+          <Avatar uri={post.avatar_url} name={post.username} size={18} pro={post.plan === 'PRO'} />
           <Text numberOfLines={1} style={styles.author}>{post.username}</Text>
           {/* Depois do nome e antes da hora: é onde o olho já passa, e onde
               toda rede social o pôs — o selo é reconhecido pela posição tanto

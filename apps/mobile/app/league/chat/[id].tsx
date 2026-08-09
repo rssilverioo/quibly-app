@@ -260,7 +260,7 @@ export default function RoomChatScreen() {
     const abreBloco = !anterior
       || new Date(item.created_at).getTime() - new Date(anterior.created_at).getTime() > TIME_BLOCK_MS;
     const mine = item.user_id === meuId;
-    const { nome: author, avatar, selo } = autorDaMensagem(item);
+    const { nome: author, avatar, selo, pro } = autorDaMensagem(item);
     const apagada = Boolean(item.deleted_at);
 
     return (
@@ -276,7 +276,7 @@ export default function RoomChatScreen() {
           onLongPress={mine || apagada ? undefined : () => setDenunciando(item)}
           style={[styles.row, mine ? styles.rowMine : styles.rowOther, item.falhou && styles.rowFailed]}
         >
-          {!mine ? <View style={styles.avatar}><Avatar uri={avatar} name={author} size={28} /></View> : null}
+          {!mine ? <View style={styles.avatar}><Avatar uri={avatar} name={author} size={28} pro={pro} /></View> : null}
           <View style={styles.column}>
             {!mine && author ? (
               <View style={styles.autorLinha}>

@@ -177,6 +177,10 @@ export default function ChallengeLeaderboardScreen() {
                   userId: item.user_id,
                   name: item.display_name,
                   avatar: item.avatar_url ?? '',
+                  // Vai pela rota como '1'/'' e não como booleano: parâmetro de
+                  // rota é sempre string, e `String(false)` chega como "false",
+                  // que é verdadeiro.
+                  pro: item.plan === 'PRO' ? '1' : '',
                   rank: String(item.rank),
                   value: String(item.metric_value),
                   unit: unidadeDaMetrica(data.challenge.metric_unit, item.metric_value, t),
@@ -186,7 +190,7 @@ export default function ChallengeLeaderboardScreen() {
             >
               {isMe ? <View style={styles.meBar} /> : null}
               <View style={styles.row}>
-                <Avatar uri={item.avatar_url} name={item.display_name} size={40} />
+                <Avatar uri={item.avatar_url} name={item.display_name} size={40} pro={item.plan === 'PRO'} />
                 <View style={{ flex: 1 }}>
                   <View style={styles.nomeLinha}>
                     <Text style={styles.name} numberOfLines={1}>{item.display_name}{isMe ? ` · ${t('rooms.you')}` : ''}</Text>

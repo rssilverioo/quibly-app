@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 // O mesmo piso que a sequência usa para ganhar um dia. Duas constantes
 // diferentes para "dia estudado" era o que fazia as telas se contradizerem.
 import { SCORING } from '@quibly/shared';
+import { AUTOR_COM_ID } from '../common/autor.select';
 
 @Injectable()
 export class ChallengesService {
@@ -86,7 +87,7 @@ export class ChallengesService {
               // `timezone` entra porque o ranking passa a contar DIAS, e dia é
               // uma noção local. Contar em UTC faria quem estuda às 22h em
               // UTC−3 ganhar o dia seguinte, e às vezes dois dias numa noite.
-              select: { id: true, handle: true, avatarUrl: true, timezone: true, verification: true },
+              select: { ...AUTOR_COM_ID, timezone: true },
             },
           },
         },
@@ -270,6 +271,7 @@ export class ChallengesService {
           handle: member.user.handle,
           avatarUrl: member.user.avatarUrl,
           verification: member.user.verification,
+          plan: member.user.plan,
           metricValue: diasPorUsuario.get(member.userId)?.size ?? 0,
           activeDays: diasPorUsuario.get(member.userId)?.size ?? 0,
           minutes: Math.round(total.minutes),
@@ -341,7 +343,7 @@ export class ChallengesService {
         members: {
           include: {
             user: {
-              select: { id: true, avatarUrl: true, timezone: true, verification: true },
+              select: { ...AUTOR_COM_ID, timezone: true },
             },
           },
         },
@@ -425,6 +427,7 @@ export class ChallengesService {
             displayName: member.displayName,
             avatarUrl: member.user.avatarUrl,
             verification: member.user.verification,
+            plan: member.user.plan,
             checkIns: winner[1].size,
           }
         : null;
@@ -456,6 +459,7 @@ export class ChallengesService {
         displayName: entry.displayName,
         avatarUrl: entry.avatarUrl,
         verification: entry.verification,
+        plan: entry.plan,
         activeDays: activeDaysByUser.get(entry.userId)?.size ?? 0,
       })),
       groupStats: {

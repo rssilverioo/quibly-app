@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, {
   ClipPath,
@@ -43,13 +43,16 @@ import { useTheme, type Palette, text } from '../../theme';
  * meio, escuro no oposto. Duas cores próximas leem como cor chapada, e cor
  * chapada lê como borda; borda não é moldura.
  *
- * ## Por que só no perfil
+ * ## Onde ela aparece
  *
- * No feed, no chat e no ranking o avatar tem 18 a 40pt. Nesse tamanho o escudo
- * vira uma mancha irregular e a silhueta — que é toda a informação — se perde.
- * Naquelas telas o avatar já carrega o selo de verificado ao lado do nome:
- * somar uma terceira marca faz o olho competir consigo mesmo, num lugar onde o
- * que importa é **quem** postou, não quem paga.
+ * Em todo lugar que desenha uma pessoa — decisão do dono do produto. Quem entra
+ * por aqui direto é só o perfil; o resto do app chega por `components/ui/Avatar`,
+ * que troca o círculo por este escudo quando `pro`.
+ *
+ * O que essa decisão custa: no feed, no chat e no ranking o avatar tem 18 a
+ * 40pt, e quanto menor, menos a silhueta se separa de um quadrado arredondado.
+ * A moldura continua legível — é a **forma** que perde definição. Abaixo de uns
+ * 24pt o escudo é mais textura do que símbolo.
  *
  * ## Por que ela não é o selo de verificado
  *
@@ -58,6 +61,15 @@ import { useTheme, type Palette, text } from '../../theme';
  * pessoa paga**. Fundir qualquer par apagaria as duas — foi o que aconteceu
  * quando o X passou a vender o azul.
  */
+
+/**
+ * O quanto o escudo é mais alto que largo.
+ *
+ * Exportado porque quem coloca o escudo numa lista precisa dele: manter a
+ * **altura** do círculo que havia ali (e não a largura) é o que impede a linha
+ * de crescer 18% só porque a pessoa assina. Ver `components/ui/Avatar`.
+ */
+export const PROPORCAO_ESCUDO = 1.18;
 
 /**
  * O escudo, numa grade de 100 × 118.
@@ -86,21 +98,30 @@ export default function MolduraPro({
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c, size), [c, size]);
 
+  // **Os `id` de um SVG são globais, e agora há muitos escudos por tela.**
+  // Enquanto era um só, no perfil, nomes fixos bastavam. Numa lista, dois
+  // `<Defs>` com o mesmo `id` fazem todos os `url(#…)` apontarem para o
+  // primeiro que a plataforma registrou — e o sintoma não é sumir, é o escudo
+  // de baixo herdar o recorte do de cima. Mesmo motivo do `SeloVerificado`.
+  const idBase = useId();
+  const idDegrade = `moldura-pro-${idBase}`;
+  const idRecorte = `recorte-pro-${idBase}`;
+
   return (
     <View style={styles.envolve}>
-      <Svg width={size} height={size * 1.18} viewBox="0 0 100 118">
+      <Svg width={size} height={size * PROPORCAO_ESCUDO} viewBox="0 0 100 118">
         <Defs>
-          <LinearGradient id="molduraPro" x1="0.15" y1="0" x2="0.85" y2="1">
+          <LinearGradient id={idDegrade} x1="0.15" y1="0" x2="0.85" y2="1">
             <Stop offset="0" stopColor="#BBD5FF" />
             <Stop offset="0.5" stopColor={c.accent} />
             <Stop offset="1" stopColor="#0140B8" />
           </LinearGradient>
-          <ClipPath id="recortePro">
+          <ClipPath id={idRecorte}>
             <Path d={ESCUDO_INTERNO} />
           </ClipPath>
         </Defs>
 
-        <Path d={ESCUDO} fill="url(#molduraPro)" />
+        <Path d={ESCUDO} fill={`url(#${idDegrade})`} />
 
         {uri ? (
           <SvgImage
@@ -112,7 +133,7 @@ export default function MolduraPro({
             // `slice`: a foto preenche o escudo inteiro. `meet` deixaria faixas
             // do degradê aparecendo por dentro, como se a moldura vazasse.
             preserveAspectRatio="xMidYMid slice"
-            clipPath="url(#recortePro)"
+            clipPath={`url(#${idRecorte})`}
           />
         ) : null}
       </Svg>
@@ -130,7 +151,7 @@ export default function MolduraPro({
 
 const makeStyles = (c: Palette, size: number) =>
   StyleSheet.create({
-    envolve: { width: size, height: size * 1.18 },
+    envolve: { width: size, height: size * PROPORCAO_ESCUDO },
     iniciaisEnvolve: {
       ...StyleSheet.absoluteFillObject,
       alignItems: 'center',

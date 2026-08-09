@@ -20,6 +20,8 @@ export interface AutorDaMensagem {
   avatar_url?: string | null;
   /** O selo, quando há. Ver `components/ui/SeloVerificado`. */
   verification?: 'BLUE' | 'GOLD' | null;
+  /** O plano, só para a forma do avatar — ver `components/plano/MolduraPro`. */
+  plan?: 'FREE' | 'PRO';
 }
 
 export interface ChatMessageComAutor extends ChatMessage {
@@ -65,6 +67,8 @@ export function autorDaMensagem(mensagem: ChatMessageComAutor): {
   nome: string;
   avatar: string | null;
   selo: 'BLUE' | 'GOLD' | null;
+  /** Se assina — só a forma do avatar depende disso, ver `MolduraPro`. */
+  pro: boolean;
 } {
   return {
     nome: mensagem.user?.username ?? mensagem.profile?.username ?? '',
@@ -72,5 +76,6 @@ export function autorDaMensagem(mensagem: ChatMessageComAutor): {
     // `null` na esmagadora maioria. Ler as duas formas pela mesma razão do
     // nome e do avatar, logo acima.
     selo: mensagem.user?.verification ?? mensagem.profile?.verification ?? null,
+    pro: (mensagem.user?.plan ?? mensagem.profile?.plan) === 'PRO',
   };
 }

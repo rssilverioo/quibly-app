@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ModerationService } from '../moderation/moderation.service';
+import { AUTOR } from '../common/autor.select';
 
 @Injectable()
 export class FeedService {
@@ -77,7 +78,7 @@ export class FeedService {
         where: { leagueId, ...semBloqueados, ...desdeOInicio },
         include: {
           user: {
-            select: { username: true, handle: true, avatarUrl: true, verification: true },
+            select: AUTOR,
           },
           session: {
             select: {
@@ -101,7 +102,7 @@ export class FeedService {
           comments: {
             include: {
               user: {
-                select: { username: true, handle: true, avatarUrl: true, verification: true },
+                select: AUTOR,
               },
             },
             orderBy: { createdAt: 'desc' as const },
@@ -211,7 +212,7 @@ export class FeedService {
       this.prisma.feedPost.findMany({
         where,
         include: {
-          user: { select: { username: true, handle: true, avatarUrl: true, verification: true } },
+          user: { select: AUTOR },
           session: {
             select: {
               id: true,
@@ -231,7 +232,7 @@ export class FeedService {
           reactions: true,
           comments: {
             include: {
-              user: { select: { username: true, handle: true, avatarUrl: true, verification: true } },
+              user: { select: AUTOR },
             },
             orderBy: { createdAt: 'desc' as const },
             take: 3,
@@ -366,7 +367,7 @@ export class FeedService {
       data: { userId, postId, content },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true, verification: true },
+          select: AUTOR,
         },
       },
     });
@@ -432,7 +433,7 @@ export class FeedService {
         where: { postId },
         include: {
           user: {
-            select: { username: true, handle: true, avatarUrl: true, verification: true },
+            select: AUTOR,
           },
         },
         orderBy: { createdAt: 'asc' },

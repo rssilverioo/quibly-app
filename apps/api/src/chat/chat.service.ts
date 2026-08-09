@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ModerationService } from '../moderation/moderation.service';
 import { transformKeys } from '../common/interceptors/snake-case.interceptor';
 import { ChatGateway } from './chat.gateway';
+import { AUTOR } from '../common/autor.select';
 
 @Injectable()
 export class ChatService {
@@ -59,7 +60,7 @@ export class ChatService {
       },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true, verification: true },
+          select: AUTOR,
         },
         reactions: true,
       },
@@ -98,7 +99,7 @@ export class ChatService {
       },
       include: {
         user: {
-          select: { username: true, handle: true, avatarUrl: true, verification: true },
+          select: AUTOR,
         },
       },
     });

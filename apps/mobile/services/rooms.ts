@@ -8,7 +8,13 @@ export interface ActiveChallenge {
   server_time: string;
   participant_count: number;
   participation_mode?: 'photo' | 'study';
-  leader?: { display_name: string; metric_value: number; avatar_url?: string | null } | null;
+  leader?: {
+    display_name: string;
+    metric_value: number;
+    avatar_url?: string | null;
+  /** O plano, só para a forma do avatar — ver `components/plano/MolduraPro`. */
+  plan?: 'FREE' | 'PRO';
+  } | null;
   me: { rank: number | null; metric_value: number; goal_progress?: number | null };
 }
 
@@ -78,6 +84,11 @@ export interface RoomFeedUser {
    * `components/ui/SeloVerificado`.
    */
   verification?: 'BLUE' | 'GOLD' | null;
+  /**
+   * O plano. O app usa só para a **forma** do avatar — quem assina aparece em
+   * escudo, ver `components/plano/MolduraPro`.
+   */
+  plan?: 'FREE' | 'PRO';
 }
 
 /** Comentário do bloco `latest_comments` — no máximo 3, ver `RoomFeedPost`. */
@@ -295,6 +306,11 @@ export interface LeaderboardEntry {
   avatar_url: string | null;
   /** O selo, quando há. Ver `components/ui/SeloVerificado`. */
   verification?: 'BLUE' | 'GOLD' | null;
+  /**
+   * O plano. O app usa só para a **forma** do avatar — quem assina aparece em
+   * escudo, ver `components/plano/MolduraPro`.
+   */
+  plan?: 'FREE' | 'PRO';
   metric_value: number;
   minutes: number;
   sessions: number;
@@ -375,6 +391,8 @@ export interface ChallengeDetails {
     user_id: string;
     display_name: string;
     avatar_url: string | null;
+  /** O plano, só para a forma do avatar — ver `components/plano/MolduraPro`. */
+    plan?: 'FREE' | 'PRO';
     active_days: number;
   }>;
   group_stats: {

@@ -153,7 +153,7 @@ export default function RoomDetailsScreen() {
                 const suffix = ordinal(entry.rank, i18n.language).slice(digits.length);
                 return (
                   <View key={entry.user_id} style={styles.row}>
-                    <Avatar uri={entry.avatar_url} name={entry.display_name} size={40} />
+                    <Avatar uri={entry.avatar_url} name={entry.display_name} size={40} pro={entry.plan === 'PRO'} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.name} numberOfLines={1}>{entry.display_name}</Text>
                       <Text style={styles.meta}>{t('rooms.daysActive', { count: entry.active_days })}</Text>
@@ -230,7 +230,7 @@ function Superlative({ Icon, data, label, styles, color, divided }: any) {
   return (
     <View style={styles.row}>
       <Icon size={22} color={color} />
-      <Avatar uri={data.avatar_url} name={data.display_name} size={36} />
+      <Avatar uri={data.avatar_url} name={data.display_name} size={36} pro={data.plan === 'PRO'} />
       <View style={{ flex: 1 }}>
         <Text style={styles.name} numberOfLines={1}>{data.display_name}</Text>
         <Text style={styles.meta}>{label} · {data.check_ins}</Text>

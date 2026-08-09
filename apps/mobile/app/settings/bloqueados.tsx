@@ -102,7 +102,7 @@ export default function BloqueadosScreen() {
           }
           renderItem={({ item }) => (
             <View style={styles.linha}>
-              <Avatar uri={item.avatar_url} name={item.username} size={40} />
+              <Avatar uri={item.avatar_url} name={item.username} size={40} pro={item.plan === 'PRO'} />
               <View style={styles.linhaTexto}>
                 <Text style={styles.nome} numberOfLines={1}>{item.username}</Text>
                 <Text style={styles.handle} numberOfLines={1}>@{item.handle}</Text>
