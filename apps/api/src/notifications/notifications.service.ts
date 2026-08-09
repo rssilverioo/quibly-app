@@ -257,6 +257,42 @@ export class NotificationsService {
     );
   }
 
+  /**
+   * Um disparo só para quem pediu.
+   *
+   * ## Por que existe
+   *
+   * Os segmentos eram `all`, `pro` e `free`. Conferir se o push funciona
+   * exigia notificar **todo mundo** — e a primeira vez que alguém testa é
+   * justamente quando é mais provável que o texto esteja errado, ou que o push
+   * simplesmente não chegue.
+   *
+   * Um caminho de teste que incomoda milhares de pessoas não é usado; e não
+   * sendo usado, o defeito só aparece em produção. Foi assim que o push do
+   * iPhone passou meses quebrado sem ninguém perceber.
+   *
+   * ## O que ele prova
+   *
+   * A corrente inteira: token registrado, chave APNs no Firebase, entrega no
+   * aparelho. Se chegar, funciona para todos; se não chegar, o log diz onde
+   * parou — inclusive o `third-party-auth-error`, que é a chave APNs faltando.
+   */
+  async sendTestToUser(userId: string, title: string, body: string) {
+    const tokens = await this.prisma.pushToken.findMany({
+      where: { userId },
+      select: { token: true, locale: true },
+    });
+
+    if (tokens.length === 0) {
+      // Zero tokens é a resposta mais informativa que esta rota dá: quer dizer
+      // que o app nunca registrou, e aí o problema é anterior ao envio.
+      return { sent: 0, tokens: 0 };
+    }
+
+    await this.sendToTokens(tokens.map((t) => t.token), { title, body });
+    return { sent: tokens.length, tokens: tokens.length };
+  }
+
   async broadcastToSegment(
     title: string,
     body: string,

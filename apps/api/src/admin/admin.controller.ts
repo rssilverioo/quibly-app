@@ -185,6 +185,24 @@ export class AdminController {
     );
   }
 
+  /**
+   * Disparo de teste, só para quem chamou.
+   *
+   * Separado do broadcast de propósito: um parâmetro a mais na mesma rota seria
+   * um valor errado longe de mandar para todo mundo.
+   */
+  @Post('notifications/test')
+  sendTestNotification(
+    @CurrentUser() user: { userId: string },
+    @Body() body: { title?: string; body?: string },
+  ) {
+    return this.notificationsService.sendTestToUser(
+      user.userId,
+      body.title?.trim() || 'Quibly',
+      body.body?.trim() || 'Se você está lendo isto, o push funciona.',
+    );
+  }
+
   /** A fila de denúncias. `status=PENDING|REVIEWED|DISMISSED|ALL`. */
   @Get('reports')
   getReports(

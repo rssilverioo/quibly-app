@@ -31,6 +31,45 @@ export default function NotificationsPage() {
     return SEGMENTS.find((s) => s.value === seg)?.label ?? seg;
   }
 
+  /**
+   * Dispara só para o próprio admin.
+   *
+   * Antes, conferir se o push funcionava exigia notificar **todo mundo** — e a
+   * primeira vez que alguém testa é justamente quando é mais provável que o
+   * texto esteja errado ou que a notificação nem chegue. Um caminho de teste
+   * que incomoda milhares de pessoas não é usado, e não sendo usado o defeito
+   * só aparece em produção.
+   *
+   * Sem confirmação, ao contrário do broadcast: não há a quem incomodar.
+   */
+  async function handleTest() {
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await api.post<{ sent: number; tokens: number }>('/admin/notifications/test', {
+        title: title.trim() || undefined,
+        body: body.trim() || undefined,
+      });
+      setResult(
+        res.tokens === 0
+          ? {
+              type: 'error',
+              // Zero é a resposta mais informativa desta rota: o app nunca
+              // registrou, então o problema é anterior ao envio.
+              message: 'Nenhum aparelho registrado nesta conta. Abra o app uma vez e tente de novo.',
+            }
+          : { type: 'success', message: `Enviado para ${res.tokens} aparelho${res.tokens !== 1 ? 's' : ''} seu${res.tokens !== 1 ? 's' : ''}.` },
+      );
+    } catch (err) {
+      setResult({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Falhou ao enviar o teste',
+      });
+    } finally {
+      setSending(false);
+    }
+  }
+
   async function handleSend() {
     setConfirmOpen(false);
     setSending(true);
@@ -147,6 +186,18 @@ export default function NotificationsPage() {
                 'Send Notification'
               )}
             </Button>
+
+            {/* O teste vem **depois** do botão principal e sem confirmação: ele
+                não incomoda ninguém além de quem tocou. Funciona com os campos
+                vazios, com um texto padrão — testar entrega não deveria exigir
+                escrever uma notificação. */}
+            <button
+              onClick={handleTest}
+              disabled={sending}
+              className="mt-3 w-full rounded-lg border border-white/10 py-2.5 text-sm text-gray-400 hover:text-white disabled:opacity-50"
+            >
+              Enviar só para mim (teste)
+            </button>
           </div>
         </Card>
 
