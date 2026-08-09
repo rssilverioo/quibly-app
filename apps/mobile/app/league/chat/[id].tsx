@@ -41,6 +41,7 @@ import {
   type MensagemNaTela,
 } from '../../../lib/chat-list';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+import FolhaDeDenuncia from '../../../components/moderation/FolhaDeDenuncia';
 
 const MIN_INPUT_HEIGHT = 40;
 const MAX_INPUT_HEIGHT = MIN_INPUT_HEIGHT + 20 * 3;
@@ -74,6 +75,8 @@ export default function RoomChatScreen() {
   const [conectado, setConectado] = useState(false);
   /** userId → instante em que o "digitando" vence. */
   const [digitando, setDigitando] = useState<Record<string, number>>({});
+  /** A mensagem que a pessoa segurou, ou `null`. */
+  const [denunciando, setDenunciando] = useState<MensagemNaTela | null>(null);
   const [agora, setAgora] = useState(() => Date.now());
 
   const listRef = useRef<FlatList<MensagemNaTela>>(null);
@@ -264,7 +267,14 @@ export default function RoomChatScreen() {
         {separador ? <Text style={styles.diaSeparador}>{separador}</Text> : null}
         {abreBloco && !separador ? <Text style={styles.stamp}>{hora(item.created_at)}</Text> : null}
 
-        <View style={[styles.row, mine ? styles.rowMine : styles.rowOther, item.falhou && styles.rowFailed]}>
+        <Press
+          haptic={false}
+          scale={1}
+          // Só nas mensagens dos outros, e só nas vivas: denunciar a própria
+          // fala, ou uma lápide sem texto, não leva a lugar nenhum.
+          onLongPress={mine || apagada ? undefined : () => setDenunciando(item)}
+          style={[styles.row, mine ? styles.rowMine : styles.rowOther, item.falhou && styles.rowFailed]}
+        >
           {!mine ? <View style={styles.avatar}><Avatar uri={avatar} name={author} size={28} /></View> : null}
           <View style={styles.column}>
             {!mine && author ? (
@@ -295,7 +305,7 @@ export default function RoomChatScreen() {
               <RotateCcw size={16} color={c.danger} />
             </Press>
           ) : null}
-        </View>
+        </Press>
       </View>
     );
   }, [c.danger, hora, meuId, messages, reenviar, rotulosDeDia, styles, t]);
@@ -328,6 +338,19 @@ export default function RoomChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        <FolhaDeDenuncia
+          visivel={denunciando !== null}
+          alvo="chat_message"
+          alvoId={denunciando?.id ?? ''}
+          autorId={denunciando?.user_id}
+          autorNome={denunciando ? autorDaMensagem(denunciando).nome : undefined}
+          aoFechar={() => setDenunciando(null)}
+          // Some da lista na hora: o servidor já parou de mandar as mensagens
+          // de quem foi bloqueado, e deixar as antigas na tela contradiz isso.
+          aoConcluir={() => setMessages((atuais) =>
+            denunciando ? atuais.filter((m) => m.user_id !== denunciando.user_id) : atuais,
+          )}
+        />
         <FlatList
           ref={listRef}
           data={messages}

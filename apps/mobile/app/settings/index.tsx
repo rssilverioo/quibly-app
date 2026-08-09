@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import Constants from 'expo-constants';
 import {
   ArrowLeft, ChevronRight, Crown, Globe, Lock, LogOut, Moon, Pencil,
-  ShieldCheck, Trash2,
+  ShieldCheck, Trash2, UserX,
 } from 'lucide-react-native';
 
 import Press from '../../components/ui/Press';
@@ -128,7 +128,16 @@ export default function SettingsScreen() {
           {COMPRAS_NO_APP_ATIVAS ? (
             <Linha Icon={Crown} rotulo={t('pricing:myPlan')} aoTocar={() => router.push('/pricing')} divisor c={c} styles={styles} />
           ) : null}
-          <Linha Icon={Pencil} rotulo={t('editProfile')} aoTocar={() => router.push('/profile/edit')} c={c} styles={styles} />
+          <Linha Icon={Pencil} rotulo={t('editProfile')} aoTocar={() => router.push('/profile/edit')} divisor c={c} styles={styles} />
+          {/* O Guideline 1.2 não pede só o ato de bloquear: pede que a pessoa
+              veja e desfaça o que bloqueou. */}
+          <Linha
+            Icon={UserX}
+            rotulo={t('common:moderation.blockedTitle')}
+            aoTocar={() => router.push('/settings/bloqueados')}
+            c={c}
+            styles={styles}
+          />
         </View>
 
         {/* aparência e idioma */}
