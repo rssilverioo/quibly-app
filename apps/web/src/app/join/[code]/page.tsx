@@ -1,4 +1,8 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
+
+import { conteudo } from '../../../components/landing/content';
+import { idiomaAceito } from '../../../lib/idioma';
 
 /**
  * A página que o convite abre.
@@ -22,6 +26,13 @@ import type { Metadata } from 'next';
  * prévia do link. Um componente de cliente entrega HTML vazio ao robô que monta
  * essa prévia, e o convite chega como uma URL crua. Buscando no servidor, o
  * `generateMetadata` põe o nome e a capa da sala no cartão.
+ *
+ * ## Por que o idioma vem do cabeçalho
+ *
+ * O resto do site escolhe idioma pela rota — `/` e `/pt`. Aqui não dá: o
+ * convite é **um link só**, gerado pelo app de quem convida e colado num grupo
+ * onde pode ter gente de qualquer lugar. Quem escolhe tem que ser o navegador
+ * de quem abre. Ver `lib/idioma`.
  *
  * ## Por que a sala aparece sem login
  *
@@ -60,6 +71,10 @@ async function buscarConvite(code: string): Promise<Convite | null> {
   }
 }
 
+async function idiomaDaVisita() {
+  return idiomaAceito((await headers()).get('accept-language'));
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -69,13 +84,14 @@ export async function generateMetadata({
   const convite = await buscarConvite(code);
   if (!convite) return { title: 'Quibly' };
 
-  const titulo = `${convite.owner.username} convidou você para ${convite.name}`;
+  const t = conteudo.convite[await idiomaDaVisita()];
+  const titulo = t.tituloDaPrevia(convite.owner.username, convite.name);
   return {
     title: titulo,
-    description: 'Salas de estudo que contam os dias em que você aparece.',
+    description: t.descricaoDoSite,
     openGraph: {
       title: titulo,
-      description: convite.description ?? 'Entre na sala e comece a contar os seus dias.',
+      description: convite.description ?? t.previaTexto,
       images: convite.cover_url ? [convite.cover_url] : undefined,
     },
   };
@@ -84,6 +100,7 @@ export async function generateMetadata({
 export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const convite = await buscarConvite(code);
+  const t = conteudo.convite[await idiomaDaVisita()];
   const deepLink = `quibly://league/join/${encodeURIComponent(code)}`;
 
   return (
@@ -100,7 +117,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
         )}
 
         <div className="convite-corpo">
-          <h1 className="display convite-nome">{convite?.name ?? 'Uma sala no Quibly'}</h1>
+          <h1 className="display convite-nome">{convite?.name ?? t.salaSemNome}</h1>
 
           {convite ? (
             <p className="convite-linha">
@@ -108,9 +125,11 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
                 // eslint-disable-next-line @next/next/no-img-element
                 <img className="convite-rosto" src={convite.owner.avatar_url} alt="" />
               ) : null}
-              <span>
-                <strong>{convite.owner.username}</strong> convidou você
-              </span>
+              {/* A frase inteira vem do dicionário, e não "nome + sufixo":
+                  em inglês o verbo vem depois do nome, em outras línguas não, e
+                  costurar pedaço de frase em código quebra na primeira tradução
+                  que não for parecida com a nossa. */}
+              <span>{t.convidou(convite.owner.username)}</span>
             </p>
           ) : null}
 
@@ -120,10 +139,8 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
 
           {convite ? (
             <p className="convite-meta">
-              {convite.member_count === 1
-                ? '1 pessoa estudando aqui'
-                : `${convite.member_count} pessoas estudando aqui`}
-              {convite.is_full ? ' · sala cheia' : ''}
+              {t.pessoas(convite.member_count)}
+              {convite.is_full ? t.cheia : ''}
             </p>
           ) : null}
 
@@ -131,14 +148,14 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
               convite quase nunca tem o Quibly instalado — e o botão de abrir,
               para essa pessoa, é o que não faz nada. */}
           <a className="btn btn-primario btn-grande convite-botao" href={APP_STORE}>
-            Baixar o Quibly
+            {t.baixar}
           </a>
           <a className="btn btn-fantasma convite-botao" href={deepLink}>
-            Já tenho o app
+            {t.jaTenho}
           </a>
 
           <p className="convite-codigo">
-            Código da sala <span className="mono">{code}</span>
+            {t.codigo} <span className="mono">{code}</span>
           </p>
         </div>
       </div>

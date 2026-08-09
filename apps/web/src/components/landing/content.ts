@@ -150,4 +150,40 @@ export const conteudo = {
     en: { direitos: 'Quibly', privacidade: 'Privacy', termos: 'Terms', apagar: 'Delete account' },
     pt: { direitos: 'Quibly', privacidade: 'Privacidade', termos: 'Termos', apagar: 'Excluir conta' },
   },
+
+  /**
+   * A página do convite — `/join/[code]`.
+   *
+   * Aqui o idioma **não** vem da rota como no resto do site: o convite é um link
+   * só, colado num grupo onde pode ter gente de qualquer lugar. Quem escolhe é o
+   * navegador de quem abre. Ver `lib/idioma`.
+   */
+  convite: {
+    en: {
+      salaSemNome: 'A room on Quibly',
+      convidou: (quem: string) => `${quem} invited you`,
+      tituloDaPrevia: (quem: string, sala: string) => `${quem} invited you to ${sala}`,
+      previaTexto: 'Join the room and start counting your days.',
+      descricaoDoSite: 'Study rooms that count the days you show up.',
+      pessoas: (n: number) =>
+        n === 1 ? '1 person studying here' : `${n} people studying here`,
+      cheia: ' · room is full',
+      baixar: 'Get Quibly',
+      jaTenho: 'I already have the app',
+      codigo: 'Room code',
+    },
+    pt: {
+      salaSemNome: 'Uma sala no Quibly',
+      convidou: (quem: string) => `${quem} convidou você`,
+      tituloDaPrevia: (quem: string, sala: string) => `${quem} convidou você para ${sala}`,
+      previaTexto: 'Entre na sala e comece a contar os seus dias.',
+      descricaoDoSite: 'Salas de estudo que contam os dias em que você aparece.',
+      pessoas: (n: number) =>
+        n === 1 ? '1 pessoa estudando aqui' : `${n} pessoas estudando aqui`,
+      cheia: ' · sala cheia',
+      baixar: 'Baixar o Quibly',
+      jaTenho: 'Já tenho o app',
+      codigo: 'Código da sala',
+    },
+  },
 } as const;
