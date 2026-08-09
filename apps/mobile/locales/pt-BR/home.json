@@ -55,5 +55,12 @@
     "longest": "Recorde",
     "daysStudied": "Dias estudados",
     "totalTime": "Tempo total"
-  }
+  },
+  "todayOfGoal": "{{done}} de {{goal}} min",
+  "todayLeft": "Faltam {{count}} min para fechar o dia",
+  "todayDone": "Dia fechado. O que vier é a mais.",
+  "todayNothing": "Nada hoje ainda",
+  "weekdayInitials": "D,S,T,Q,Q,S,S",
+  "daysStudiedReal": "Dias estudados",
+  "lastYear": "últimos 12 meses"
 }

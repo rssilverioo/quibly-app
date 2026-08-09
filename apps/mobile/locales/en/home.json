@@ -55,5 +55,12 @@
     "longest": "Longest",
     "daysStudied": "Days studied",
     "totalTime": "Total time"
-  }
+  },
+  "todayOfGoal": "{{done}} of {{goal}} min",
+  "todayLeft": "{{count}} min to close the day",
+  "todayDone": "Day closed. Anything else is extra.",
+  "todayNothing": "Nothing yet today",
+  "weekdayInitials": "S,M,T,W,T,F,S",
+  "daysStudiedReal": "Days studied",
+  "lastYear": "last 12 months"
 }

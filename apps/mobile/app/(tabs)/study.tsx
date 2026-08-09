@@ -1,15 +1,16 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Play, ChevronRight, Layers, Camera } from 'lucide-react-native';
-import type { FlashcardSet } from '@quibly/shared';
+import { Play } from 'lucide-react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useSessionStore } from '../../stores/session.store';
-import { listFlashcardSets } from '../../services/flashcards';
+import { getStudyHeatmap, type StudyHeatmap } from '../../services/sessions';
+import { resumirODia } from '../../lib/dia-de-estudo';
+import { nivelDeEstudo } from '../../lib/study-heatmap';
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius } from '../../theme';
 import { useTabBarClearance } from './_layout';
@@ -17,7 +18,6 @@ import { useTabBarClearance } from './_layout';
 export default function StudyScreen() {
   const router = useRouter();
   const { t: tr } = useTranslation('home');
-  const { t: lessonsTr } = useTranslation('lessons');
   const { c } = useTheme();
   const tabBarClearance = useTabBarClearance();
   const { profile } = useAuth();
@@ -76,29 +76,49 @@ export default function StudyScreen() {
     .map((n) => String(n).padStart(2, '0'))
     .join(':');
 
-  const [flashcardSets, setFlashcardSets] = useState<FlashcardSet[]>([]);
 
-  const hasLoaded = useRef(false);
+
+  /**
+   * O mapa de constância, pedido em janela de um ano.
+   *
+   * A mesma rota que alimenta o mapa do perfil, e de propósito: dois caminhos
+   * para "quantos dias você estudou" acabariam discordando, e discordar sobre o
+   * número que é a tese do produto é o pior lugar para ter dois caminhos.
+   */
+  const [mapa, setMapa] = useState<StudyHeatmap | null>(null);
   useFocusEffect(
     useCallback(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          const sets = await listFlashcardSets();
-          if (!cancelled) setFlashcardSets(sets ?? []);
-        } catch {}
-        if (!cancelled) hasLoaded.current = true;
-      })();
-      return () => { cancelled = true; };
-    }, [])
+      let cancelado = false;
+      getStudyHeatmap(371)
+        .then((resposta) => { if (!cancelado) setMapa(resposta); })
+        // Sem mapa a tela mostra o dia zerado, que é um estado desenhado. Não
+        // vale um alerta: ninguém abre esta aba para ver o histórico.
+        .catch(() => {});
+      return () => { cancelado = true; };
+    }, []),
   );
+
+  const dia = useMemo(
+    () => resumirODia(mapa, profile?.daily_goal_minutes),
+    [mapa, profile?.daily_goal_minutes],
+  );
+
+  /** `D,S,T,Q,Q,S,S` em pt, `S,M,T,W,T,F,S` em inglês. */
+  const iniciaisDosDias = useMemo(() => tr('weekdayInitials').split(','), [tr]);
 
   const totalMinutes = profile?.total_study_minutes ?? 0;
   const totalHours = Math.floor(totalMinutes / 60);
 
+  /**
+   * O do meio dizia `Math.ceil(totalMinutes / 25)` sob o rótulo "dias
+   * estudados" — a contagem de **blocos de pomodoro**, não de dias. Com 17h no
+   * perfil, a tela anunciava "41 dias estudados" para quem talvez tivesse
+   * estudado em quatro. Agora vem contado do mapa, que é a mesma fonte do
+   * perfil, e por isso os dois nunca discordam.
+   */
   const stats = [
     { value: `${totalHours}h`, label: tr('totalHours') },
-    { value: String(Math.ceil(totalMinutes / 25)), label: tr('streakCalendar.daysStudied') },
+    { value: String(dia.diasEstudados), label: tr('daysStudiedReal') },
     { value: String(profile?.current_streak ?? 0), label: tr('dayStreak', { count: profile?.current_streak ?? 0 }) },
   ];
 
@@ -153,6 +173,73 @@ export default function StudyScreen() {
             </Animated.View>
           )}
 
+          {/* O assunto da tela é **hoje**: o que já foi feito, o que falta, e a
+              semana que levou até aqui. Os totais de vida continuam abaixo, mas
+              perderam o topo — eles não ajudam ninguém a começar agora. */}
+          <Animated.View entering={FadeInDown.duration(300).delay(95)}>
+            <View style={[styles.hoje, { backgroundColor: c.surface, borderColor: c.border }]}>
+              <View style={styles.hojeTopo}>
+                <Text style={{ ...t.overline, color: c.fgSubtle }}>{tr('today')}</Text>
+                <Text style={{ ...t.label, color: dia.cumpriu ? c.accent : c.fgMuted }}>
+                  {tr('todayOfGoal', { done: dia.minutosHoje, goal: dia.metaMinutos })}
+                </Text>
+              </View>
+
+              {/* Barra e não anel: ela cabe na largura do cartão sem competir
+                  com o botão, e a leitura de "quanto falta" é a mesma. */}
+              <View style={[styles.trilho, { backgroundColor: c.surfaceRaised }]}>
+                <View
+                  style={[
+                    styles.preenchido,
+                    { backgroundColor: c.accent, width: `${Math.round(dia.progresso * 100)}%` },
+                  ]}
+                />
+              </View>
+
+              <Text style={{ ...t.caption, color: c.fgMuted }}>
+                {dia.cumpriu
+                  ? tr('todayDone')
+                  : dia.minutosHoje === 0
+                    ? tr('todayNothing')
+                    : tr('todayLeft', { count: dia.faltamMinutos })}
+              </Text>
+
+              {/* A semana inteira, inclusive os dias parados — são eles que dão
+                  sentido aos cheios. Mesma escala de intensidade do mapa do
+                  perfil, para os dois não contarem histórias diferentes. */}
+              <View style={styles.semana}>
+                {dia.semana.map((d) => (
+                  <View key={d.data} style={styles.diaColuna}>
+                    {/* O aro carrega a borda e o quadrado carrega a cor. Estavam
+                        na mesma `View`, e a `opacity` da intensidade desbotava a
+                        borda junto — hoje ficava indistinguível dos outros dias
+                        justo nos dias fracos, que é quando saber que é hoje mais
+                        importa. */}
+                    <View
+                      style={[
+                        styles.diaAro,
+                        d.hoje && { borderColor: c.accent, borderWidth: 2 },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.diaQuadrado,
+                          {
+                            backgroundColor: d.minutos > 0 ? c.accent : c.surfaceRaised,
+                            opacity: d.minutos > 0 ? 0.3 + nivelDeEstudo(d.minutos) * 0.175 : 1,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={{ ...t.caption, color: c.fgSubtle, fontSize: 10 }}>
+                      {iniciaisDosDias[d.diaDaSemana]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+
           <Animated.View entering={FadeInDown.duration(300).delay(110)}>
             <Press
               haptic="medium"
@@ -181,59 +268,13 @@ export default function StudyScreen() {
             ))}
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(300).delay(175)} style={styles.lessonCapture}>
-            <Press
-              scale={0.98}
-              onPress={() => router.push('/lesson/capture')}
-              style={[styles.deckRow, { backgroundColor: c.surface, borderColor: c.border }]}
-            >
-              <View style={[styles.deckIcon, { backgroundColor: c.surfaceRaised }]}>
-                <Camera size={16} color={c.fgMuted} strokeWidth={2.2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...t.bodyStrong, color: c.fg }}>{lessonsTr('capture')}</Text>
-                <Text style={{ ...t.caption, color: c.fgMuted, marginTop: 2 }}>
-                  {lessonsTr('captureSub')}
-                </Text>
-              </View>
-              <ChevronRight size={17} color={c.fgSubtle} />
-            </Press>
-          </Animated.View>
-
-          {flashcardSets.length > 0 && (
-            <Animated.View entering={FadeInDown.duration(300).delay(190)} style={styles.section}>
-              <View style={styles.sectionHead}>
-                <Text style={{ ...t.overline, color: c.fgSubtle }}>{tr('continueStudying')}</Text>
-                <Press haptic={false} scale={0.94} onPress={() => router.push('/(tabs)/library')}>
-                  <Text style={{ ...t.caption, color: c.fgMuted }}>{tr('seeAll')}</Text>
-                </Press>
-              </View>
-
-              <View style={{ gap: space.sm }}>
-                {flashcardSets.slice(0, 5).map((set) => (
-                  <Press
-                    key={set.id}
-                    scale={0.98}
-                    onPress={() => router.push(`/flashcards/${set.id}`)}
-                    style={[styles.deckRow, { backgroundColor: c.surface, borderColor: c.border }]}
-                  >
-                    <View style={[styles.deckIcon, { backgroundColor: c.surfaceRaised }]}>
-                      <Layers size={15} color={c.fgMuted} strokeWidth={2.2} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text numberOfLines={1} style={{ ...t.bodyStrong, color: c.fg }}>
-                        {set.title}
-                      </Text>
-                      <Text style={{ ...t.caption, color: c.fgSubtle, marginTop: 2 }}>
-                        {set._count?.flashcards ?? 0}
-                      </Text>
-                    </View>
-                    <ChevronRight size={17} color={c.fgSubtle} />
-                  </Press>
-                ))}
-              </View>
-            </Animated.View>
-          )}
+          {/* Saíram daqui em 09/08, a pedido do dono do produto: "Capture a
+              class" e a lista de baralhos recentes. O motivo é o mesmo para os
+              dois — **não é mais o foco**. Esta aba trata de aparecer hoje, e
+              nem capturar aula nem revisar o que já foi estudado ajudam alguém
+              a começar agora. Os baralhos continuam inteiros na Biblioteca, e a
+              captura na rota `/lesson/capture`; nada foi apagado, só deixou de
+              disputar a tela de começar. */}
 
           {/* The native tab bar floats over the content — leave room for it. */}
           <View style={{ height: tabBarClearance }} />
@@ -268,6 +309,14 @@ const styles = StyleSheet.create({
   },
 
   statsRow: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
+  hoje: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.sm, marginTop: space.lg },
+  hojeTopo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  trilho: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  preenchido: { height: '100%', borderRadius: 4 },
+  semana: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.xs },
+  diaColuna: { alignItems: 'center', gap: 4 },
+  diaAro: { padding: 2, borderRadius: 9, borderWidth: 2, borderColor: 'transparent' },
+  diaQuadrado: { width: 24, height: 24, borderRadius: 6 },
   lessonCapture: { marginTop: space.xl },
   statCard: {
     flex: 1,
