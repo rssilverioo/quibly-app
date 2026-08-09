@@ -88,6 +88,31 @@ public class FocoProfundoModule: Module {
       return false
     }
 
+    /**
+     Abre o seletor do sistema para escolher o que continua liberado.
+
+     Devolve quantos apps ficaram escolhidos — é a única coisa que dá para saber
+     sobre eles. Nem o app nem o servidor jamais veem **quais** são: os tokens
+     são cifrados e só a Apple os interpreta.
+     */
+    AsyncFunction("escolherLiberados") { (promessa: Promise) in
+      #if canImport(FamilyControls)
+      if #available(iOS 16.0, *) {
+        AppsLiberados.apresentar { quantos in promessa.resolve(quantos) }
+        return
+      }
+      #endif
+      promessa.resolve(0)
+    }
+
+    /** Quantos apps a pessoa liberou. Zero quer dizer "bloqueie tudo". */
+    Function("quantosLiberados") { () -> Int in
+      #if canImport(FamilyControls)
+      if #available(iOS 16.0, *) { return AppsLiberados.quantidade }
+      #endif
+      return 0
+    }
+
     Function("temPermissao") { () -> Bool in
       #if canImport(FamilyControls)
       if #available(iOS 16.0, *) {
@@ -116,10 +141,20 @@ public class FocoProfundoModule: Module {
         EstadoDoFoco.marcarInicio(expiraEm: fim)
 
         let store = ManagedSettingsStore(named: EstadoDoFoco.loja)
-        // `.all()` e não uma lista: bloquear **tudo** é o pedido, e é também a
-        // única forma que a API oferece — os tokens são opacos e não dá para
-        // enumerar o que está instalado.
-        store.shield.applicationCategories = .all()
+        /*
+         Tudo, menos o que a pessoa liberou.
+
+         `.all(except:)` é a forma que a API oferece, e ela é o inverso do que a
+         intuição sugere: não se escolhe o que bloquear, se bloqueia tudo e se
+         abrem exceções. Os tokens são opacos — não dá para enumerar o que está
+         instalado nem descobrir que app é cada um —, então as exceções só podem
+         vir do seletor do sistema. Ver `AppsLiberados`.
+
+         Seleção vazia devolve o comportamento de antes: bloqueia tudo.
+        */
+        store.shield.applicationCategories = .all(except: AppsLiberados.selecao.applicationTokens)
+        // Os sites não têm exceção porque o seletor de domínios é outro fluxo, e
+        // ninguém pediu por ele. Liberar um app não implica liberar o site dele.
         store.shield.webDomainCategories = .all()
 
         Self.agendarFim(em: fim)

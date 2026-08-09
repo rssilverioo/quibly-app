@@ -28,7 +28,12 @@
     "deepFocusPermission": "Bloquear apps precisa da permissão do Tempo de Uso. Nada sai do seu telefone — o Quibly nunca vê quais apps você tem.",
     "deepFocusDenied": "A permissão do Tempo de Uso não foi dada, então a sessão começa sem bloqueio.",
     "focusCancel": "Encerrar o foco",
-    "focusCancelIn": "Encerrar o foco ({{count}})"
+    "focusCancelIn": "Encerrar o foco ({{count}})",
+    "allowedApps": "Continua liberado",
+    "allowedAppsNone": "Nada — bloqueia tudo",
+    "allowedAppsOne": "1 app fica aberto",
+    "allowedAppsMany": "{{count}} apps ficam abertos",
+    "allowedAppsHint": "A música não para de um jeito ou de outro — o bloqueio esconde o app, não o som. Libere para conseguir trocar de faixa."
   },
   "active": {
     "work": "TRABALHO",

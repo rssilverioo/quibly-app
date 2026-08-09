@@ -28,7 +28,12 @@
     "deepFocusPermission": "Screen Time permission is needed to block apps. Nothing leaves your phone — Quibly never sees which apps you have.",
     "deepFocusDenied": "Screen Time permission wasn't granted, so the session starts without blocking.",
     "focusCancel": "End focus",
-    "focusCancelIn": "End focus ({{count}})"
+    "focusCancelIn": "End focus ({{count}})",
+    "allowedApps": "Stays allowed",
+    "allowedAppsNone": "Nothing — everything gets blocked",
+    "allowedAppsOne": "1 app stays open",
+    "allowedAppsMany": "{{count}} apps stay open",
+    "allowedAppsHint": "Music keeps playing either way — the block hides the app, not the sound. Allow it to change tracks."
   },
   "active": {
     "work": "WORK",

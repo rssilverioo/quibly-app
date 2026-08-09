@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, Plus, Minus } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Plus, Minus } from 'lucide-react-native';
 import type { Subject, TimerMode } from '@quibly/shared';
 import { TIMER_PRESETS } from '@quibly/shared/constants';
 import { useTranslation } from 'react-i18next';
@@ -24,8 +24,10 @@ import { track } from '../../lib/analytics';
 import { voltar } from '../../lib/navegacao';
 import {
   comecarFoco,
+  escolherAppsLiberados,
   focoDisponivel,
   pedirPermissaoDeFoco,
+  quantosAppsLiberados,
   temPermissaoDeFoco,
 } from '../../modules/foco-profundo/src';
 
@@ -43,6 +45,7 @@ export default function SessionSetupScreen() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [bloquear, setBloquear] = useState(false);
+  const [liberados, setLiberados] = useState(() => quantosAppsLiberados());
   const [showNewSubject, setShowNewSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState<string>(SUBJECT_COLORS[0]);
@@ -173,6 +176,25 @@ export default function SessionSetupScreen() {
     setBloquear(concedida);
     if (!concedida) Alert.alert('', tr('setup.deepFocusDenied'));
   };
+
+  /**
+   * Abre o seletor do sistema.
+   *
+   * A escolha é gravada pelo lado nativo, no App Group — não sobe para o
+   * servidor e não passa por aqui. O que volta é a **contagem**, que é a única
+   * coisa que existe para mostrar: os tokens da Apple são opacos, e nem o app
+   * sabe quais apps foram marcados.
+   */
+  const escolherLiberados = async () => {
+    setLiberados(await escolherAppsLiberados());
+  };
+
+  const resumoDosLiberados =
+    liberados === 0
+      ? tr('setup.allowedAppsNone')
+      : liberados === 1
+        ? tr('setup.allowedAppsOne')
+        : tr('setup.allowedAppsMany', { count: liberados });
 
   const handleStart = async () => {
     if (!store.subjectId) return;
@@ -430,6 +452,25 @@ export default function SessionSetupScreen() {
               />
             </Press>
           )}
+
+          {/* A exceção só aparece com o bloqueio ligado: sem ele, "continua
+              liberado" não descreve nada. */}
+          {focoDisponivel() && bloquear ? (
+            <Press
+              scale={0.99}
+              onPress={escolherLiberados}
+              style={[styles.customCard, styles.focoCard, { backgroundColor: c.surface, borderColor: c.border }]}
+            >
+              <View style={styles.focoTexto}>
+                <Text style={{ ...t.bodyStrong, color: c.fg }}>{tr('setup.allowedApps')}</Text>
+                <Text style={{ ...t.caption, color: c.fgMuted }}>{resumoDosLiberados}</Text>
+                <Text style={{ ...t.caption, color: c.fgSubtle, lineHeight: 17 }}>
+                  {tr('setup.allowedAppsHint')}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={c.fgMuted} />
+            </Press>
+          ) : null}
 
           <View style={{ height: 120 }} />
         </ScrollView>

@@ -25,6 +25,8 @@ interface FocoProfundoNativo {
   temPermissao(): boolean;
   pedirPermissao(): Promise<boolean>;
   comecar(duracaoSegundos: number): Promise<boolean>;
+  escolherLiberados(): Promise<number>;
+  quantosLiberados(): number;
   parar(): void;
   reconciliar(): boolean;
   segundosRestantes(): number;
@@ -78,6 +80,22 @@ export function temPermissaoDeFoco(): boolean {
 /** Abre a folha do sistema. Quem aprova é a pessoa, com Face ID ou senha. */
 export async function pedirPermissaoDeFoco(): Promise<boolean> {
   return (await nativo?.pedirPermissao()) ?? false;
+}
+
+/**
+ * Abre o seletor do sistema para escolher o que continua liberado no foco.
+ *
+ * Devolve **quantos** apps ficaram escolhidos — e só isso. Nem o app nem o
+ * servidor veem quais são: os tokens da Apple são opacos, e essa é a razão pela
+ * qual a escolha é da pessoa e não uma lista nossa de "apps de música".
+ */
+export async function escolherAppsLiberados(): Promise<number> {
+  return (await nativo?.escolherLiberados()) ?? 0;
+}
+
+/** Quantos apps continuam liberados. Zero quer dizer que o foco bloqueia tudo. */
+export function quantosAppsLiberados(): number {
+  return nativo?.quantosLiberados() ?? 0;
 }
 
 /**
