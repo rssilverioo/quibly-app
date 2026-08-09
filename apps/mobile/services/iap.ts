@@ -12,24 +12,29 @@ const ENTITLEMENT_ID = 'pro';
 export type { PurchasesPackage, PurchasesOfferings };
 
 /**
- * **Compra dentro do app: desligada.** Decisão do dono do produto em
- * 06/08/2026 — *"vamos desativar opção de compra dentro do app por enquanto,
- * futuramente iremos ajustar"*.
+ * **Compra dentro do app: ligada** desde 09/08/2026.
  *
- * O produto não perde nada hoje: todo entitlement já nasce em `Infinity`
- * (`ROADMAP §Fase 0` — "permite lançar grátis e monetizar sem refactor"), então
- * o paywall não guardava nenhuma porta. O que ele fazia era prometer uma compra
- * que, no Android, nem podia acontecer: a chave do RevenueCat é o placeholder
- * `goog_YOUR_REVENUECAT_ANDROID_KEY`.
+ * ~~"Desligada em 06/08 — o paywall prometia uma compra que no Android nem
+ * podia acontecer, e uma tela de assinatura que carrega vazia é candidata a
+ * Guideline 2.1."~~ As duas razões caíram, e por motivos diferentes.
  *
- * Some também um risco de review: uma tela de assinatura que carrega vazia é
- * candidata a *Guideline 2.1 — App Completeness*.
+ * O paywall passou a **guardar uma porta de verdade**: o plano grátis vale três
+ * salas próprias (`FREE_ROOMS` na API), e a quarta abre a folha do Pro. Antes
+ * todo entitlement nascia em `Infinity` e não havia o que vender.
  *
- * **Para religar, mude esta constante para `true`.** Nada foi apagado: a tela,
- * o hook e as funções de compra continuam inteiros, e `revenueCatConfigError`
- * abaixo é o que impede que a religação aconteça com chave de mentira.
+ * E o catálogo existe: entitlement `pro`, produtos `com.quibly.app.pro.monthly`
+ * e `.yearly` aprovados na App Store, offering `default` com `$rc_monthly` e
+ * `$rc_annual` — que é exatamente o que `useIAP` procura. A tela carrega preço
+ * real, não vazio.
+ *
+ * **O Android continua sem chave.** `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID`
+ * ainda é `goog_YOUR_REVENUECAT_ANDROID_KEY` em todos os perfis, e é por isso
+ * que `revenueCatConfigError` abaixo não foi tocado: ele detecta o placeholder
+ * e faz a tela dizer o que houve, em vez de mostrar o vazio que mente. Ligar
+ * aqui não liga a compra no Android — só para de escondê-la no iOS, onde ela
+ * funciona.
  */
-export const COMPRAS_NO_APP_ATIVAS = false;
+export const COMPRAS_NO_APP_ATIVAS = true;
 
 /**
  * Uma chave que não é chave — vazia ou o placeholder que veio do `eas.json`.

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
+import { COMPRAS_NO_APP_ATIVAS, revenueCatConfigError } from '../../services/iap';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Linking,
@@ -53,6 +53,20 @@ export default function PricingScreen() {
   const monthlyPrice = getPrice('monthly');
   const yearlyPrice = getPrice('yearly');
   const pricesLoaded = !!monthlyPrice && !!yearlyPrice;
+
+  /**
+   * Quando o build subiu sem chave de verdade.
+   *
+   * Sem isto a tela cai no estado sem preço — e vazio **mente**: é
+   * indistinguível de "ainda carregando" e de "sem produtos nesta região". O
+   * RevenueCat aceita uma chave inválida e só falha depois, no `getOfferings`,
+   * que tem `catch` e devolve `null`.
+   *
+   * Hoje isso vale para o Android, cuja chave ainda é o placeholder do
+   * `eas.json`. Quem abre a tela lá precisa ler o motivo, não ficar olhando
+   * três pontinhos que nunca viram preço.
+   */
+  const erroDeConfig = revenueCatConfigError();
 
   const priceLabels = {
     monthly: monthlyPrice ?? '...',
@@ -111,8 +125,20 @@ export default function PricingScreen() {
     track('plan_selected', { selected_plan: next });
   };
 
-  const freeFeatures = ['flashcards', 'quizzes', 'documents', 'leagues'] as const;
-  const proFeatures = ['flashcards', 'quizzes', 'documents', 'leagues', 'priority', 'noAds'] as const;
+  /**
+   * O que cada plano dá — descrito pelo produto que existe.
+   *
+   * Era flashcards, quizzes, upload de documentos e IA prioritária: o produto
+   * anterior. A pessoa lia isso na tela onde decide pagar, e nada daquilo
+   * acontece hoje.
+   *
+   * As três linhas repetidas nos dois planos são de propósito. Elas não
+   * vendem o Pro — dizem que o cronômetro, o mapa e entrar em salas dos outros
+   * **não** são pagos. Numa tela de assinatura, dizer o que continua grátis
+   * evita a suspeita de que o resto vai virar pago depois.
+   */
+  const freeFeatures = ['rooms', 'joining', 'timer', 'streaks'] as const;
+  const proFeatures = ['rooms', 'joining', 'timer', 'streaks', 'noAds'] as const;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -126,22 +152,20 @@ export default function PricingScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Usage */}
-        {usage && (
-          <View style={styles.usageCard}>
-            <Text style={styles.usageTitle}>{t('usage')}</Text>
-            <Text style={styles.usageRow}>
-              {usage.plan === 'PRO'
-                ? t('unlimited')
-                : t('flashcardsUsed', { used: usage.flashcard_sets.used, limit: usage.flashcard_sets.limit })}
-            </Text>
-            <Text style={styles.usageRow}>
-              {usage.plan === 'PRO'
-                ? t('unlimited')
-                : t('quizzesUsed', { used: usage.quizzes.used, limit: usage.quizzes.limit })}
-            </Text>
-          </View>
-        )}
+        {/*
+          O bloco de uso saiu.
+
+          Ele contava flashcards e quizzes — o produto anterior — e mostrava
+          "0 / -1", porque `-1` é o sentinela de ilimitado do servidor vazando
+          para a tela. Um número negativo no lugar de um limite é pior que não
+          mostrar nada.
+
+          O que valeria mostrar aqui é quantas salas próprias a pessoa já tem,
+          que é o limite que o plano de fato guarda. Mas esse número vive no
+          servidor (`FREE_ROOMS`) e não está em `useUsage`, e uma tela de
+          assinatura não é o lugar de descobrir isso — a folha do Pro já diz o
+          limite no momento em que ele é atingido, com o número vindo de lá.
+        */}
 
         {/* Billing Toggle */}
         {!isPro && (
@@ -227,6 +251,12 @@ export default function PricingScreen() {
               <Text style={styles.legalLinkText}>{t('termsOfUse')}</Text>
             </TouchableOpacity>
             <Text style={styles.legalSeparator}>  |  </Text>
+            {/* O motivo, quando não há preço por falta de chave. Sem esta
+                faixa a tela mostra "..." para sempre, e ninguém sabe por quê. */}
+            {erroDeConfig ? (
+              <Text style={styles.avisoConfig}>{erroDeConfig}</Text>
+            ) : null}
+
             <TouchableOpacity onPress={() => Linking.openURL('https://tryquibly.com/privacy')}>
               <Text style={styles.legalLinkText}>{t('privacyPolicy')}</Text>
             </TouchableOpacity>
@@ -310,6 +340,13 @@ const styles = StyleSheet.create({
   legalLinksRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   legalLinkText: { fontSize: 12, fontFamily: FONTS.semiBold, color: COLORS.primary, textDecorationLine: 'underline' as const },
   legalSeparator: { fontSize: 12, color: COLORS.textMuted },
+  avisoConfig: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 16,
+  },
   subscribeButton: { backgroundColor: COLORS.gold, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   subscribeButtonText: { fontSize: 16, fontFamily: FONTS.bold, color: COLORS.onPrimary },
   manageButton: { backgroundColor: COLORS.surface, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: COLORS.border },

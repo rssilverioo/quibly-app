@@ -10,17 +10,16 @@
   "perYear": "/year",
   "savePercent": "Save {{percent}}%",
   "freeFeatures": {
-    "flashcards": "3 flashcard sets/day",
-    "quizzes": "3 quizzes/day",
-    "documents": "Upload documents",
-    "leagues": "Join leagues"
+    "rooms": "3 study rooms of your own",
+    "joining": "Join unlimited rooms",
+    "timer": "Timer that runs with the app closed",
+    "streaks": "Streak map and challenges"
   },
   "proFeatures": {
-    "flashcards": "Unlimited flashcard sets",
-    "quizzes": "Unlimited quizzes",
-    "documents": "Upload documents",
-    "leagues": "Join leagues",
-    "priority": "Priority AI generation",
+    "rooms": "Unlimited rooms of your own",
+    "joining": "Join unlimited rooms",
+    "timer": "Timer that runs with the app closed",
+    "streaks": "Streak map and challenges",
     "noAds": "No ads"
   },
   "subscribe": "Subscribe",
@@ -31,8 +30,6 @@
   "subscribed": "Welcome to Pro! Your subscription is now active.",
   "myPlan": "My Plan",
   "usage": "Usage",
-  "flashcardsUsed": "{{used}} / {{limit}} flashcard sets",
-  "quizzesUsed": "{{used}} / {{limit}} quizzes",
   "unlimited": "Unlimited",
   "restorePurchases": "Restore Purchases",
   "manageSubscription": "Manage Subscription",
@@ -43,5 +40,6 @@
   "subscriptionTerms": "Payment will be charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless it is canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions by going to your account settings on the App Store after purchase.",
   "termsOfUse": "Terms of Use",
   "privacyPolicy": "Privacy Policy",
-  "andText": "and"
+  "andText": "and",
+  "roomsUsed": "{{used}} / {{limit}} rooms of your own"
 }

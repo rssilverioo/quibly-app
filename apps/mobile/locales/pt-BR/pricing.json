@@ -10,17 +10,16 @@
   "perYear": "/ano",
   "savePercent": "Economize {{percent}}%",
   "freeFeatures": {
-    "flashcards": "3 sets de flashcards/dia",
-    "quizzes": "3 quizzes/dia",
-    "documents": "Enviar documentos",
-    "leagues": "Entrar em ligas"
+    "rooms": "3 salas de estudo suas",
+    "joining": "Entrar em quantas salas quiser",
+    "timer": "Cronômetro que roda com o app fechado",
+    "streaks": "Mapa de constância e desafios"
   },
   "proFeatures": {
-    "flashcards": "Flashcards ilimitados",
-    "quizzes": "Quizzes ilimitados",
-    "documents": "Enviar documentos",
-    "leagues": "Entrar em ligas",
-    "priority": "Geração AI prioritária",
+    "rooms": "Salas suas ilimitadas",
+    "joining": "Entrar em quantas salas quiser",
+    "timer": "Cronômetro que roda com o app fechado",
+    "streaks": "Mapa de constância e desafios",
     "noAds": "Sem anúncios"
   },
   "subscribe": "Assinar",
@@ -31,8 +30,6 @@
   "subscribed": "Bem-vindo ao Pro! Sua assinatura está ativa.",
   "myPlan": "Meu Plano",
   "usage": "Uso",
-  "flashcardsUsed": "{{used}} / {{limit}} sets de flashcards",
-  "quizzesUsed": "{{used}} / {{limit}} quizzes",
   "unlimited": "Ilimitado",
   "restorePurchases": "Restaurar Compras",
   "manageSubscription": "Gerenciar Assinatura",
@@ -43,5 +40,6 @@
   "subscriptionTerms": "O pagamento será cobrado na sua conta Apple ID no momento da confirmação da compra. A assinatura renova automaticamente, a menos que seja cancelada pelo menos 24 horas antes do fim do período atual. Sua conta será cobrada pela renovação dentro de 24 horas antes do fim do período atual. Você pode gerenciar e cancelar suas assinaturas nas configurações da sua conta na App Store após a compra.",
   "termsOfUse": "Termos de Uso",
   "privacyPolicy": "Política de Privacidade",
-  "andText": "e"
+  "andText": "e",
+  "roomsUsed": "{{used}} / {{limit}} salas suas"
 }
