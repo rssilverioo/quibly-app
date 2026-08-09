@@ -532,3 +532,50 @@ describe('RoomsService.create — a cota de salas', () => {
     });
   });
 });
+
+describe('RoomsService.update — quanta gente cabe', () => {
+  function servico(membrosDentro: number) {
+    const prisma = {
+      league: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'sala-1', ownerId: 'dono', coverUrl: null }),
+        update: jest.fn().mockImplementation(({ data }) => ({ id: 'sala-1', ...data })),
+      },
+      leagueMember: { count: jest.fn().mockResolvedValue(membrosDentro) },
+    };
+    const service = new RoomsService(
+      prisma as any, {} as any, {} as any, {} as any, {} as any,
+    );
+    return { service, prisma };
+  }
+
+  it('grava o novo teto quando ele cabe', async () => {
+    const { service, prisma } = servico(7);
+    await service.update('dono', 'sala-1', { max_members: 30 });
+    expect(prisma.league.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ maxMembers: 30 }) }),
+    );
+  });
+
+  it('recusa encolher abaixo de quem já está dentro, e diz quantos são', async () => {
+    // Aplicar em silêncio deixaria a sala num estado que ela não sabe explicar:
+    // 20 dentro, teto 5, porta fechada para sempre e nenhuma tela dizendo por
+    // quê. E ninguém é expulso — expulsar por causa de um número seria a pior
+    // leitura possível de "editar sala".
+    const { service, prisma } = servico(20);
+    await expect(service.update('dono', 'sala-1', { max_members: 5 })).rejects.toThrow(/20/);
+    expect(prisma.league.update).not.toHaveBeenCalled();
+  });
+
+  it('aceita o teto exatamente igual à contagem atual', async () => {
+    // Fechar a sala no tamanho em que ela está é uma decisão legítima: "não
+    // entra mais ninguém". O que não pode é ficar menor do que já é.
+    const { service } = servico(12);
+    await expect(service.update('dono', 'sala-1', { max_members: 12 })).resolves.toBeDefined();
+  });
+
+  it('não conta membros quando o teto não foi mexido', async () => {
+    const { service, prisma } = servico(7);
+    await service.update('dono', 'sala-1', { name: 'Outro nome' });
+    expect(prisma.leagueMember.count).not.toHaveBeenCalled();
+  });
+});

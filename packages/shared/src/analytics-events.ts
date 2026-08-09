@@ -152,7 +152,7 @@ export interface AnalyticsEventProps {
    * momento em que a sala nasce; o desafio nasce junto e não tem instante
    * próprio para registrar.
    */
-  room_created: { duration_days: number };
+  room_created: { duration_days: number; max_members: number };
   invite_shared: { room_id: string };
   /** The invite/join preview loaded — denominator for room_joined via invite. */
   invite_opened: { is_member: boolean };

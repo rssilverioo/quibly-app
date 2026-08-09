@@ -147,7 +147,12 @@
     "checkInEmptyTitle": "Mostre à sala que você apareceu",
     "checkInEmptyText": "Sua mesa, seu caderno, sua tela. O que provar que você sentou hoje.",
     "checkInMarksToday": "Isto marca o dia de hoje no desafio",
-    "checkInFeedOnly": "Entra no feed. Nesta sala, quem marca o dia é o tempo estudado."
+    "checkInFeedOnly": "Entra no feed. Nesta sala, quem marca o dia é o tempo estudado.",
+    "roomSize": "Quanta gente cabe",
+    "roomSizeHint": "Ninguém sai se você diminuir — a sala só para de aceitar gente nova.",
+    "roomSizeInside_one": "{{count}} pessoa na sala agora",
+    "roomSizeInside_other": "{{count}} pessoas na sala agora",
+    "roomSizeTooSmall": "A sala já tem {{count}} pessoas. Escolha um tamanho maior."
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

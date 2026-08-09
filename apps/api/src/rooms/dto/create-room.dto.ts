@@ -47,4 +47,18 @@ export class CreateRoomDto {
   @Max(365)
   @IsOptional()
   duration_days?: number;
+
+  /**
+   * Quanta gente cabe. O dono escolhe na criação e pode mudar depois — ver
+   * `UpdateRoomDto`, que carrega a regra de não encolher abaixo de quem já
+   * está dentro.
+   *
+   * Opcional pelo mesmo motivo dos campos acima: há build em campo que não
+   * manda, e sem ele a sala nasce com o padrão de sempre.
+   */
+  @IsInt()
+  @Min(2)
+  @Max(100)
+  @IsOptional()
+  max_members?: number;
 }

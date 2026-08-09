@@ -27,6 +27,7 @@ import { track } from '../../lib/analytics';
 import { diasAte, emDias } from '../../lib/prazo-desafio';
 import FolhaDoPro from '../../components/plano/FolhaDoPro';
 import { voltar } from '../../lib/navegacao';
+import { TAMANHOS } from '../../components/sala/LimiteDeMembros';
 
 /**
  * Criar sala — e, com ela, o desafio.
@@ -90,6 +91,8 @@ export default function CreateRoomScreen() {
 
   // O que sobe é sempre `duration_days` — a data escolhida vira dias aqui.
   const prazoEmDias = prazoCustom ? diasAte(dataFinal) : days;
+  /** 50 já era o padrão silencioso de toda sala; agora é só o pré-selecionado. */
+  const [limite, setLimite] = useState<number>(50);
   const dataCurta = dataFinal.toLocaleDateString(i18n.language, { day: '2-digit', month: 'short' });
 
   /**
@@ -156,8 +159,8 @@ export default function CreateRoomScreen() {
     setError(null);
     setCreating(true);
     try {
-      setCreated(await createRoom(name.trim(), displayName.trim(), prazoEmDias));
-      track('room_created', { duration_days: prazoEmDias });
+      setCreated(await createRoom(name.trim(), displayName.trim(), prazoEmDias, limite));
+      track('room_created', { duration_days: prazoEmDias, max_members: limite });
     } catch (err) {
       /*
        Bater no limite do plano não é erro, é oferta.
@@ -299,6 +302,24 @@ export default function CreateRoomScreen() {
               {t('rooms.durationDays', { count: prazoEmDias })}
             </Text>
           ) : null}
+
+          {/* Os tamanhos vêm de `LimiteDeMembros` — o desenho é o desta tela
+              (rótulo de seção e chips, sem cartão), mas a lista de valores
+              permitidos é uma só, senão criar e editar passam a oferecer
+              opções diferentes para a mesma coisa. */}
+          <Text style={styles.sectionLabel}>{t('rooms.roomSize')}</Text>
+          <View style={styles.daysRow}>
+            {TAMANHOS.map((n) => (
+              <Press
+                key={n}
+                onPress={() => setLimite(n)}
+                accessibilityLabel={String(n)}
+                style={[styles.day, limite === n && styles.selected]}
+              >
+                <Text style={styles.dayText}>{n}</Text>
+              </Press>
+            ))}
+          </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>

@@ -147,7 +147,12 @@
     "checkInEmptyTitle": "Show the room you showed up",
     "checkInEmptyText": "Your desk, your notes, your screen. Whatever proves you sat down today.",
     "checkInMarksToday": "This marks today in the challenge",
-    "checkInFeedOnly": "Goes to the feed. In this room, study time marks the day."
+    "checkInFeedOnly": "Goes to the feed. In this room, study time marks the day.",
+    "roomSize": "How many people fit",
+    "roomSizeHint": "Nobody is removed if you lower it — the room just stops taking new people.",
+    "roomSizeInside_one": "{{count}} person in the room now",
+    "roomSizeInside_other": "{{count}} people in the room now",
+    "roomSizeTooSmall": "The room already has {{count}} members. Pick a bigger size."
   },
   "members": "Members",
   "members_one": "{{count}} member",

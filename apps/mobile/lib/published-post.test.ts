@@ -4,6 +4,7 @@ import { collectSessionCopies, copyChipLabel, pickPrimaryCopy } from './publishe
 
 const room = (over: Partial<RoomSummary> & { id: string; name: string }): RoomSummary => ({
   member_count: 3,
+  max_members: 50,
   total_sp: 0,
   last_post_at: null,
   unread_posts: 0,

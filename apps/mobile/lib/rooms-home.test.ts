@@ -6,6 +6,7 @@ const room = (id: string): RoomSummary => ({
   id,
   name: `Sala ${id}`,
   member_count: 4,
+  max_members: 50,
   total_sp: 0,
   last_post_at: null,
   unread_posts: 0,

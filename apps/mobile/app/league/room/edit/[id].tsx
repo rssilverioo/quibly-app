@@ -29,6 +29,7 @@ import {
 import { roomCoverForId } from '../../../../assets/room-covers';
 import { useTheme, type Palette, radius, space, text } from '../../../../theme';
 import { voltar } from '../../../../lib/navegacao';
+import LimiteDeMembros from '../../../../components/sala/LimiteDeMembros';
 
 /**
  * Editar a sala — só o dono chega aqui.
@@ -51,8 +52,21 @@ import { voltar } from '../../../../lib/navegacao';
  * um botão para voltar a ele valeria menos que a confusão de existir.
  */
 export default function EditRoomScreen() {
-  const { id: roomId, name: nomeInicial, description: descInicial, cover } =
-    useLocalSearchParams<{ id: string; name?: string; description?: string; cover?: string }>();
+  const {
+    id: roomId,
+    name: nomeInicial,
+    description: descInicial,
+    cover,
+    maxMembers,
+    memberCount,
+  } = useLocalSearchParams<{
+    id: string;
+    name?: string;
+    description?: string;
+    cover?: string;
+    maxMembers?: string;
+    memberCount?: string;
+  }>();
   const router = useRouter();
   const { t } = useTranslation('common');
   const { c } = useTheme();
@@ -61,6 +75,8 @@ export default function EditRoomScreen() {
   const [nome, setNome] = useState(nomeInicial ?? '');
   const [descricao, setDescricao] = useState(descInicial ?? '');
   const [capa, setCapa] = useState<string | null>(cover ?? null);
+  const [limite, setLimite] = useState(Number(maxMembers) || 50);
+  const jaDentro = Number(memberCount) || 0;
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -107,7 +123,11 @@ export default function EditRoomScreen() {
     setSalvando(true);
     setErro(null);
     try {
-      await updateRoom(roomId, { name: limpo, description: descricao.trim() });
+      await updateRoom(roomId, {
+        name: limpo,
+        description: descricao.trim(),
+        max_members: limite,
+      });
       voltar();
     } catch (e) {
       setErro((e as Error)?.message ?? t('rooms.editError'));
@@ -199,6 +219,8 @@ export default function EditRoomScreen() {
                 placeholderTextColor={c.fgSubtle}
               />
             </View>
+
+            <LimiteDeMembros valor={limite} aoEscolher={setLimite} jaDentro={jaDentro} />
 
             {/* A data aparece explicada, e não como campo desabilitado: um campo
                 cinza convida ao toque e não diz por que não responde. */}

@@ -102,6 +102,9 @@ export class RoomsService {
       end_date: fim,
       privacy: 'private',
       mode: 'competitive',
+      // `CreateLeagueDto` já valida 2..100, o mesmo teto do `UpdateRoomDto`.
+      // Ausente, `leagues.service` aplica o padrão de 50.
+      max_members: dto.max_members,
     });
 
     // O modo não passa por `leagues.service`: `CreateLeagueDto` não o conhece —
@@ -221,13 +224,33 @@ export class RoomsService {
   async update(userId: string, roomId: string, dto: UpdateRoomDto) {
     await this.exigirDono(roomId, userId);
 
+    /**
+     * Encolher a sala abaixo de quem já está dentro é recusado, e não aplicado
+     * em silêncio.
+     *
+     * Ninguém é expulso — expulsar por causa de um número seria a pior leitura
+     * possível de "editar sala". Mas aceitar o número deixaria a sala num
+     * estado que ela não sabe explicar: 20 pessoas dentro, teto 5, porta
+     * fechada para sempre e nenhuma tela dizendo por quê. O erro nomeia a
+     * contagem atual, que é a informação de que o dono precisa para escolher.
+     */
+    if (dto.max_members !== undefined) {
+      const dentro = await this.prisma.leagueMember.count({ where: { leagueId: roomId } });
+      if (dto.max_members < dentro) {
+        throw new BadRequestException(
+          `The room already has ${dentro} members. The limit cannot be lower than that.`,
+        );
+      }
+    }
+
     const league = await this.prisma.league.update({
       where: { id: roomId },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         ...(dto.description !== undefined ? { description: dto.description.trim() } : {}),
+        ...(dto.max_members !== undefined ? { maxMembers: dto.max_members } : {}),
       },
-      select: { id: true, name: true, description: true, coverUrl: true },
+      select: { id: true, name: true, description: true, coverUrl: true, maxMembers: true },
     });
 
     return league;
@@ -332,6 +355,9 @@ export class RoomsService {
         // esta coluna não existia até 07/08.
         coverUrl: league.coverUrl,
         memberCount: league.members.length,
+        // O teto vem junto da contagem porque as duas só significam alguma
+        // coisa lado a lado: "7" não diz nada, "7 de 50" diz.
+        maxMembers: league.maxMembers,
         totalSp: membership.totalSp,
         lastPostAt: league.feedPosts[0]?.createdAt ?? null,
         myMembership: {

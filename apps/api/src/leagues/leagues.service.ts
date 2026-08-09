@@ -121,7 +121,7 @@ export class LeaguesService {
             mode: dto.mode,
             status,
             inviteCode,
-            maxMembers: dto.max_members || 50,
+            maxMembers: dto.max_members ?? 50,
           },
         });
 

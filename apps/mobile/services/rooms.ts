@@ -26,6 +26,8 @@ export interface RoomSummary {
   /** Papel de quem pediu — `owner` destrava a edição da sala. */
   my_membership?: { role: string; display_name: string };
   member_count: number;
+  /** Quanta gente cabe. Só faz sentido ao lado de `member_count`. */
+  max_members: number;
   total_sp: number;
   last_post_at: string | null;
   unread_posts: number;
@@ -240,8 +242,9 @@ export const createRoom = (
   name: string,
   display_name: string,
   duration_days: number,
+  max_members?: number,
 ): Promise<CreatedRoom> =>
-  api.post('/rooms', { name, display_name, duration_days });
+  api.post('/rooms', { name, display_name, duration_days, max_members });
 
 export const getRoomFeed = (roomId: string): Promise<RoomFeedPage> =>
   api.get(`/rooms/${roomId}/feed?page=1&limit=20`);
@@ -267,7 +270,10 @@ export interface CreatedRoomPost {
 }
 
 /** O que o dono pode mudar. A data não entra — ver `UpdateRoomDto` na API. */
-export function updateRoom(roomId: string, data: { name?: string; description?: string }) {
+export function updateRoom(
+  roomId: string,
+  data: { name?: string; description?: string; max_members?: number },
+) {
   return api.patch<{ id: string; name: string; description: string | null; cover_url: string | null }>(
     `/rooms/${roomId}`,
     data,

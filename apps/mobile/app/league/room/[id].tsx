@@ -238,6 +238,9 @@ export default function RoomFeedScreen() {
                 name: room.name,
                 description: room.description ?? '',
                 cover: room.cover_url ?? '',
+                // Parâmetro de rota é string; a tela de edição converte.
+                maxMembers: String(room.max_members),
+                memberCount: String(room.member_count),
               },
             })}
             style={styles.back}
