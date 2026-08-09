@@ -11,7 +11,20 @@ import ManagedSettings
  Duplicar qualquer um desses literais nos outros arquivos é como o bug fica: o
  monitor levantaria uma loja e o app baixaria outra, e o telefone ficaria
  bloqueado sem que nenhum código pareça errado.
+
+ ## Por que o tipo inteiro é `@available(iOS 16.0, *)`
+
+ `ManagedSettingsStore` chegou no iOS 16, e as **extensões** miram 16 — mas este
+ mesmo arquivo também compila dentro do **app**, que mira 15.1 para não excluir
+ aparelho em uso. Sem a anotação, o alvo do app não compila:
+
+   'Name' is only available in iOS 16.0 or newer
+
+ Marcar o tipo, e não cada membro: não existe nada aqui que faça sentido antes
+ do 16 — sem `ManagedSettingsStore` não há escudo para coordenar. Quem chama do
+ lado do app já está dentro de `if #available(iOS 16.0, *)`.
  */
+@available(iOS 16.0, *)
 enum EstadoDoFoco {
   /**
    A loja de ajustes do Quibly, com nome próprio.
