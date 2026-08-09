@@ -28,6 +28,7 @@ import {
 } from '../../../../services/rooms';
 import { roomCoverForId } from '../../../../assets/room-covers';
 import { useTheme, type Palette, radius, space, text } from '../../../../theme';
+import { voltar } from '../../../../lib/navegacao';
 
 /**
  * Editar a sala — só o dono chega aqui.
@@ -107,7 +108,7 @@ export default function EditRoomScreen() {
     setErro(null);
     try {
       await updateRoom(roomId, { name: limpo, description: descricao.trim() });
-      router.back();
+      voltar();
     } catch (e) {
       setErro((e as Error)?.message ?? t('rooms.editError'));
       setSalvando(false);
@@ -148,7 +149,7 @@ export default function EditRoomScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Press onPress={() => router.back()} style={styles.acao}>
+        <Press onPress={() => voltar()} style={styles.acao}>
           <X size={22} color={c.fgMuted} />
         </Press>
         <Text style={styles.titulo}>{t('rooms.editRoom')}</Text>

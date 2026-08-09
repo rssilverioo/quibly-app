@@ -11,6 +11,7 @@ import Press from '../../../../../components/ui/Press';
 import { feedPagePosts, roomFeedPostToCardPost } from '../../../../../lib/feed-post';
 import { getChallengeMemberPosts } from '../../../../../services/rooms';
 import { useTheme, type Palette, space, text } from '../../../../../theme';
+import { voltar } from '../../../../../lib/navegacao';
 
 const PAGE_SIZE = 20;
 
@@ -62,7 +63,7 @@ export default function ChallengeMemberFeedScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.nav}>
-        <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+        <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
         <Text style={styles.navTitle}>{t('rooms.memberHistory')}</Text>
         <View style={styles.back} />
       </View>

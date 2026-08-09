@@ -21,6 +21,7 @@ import { getLiveMembers, type LiveMember } from '../../../services/leagues';
 import { getMyRooms, getRoomFeed, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import FolhaDeDenuncia from '../../../components/moderation/FolhaDeDenuncia';
+import { voltar } from '../../../lib/navegacao';
 
 /** Altura da barra da sala (`RoomTabBar`), para o FAB pousar 16pt acima dela. */
 const ROOM_TAB_BAR_HEIGHT = 66;
@@ -135,7 +136,7 @@ export default function RoomFeedScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.backRow}>
-          <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+          <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
         </View>
         <View style={styles.center}>
           <Mascot state="worried" size={96} animate={false} />
@@ -222,7 +223,7 @@ export default function RoomFeedScreen() {
           existe. A API confere a posse de novo — esta linha é conveniência, não
           segurança. */}
       <View style={styles.backRow}>
-        <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+        <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
         {room.my_membership?.role === 'owner' ? (
           <Press
             onPress={() => router.push({

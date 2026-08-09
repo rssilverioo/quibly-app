@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import Press from '../../../components/ui/Press';
 import { createChallenge } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+import { voltar } from '../../../lib/navegacao';
 
 const isoAfterDays = (days: number) => {
   const date = new Date();
@@ -36,7 +37,7 @@ export default function NewChallengeScreen() {
         metric: 'minutes',
         ends_on: isoAfterDays(days),
       });
-      router.back();
+      voltar();
     } catch (err) {
       // §5.7: erro vira linha abaixo do formulário. Alerta é para ação
       // destrutiva, não para "não deu certo".
@@ -48,7 +49,7 @@ export default function NewChallengeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Press onPress={() => router.back()} style={styles.close}><X size={22} color={c.fg} /></Press>
+        <Press onPress={() => voltar()} style={styles.close}><X size={22} color={c.fg} /></Press>
         <Text style={styles.headerTitle}>{t('rooms.newChallenge')}</Text>
         <View style={styles.close} />
       </View>

@@ -17,6 +17,7 @@ import XPToast from '../../components/common/XPToast';
 import ConfettiOverlay from '../../components/common/ConfettiOverlay';
 import { Mascot } from '../../components/mascot';
 import { track } from '../../lib/analytics';
+import { voltar } from '../../lib/navegacao';
 
 export default function FlashcardPlayerScreen() {
   const router = useRouter();
@@ -100,7 +101,7 @@ export default function FlashcardPlayerScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => voltar()} style={styles.backBtn}>
             <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
@@ -108,7 +109,7 @@ export default function FlashcardPlayerScreen() {
           <Mascot state="worried" size={120} />
           <Text style={styles.emptyText}>{error ?? t('empty')}</Text>
           <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.surface, borderRadius: 10 }}
-            onPress={() => router.back()}>
+            onPress={() => voltar()}>
             <Text style={{ color: COLORS.primary, fontFamily: FONTS.semiBold, fontSize: 14 }}>{t('goBack')}</Text>
           </TouchableOpacity>
         </View>
@@ -123,7 +124,7 @@ export default function FlashcardPlayerScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => voltar()} style={styles.backBtn}>
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{set.title}</Text>
@@ -143,7 +144,7 @@ export default function FlashcardPlayerScreen() {
           <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8} onPress={handleReviewAgain}>
             <Text style={styles.primaryButtonText}>{t('reviewAgain')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.8} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.8} onPress={() => voltar()}>
             <Text style={styles.secondaryButtonText}>{t('goBack')}</Text>
           </TouchableOpacity>
         </View>

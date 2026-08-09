@@ -14,6 +14,7 @@ import { challengeTimeLeft } from '../../../lib/rooms-home';
 import { leaveLeague } from '../../../services/leagues';
 import { getMyRooms, getRoomDetails, type ChallengeDetails, type RoomSummary } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+import { voltar } from '../../../lib/navegacao';
 
 export default function RoomDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -67,7 +68,7 @@ export default function RoomDetailsScreen() {
 
   const nav = (
     <View style={styles.nav}>
-      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+      <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
     </View>
   );
 

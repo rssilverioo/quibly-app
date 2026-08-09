@@ -22,6 +22,7 @@ import { Mascot } from '../../components/mascot';
 import { useTheme, text as t, space, radius } from '../../theme';
 import i18n from '../../lib/i18n';
 import { track } from '../../lib/analytics';
+import { voltar } from '../../lib/navegacao';
 
 type Mode = 'choose' | 'recording' | 'uploading';
 
@@ -190,7 +191,7 @@ export default function CaptureScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Press haptic={false} scale={0.9} onPress={() => router.back()} style={styles.closeBtn}>
+          <Press haptic={false} scale={0.9} onPress={() => voltar()} style={styles.closeBtn}>
             <X size={22} color={c.fgMuted} />
           </Press>
         </View>

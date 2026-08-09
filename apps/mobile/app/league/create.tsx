@@ -26,6 +26,7 @@ import { ApiError } from '../../lib/http-errors';
 import { track } from '../../lib/analytics';
 import { diasAte, emDias } from '../../lib/prazo-desafio';
 import FolhaDoPro from '../../components/plano/FolhaDoPro';
+import { voltar } from '../../lib/navegacao';
 
 /**
  * Criar sala — e, com ela, o desafio.
@@ -195,7 +196,7 @@ export default function CreateRoomScreen() {
 
   const header = (
     <View style={styles.header}>
-      <Press onPress={() => router.back()} style={styles.close}><X size={22} color={c.fg} /></Press>
+      <Press onPress={() => voltar()} style={styles.close}><X size={22} color={c.fg} /></Press>
       <Text style={styles.headerTitle}>{created ? created.name : t('rooms.newRoom')}</Text>
       <View style={styles.close} />
     </View>

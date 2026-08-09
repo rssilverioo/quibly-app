@@ -28,6 +28,7 @@ import {
   type RoomSummary,
 } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
+import { voltar } from '../../../lib/navegacao';
 
 /** Retrato máximo: 3/4. Acima disso a foto some com o resto da tela. */
 const PORTRAIT_LIMIT = 3 / 4;
@@ -157,7 +158,7 @@ export default function RoomPhotoPostScreen() {
     setError(null);
     try {
       await createRoomPost(roomId, photo, caption);
-      router.back();
+      voltar();
     } catch (err) {
       // A foto NÃO se perde: ela continua no estado e o cabeçalho vira "Tentar
       // de novo". Um `Alert.alert` aqui já custou o post de alguém.
@@ -174,7 +175,7 @@ export default function RoomPhotoPostScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Press onPress={() => router.back()} style={styles.close}><X size={22} color={c.fgMuted} /></Press>
+        <Press onPress={() => voltar()} style={styles.close}><X size={22} color={c.fgMuted} /></Press>
         <Text style={styles.title}>{t('rooms.newCheckIn')}</Text>
         {/* Ação em texto, e não um bloco fixo no rodapé: aqui ela nunca é
             coberta pelo teclado da legenda. */}

@@ -16,6 +16,7 @@ import { useTheme, text as t, space, radius } from '../../theme';
 import { track } from '../../lib/analytics';
 import { onLiveTimerAction } from '../../services/study-timer';
 import { mascotForSession, milestoneForMinutes, minutesToNextMilestone } from '@quibly/shared';
+import { voltar } from '../../lib/navegacao';
 
 const { width: SW } = Dimensions.get('window');
 const TIMER_SIZE = Math.min(SW * 0.72, 300);
@@ -235,7 +236,7 @@ export default function ActiveSessionScreen() {
       <Press
         haptic={false}
         scale={0.92}
-        onPress={() => router.back()}
+        onPress={() => voltar()}
         style={styles.backBtn}
       >
         <ArrowLeft size={22} color={c.fgMuted} />

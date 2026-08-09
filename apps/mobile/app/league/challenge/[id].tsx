@@ -21,6 +21,7 @@ import {
 } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import SeloVerificado from '../../../components/ui/SeloVerificado';
+import { voltar } from '../../../lib/navegacao';
 
 /** Cinco linhas de esqueleto: a forma do placar é conhecida, então esperar com
  *  a forma certa é melhor que esperar com um spinner (§4.4). */
@@ -75,7 +76,7 @@ export default function ChallengeLeaderboardScreen() {
 
   const nav = (
     <View style={styles.nav}>
-      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+      <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
     </View>
   );
 

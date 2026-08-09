@@ -17,6 +17,7 @@ import { useUsage } from '../../hooks/useUsage';
 import { useIAP } from '../../hooks/useIAP';
 import i18n from '../../lib/i18n';
 import { captureException } from '../../lib/sentry';
+import { voltar } from '../../lib/navegacao';
 
 type Billing = 'monthly' | 'yearly';
 
@@ -118,7 +119,7 @@ export default function PricingScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => voltar()} style={styles.backBtn}>
             <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('title')}</Text>

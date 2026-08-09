@@ -14,6 +14,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { addComment, toggleReaction } from '../../../../services/feed';
 import { getCachedFeedPost } from '../../../../lib/feed-detail-cache';
 import { useTheme, type Palette, space, text } from '../../../../theme';
+import { voltar } from '../../../../lib/navegacao';
 
 export default function FeedPostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,7 +65,7 @@ export default function FeedPostDetailScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+        <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
         <Text style={styles.title}>{t('rooms.post')}</Text>
         <View style={styles.back} />
       </View>
@@ -92,7 +93,7 @@ export default function FeedPostDetailScreen() {
             <View style={styles.missingBlock}>
               <Mascot state="worried" size={96} animate={false} />
               <Text style={styles.missing}>{t('rooms.postUnavailable')}</Text>
-              <Press onPress={() => router.back()} style={styles.missingAction}>
+              <Press onPress={() => voltar()} style={styles.missingAction}>
                 <Text style={styles.link}>{t('rooms.backToFeed')}</Text>
               </Press>
             </View>

@@ -22,6 +22,7 @@ import {
   generateFlashcardsFromLesson, generateQuizFromLesson,
   type Lesson,
 } from '../../services/lessons';
+import { voltar } from '../../lib/navegacao';
 
 /** How often to re-check a lesson that's still being processed. */
 const POLL_MS = 4000;
@@ -118,7 +119,7 @@ export default function LessonScreen() {
           if (!id) return;
           await deleteLesson(id).catch(() => {});
           track('lesson_deleted');
-          router.back();
+          voltar();
         },
       },
     ]);
@@ -139,7 +140,7 @@ export default function LessonScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header: floats over the scrolling note, so it earns the glass. */}
         <Glass variant="chrome" cornerRadius={0} style={styles.header}>
-          <Press haptic={false} scale={0.9} onPress={() => router.back()} style={styles.iconBtn}>
+          <Press haptic={false} scale={0.9} onPress={() => voltar()} style={styles.iconBtn}>
             <ArrowLeft size={22} color={c.fgMuted} />
           </Press>
           <Press haptic="light" scale={0.9} onPress={confirmDelete} style={styles.iconBtn}>

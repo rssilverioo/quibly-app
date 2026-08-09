@@ -42,6 +42,7 @@ import {
 } from '../../../lib/chat-list';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import FolhaDeDenuncia from '../../../components/moderation/FolhaDeDenuncia';
+import { voltar } from '../../../lib/navegacao';
 
 const MIN_INPUT_HEIGHT = 40;
 const MAX_INPUT_HEIGHT = MIN_INPUT_HEIGHT + 20 * 3;
@@ -314,7 +315,7 @@ export default function RoomChatScreen() {
 
   const header = (
     <View style={styles.header}>
-      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+      <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
       <Text style={styles.headerTitle} numberOfLines={1}>{roomName}</Text>
       <View style={styles.back} />
     </View>

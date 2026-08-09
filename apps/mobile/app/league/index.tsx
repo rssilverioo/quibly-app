@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getMyLeagues, type LeagueWithStanding } from '../../services/leagues';
 import { Trophy, Users, Calendar, ArrowLeft } from 'lucide-react-native';
 import { staticDark as c } from '../../theme';
+import { voltar } from '../../lib/navegacao';
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
@@ -45,7 +46,7 @@ export default function LeaguesListScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => voltar()} style={styles.backBtn}>
           <ArrowLeft size={22} color={c.fg} />
         </TouchableOpacity>
         <Text style={styles.title}>{t('title')}</Text>

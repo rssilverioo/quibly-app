@@ -14,6 +14,7 @@ import { logout as firebaseLogout, deleteAccount } from '../../services/auth';
 import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
 import i18n from '../../lib/i18n';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
+import { voltar } from '../../lib/navegacao';
 
 /**
  * Ajustes — uma tela, atrás da engrenagem do perfil.
@@ -113,7 +114,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.tela} edges={['top', 'bottom']}>
       <View style={styles.barra}>
-        <Press onPress={() => router.back()} style={styles.voltar}>
+        <Press onPress={() => voltar()} style={styles.voltar}>
           <ArrowLeft size={22} color={c.fg} />
         </Press>
         <Text style={styles.titulo}>{t('settings')}</Text>

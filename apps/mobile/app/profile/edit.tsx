@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateProfile } from '../../services/auth';
 import { useTheme, type Palette, text as ty, space, radius } from '../../theme';
+import { voltar } from '../../lib/navegacao';
 
 /*
  * O mapa de cor que existia aqui era o defeito que `MARCA.md §2` item 4
@@ -69,7 +70,7 @@ export default function EditProfileScreen() {
       });
       setProfile(updated);
       Alert.alert(t('edit.savedTitle'), t('edit.savedMessage'));
-      router.back();
+      voltar();
     } catch (err: any) {
       const msg = err?.message?.includes('handle')
         ? t('edit.handleTaken')
@@ -101,7 +102,7 @@ export default function EditProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => voltar()}
             activeOpacity={0.7}
             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
           >

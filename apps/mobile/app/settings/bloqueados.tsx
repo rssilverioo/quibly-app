@@ -10,6 +10,7 @@ import Press from '../../components/ui/Press';
 import { Mascot } from '../../components/mascot';
 import { desbloquear, listarBloqueados, type PessoaBloqueada } from '../../services/moderation';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
+import { voltar } from '../../lib/navegacao';
 
 /**
  * Quem você bloqueou — e o botão para desfazer.
@@ -66,7 +67,7 @@ export default function BloqueadosScreen() {
   return (
     <SafeAreaView style={styles.tela} edges={['top', 'bottom']}>
       <View style={styles.barra}>
-        <Press onPress={() => router.back()} style={styles.voltar}>
+        <Press onPress={() => voltar()} style={styles.voltar}>
           <ArrowLeft size={22} color={c.fg} />
         </Press>
         <Text style={styles.titulo}>{t('moderation.blockedTitle')}</Text>

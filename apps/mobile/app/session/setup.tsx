@@ -21,6 +21,7 @@ import { getBatteryWarning, openBatterySettings } from '../../services/study-tim
 import Press from '../../components/ui/Press';
 import { useTheme, text as t, space, radius, SUBJECT_COLORS } from '../../theme';
 import { track } from '../../lib/analytics';
+import { voltar } from '../../lib/navegacao';
 
 /** One prompt per install, not per session. */
 const BATTERY_PROMPT_KEY = '@quibly/battery-optimization-prompted';
@@ -195,7 +196,7 @@ export default function SessionSetupScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Press haptic={false} scale={0.9} onPress={() => router.back()} style={styles.iconBtn}>
+          <Press haptic={false} scale={0.9} onPress={() => voltar()} style={styles.iconBtn}>
             <ArrowLeft size={22} color={c.fgMuted} />
           </Press>
         </View>

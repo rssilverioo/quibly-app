@@ -23,6 +23,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { getLeaguePreview, joinLeague, type LeaguePreview } from '../../../services/leagues';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import { track } from '../../../lib/analytics';
+import { voltar } from '../../../lib/navegacao';
 
 /** Distinguir "convite não existe" de "a rede caiu" muda o coelho e a saída. */
 type Failure = 'invalid' | 'offline';
@@ -94,7 +95,7 @@ export default function JoinRoomScreen() {
 
   const nav = (
     <View style={styles.nav}>
-      <Press onPress={() => router.back()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
+      <Press onPress={() => voltar()} style={styles.back}><ArrowLeft size={22} color={c.fg} /></Press>
     </View>
   );
 

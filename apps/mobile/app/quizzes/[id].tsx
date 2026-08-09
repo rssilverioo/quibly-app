@@ -19,6 +19,7 @@ import ConfettiOverlay from '../../components/common/ConfettiOverlay';
 import { staticDark as c } from '../../theme';
 import { Mascot } from '../../components/mascot';
 import { track } from '../../lib/analytics';
+import { voltar } from '../../lib/navegacao';
 
 const { width: SW } = Dimensions.get('window');
 const LABELS = ['A', 'B', 'C', 'D'];
@@ -147,14 +148,14 @@ export default function QuizPlayerScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => voltar()} style={styles.backBtn}>
             <ArrowLeft size={24} color={c.fg} />
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
           <Mascot state="worried" size={120} />
           <Text style={styles.emptyText}>{error ?? t('empty')}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => voltar()}>
             <Text style={styles.retryBtnText}>{t('goBack')}</Text>
           </TouchableOpacity>
         </View>
@@ -227,7 +228,7 @@ export default function QuizPlayerScreen() {
             <RotateCcw size={18} color={c.fgOnAccent} />
             <Text style={styles.primaryBtnText}>{t('retake')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} activeOpacity={0.85} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.secondaryBtn} activeOpacity={0.85} onPress={() => voltar()}>
             <Text style={styles.secondaryBtnText}>{t('goBack')}</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -236,7 +237,7 @@ export default function QuizPlayerScreen() {
         <>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => voltar()} style={styles.backBtn}>
               <ArrowLeft size={22} color={c.fg} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>
