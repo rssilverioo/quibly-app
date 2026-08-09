@@ -25,6 +25,7 @@ import { useTabBarClearance } from './_layout';
 import StreakCalendarModal from '../../components/StreakCalendarModal';
 import StudyHeatmap from '../../components/StudyHeatmap';
 import SeloVerificado from '../../components/ui/SeloVerificado';
+import MolduraPro from '../../components/plano/MolduraPro';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -184,8 +185,24 @@ export default function ProfileScreen() {
 
         {/* 2 — cabeçalho: avatar 72 + nome + sublinha */}
         <View style={styles.header}>
+          {/*
+            Quem assina tem avatar em escudo; o resto continua redondo. A
+            moldura **desenha** o avatar em vez de embrulhá-lo — escudo exige
+            SVG, e de fora não há como recortar algo que já foi desenhado.
+          */}
           <Press haptic="light" scale={0.94} onPress={pickAvatar} style={styles.avatarWrap}>
-            {showAvatarImage ? (
+            {/*
+              Quem assina ganha **forma**, não enfeite — é o que faz o marcador
+              do Strava funcionar: a diferença é lida na silhueta, antes de
+              qualquer detalhe. Ver `MolduraPro`.
+            */}
+            {profile.plan === 'PRO' ? (
+              <MolduraPro
+                uri={showAvatarImage ? profile.avatar_url! : null}
+                iniciais={getInitials(profile.username)}
+                size={72}
+              />
+            ) : showAvatarImage ? (
               <Image
                 source={{ uri: profile.avatar_url! }}
                 style={styles.avatar}
