@@ -20,6 +20,7 @@ import {
   configureNotifications,
   requestNotificationPermissions,
   getDevicePushToken,
+  onPushTokenRefresh,
   addNotificationResponseListener,
 } from '../lib/notifications';
 import { registerPushToken } from '../services/notifications';
@@ -208,6 +209,23 @@ function RootLayoutNav() {
         captureException(err, { where: 'registerPushToken' });
       }
     })();
+  }, [isAuthenticated]);
+
+  /**
+   * O FCM troca o token sozinho — restauração de backup, reinstalação, limpeza
+   * de dados. O antigo para de entregar **em silêncio**: nada falha, as
+   * notificações só deixam de chegar.
+   *
+   * Registrar só na abertura não cobre isso, porque a troca pode acontecer com
+   * o app já aberto. Este ouvinte é o único caminho que reencontra a pessoa.
+   */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    return onPushTokenRefresh((novo) => {
+      registerPushToken(novo, Platform.OS).catch((err) =>
+        captureException(err, { where: 'onPushTokenRefresh' }),
+      );
+    });
   }, [isAuthenticated]);
 
   // Handle notification taps
