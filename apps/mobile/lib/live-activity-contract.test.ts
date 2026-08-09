@@ -245,3 +245,33 @@ describe('os comentários do Swift não podem engolir o arquivo', () => {
     expect({ arquivo: caminho, abre, fecha }).toEqual({ arquivo: caminho, abre, fecha: abre });
   });
 });
+
+/**
+ * Todo símbolo que a extensão usa tem que estar definido **nela**.
+ *
+ * O Swift dos alvos não passa pelo `tsc` nem pelo vitest: nada no repositório o
+ * compila. Um símbolo apagado só aparece no build da EAS, dez minutos e uma fila
+ * depois — foi assim que o build 52 morreu com `type 'Color' has no member
+ * 'quiblyAccent'`, porque a extensão da cor morava logo abaixo dos botões que
+ * eu removi e o corte pegou o vizinho.
+ *
+ * Este teste não substitui um compilador. Cobre o caso que de fato acontece:
+ * apagar um trecho e levar junto algo que outro trecho usava.
+ */
+describe('a extensão define o que ela mesma usa', () => {
+  const arquivos = ['../targets/widget/StudyTimerLiveActivity.swift', '../targets/widget/CoelhoMark.swift']
+    .map((caminho) => ler(caminho))
+    .join('\n');
+
+  it('define toda cor `Color.quibly*` que referencia', () => {
+    const usadas = new Set(
+      [...arquivos.matchAll(/Color\.(quibly[A-Za-z]+)/g)].map((m) => m[1]),
+    );
+    expect(usadas.size).toBeGreaterThan(0);
+    for (const cor of usadas) {
+      expect(arquivos, `Color.${cor} é usada mas não é definida no alvo`).toMatch(
+        new RegExp(`static let ${cor}\\b`),
+      );
+    }
+  });
+});

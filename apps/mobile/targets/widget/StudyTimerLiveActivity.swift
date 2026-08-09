@@ -282,6 +282,28 @@ private struct TimerText: View {
  sessão, que ainda servem às notificações.
 */
 
+extension Color {
+  /**
+   O accent do tema **escuro** de `theme/colors.ts` — `#4C9AFF`.
+
+   Escuro e não claro porque a Live Activity é sempre sobre fundo escuro: na
+   Dynamic Island é preto, e o card da tela bloqueada usa
+   `activityBackgroundTint` preto. O accent claro (`#0043BA`) é um azul fundo,
+   pensado para texto sobre branco — ali ele quase desaparece.
+
+   Isto estava em `BRAND_LIME` com um comentário dizendo "a mesma cor no app e
+   fora dele". O app trocou o accent pelo azul do coelho em 31/07 e a Live
+   Activity ficou para trás, então o comentário virou mentira e o cronômetro na
+   tela de bloqueio era a única superfície do produto ainda em verde-limão.
+
+   **Foi apagada sem querer em 09/08**, junto com os botões de pausar e
+   encerrar: ela morava logo abaixo deles, e o corte pegou o vizinho. O
+   `tsc` e os testes não viram nada — Swift de extensão não passa por nenhum dos
+   dois —, e o erro só apareceu no build 52.
+   */
+  static let quiblyAccent = Color(red: 0.298, green: 0.604, blue: 1.0)
+}
+
 // MARK: - bundle da extensão
 
 @main
