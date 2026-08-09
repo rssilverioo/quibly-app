@@ -325,7 +325,20 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   semFoto: { ...text.caption, color: c.fgSubtle },
   lapis: {
     position: 'absolute',
-    bottom: -18,
+    /**
+     * Dentro do container, e não transbordando.
+     *
+     * Era `-18`: o botão saía 18pt para fora, e o vão até o card é
+     * `space.lg` (16). Ou seja, ele ocupava o vão inteiro e ainda sobrava
+     * 2pt por cima do card — encostado, o que lê como erro de alinhamento
+     * mesmo depois de o `zIndex` ter devolvido o toque.
+     *
+     * Com `22` — os 40 de `paddingBottom` menos os 18 de meio-botão — o lápis
+     * fica **centrado na borda inferior do quadro**, exatamente como antes aos
+     * olhos, e inteiramente dentro da caixa. Abaixo dele sobram 22 de padding
+     * mais 16 do vão: 38pt de respiro até o card.
+     */
+    bottom: 22,
     alignSelf: 'center',
     width: 36,
     height: 36,
