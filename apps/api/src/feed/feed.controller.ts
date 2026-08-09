@@ -7,8 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseAuthGuard } from '../auth/guards/firebase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { FeedService } from './feed.service';
@@ -51,6 +54,23 @@ export class FeedController {
     @Body() dto: CommentDto,
   ) {
     return this.feedService.addComment(user.userId, postId, dto.content);
+  }
+
+  /**
+   * Anexar foto ao post já publicado.
+   *
+   * 10MB, o mesmo teto do check-in: é foto de caderno tirada na hora, não
+   * galeria. Declarada antes de `:postId` genérico não faz diferença aqui — o
+   * caminho tem um segmento a mais —, mas fica junto das outras rotas de post.
+   */
+  @Post(':postId/photo')
+  @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  attachPhoto(
+    @CurrentUser() user: { userId: string; email: string },
+    @Param('postId') postId: string,
+    @UploadedFile() photo?: Express.Multer.File,
+  ) {
+    return this.feedService.attachPhoto(user.userId, postId, photo);
   }
 
   @Delete('comments/:commentId')

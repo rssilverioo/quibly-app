@@ -56,7 +56,11 @@
     "captionFailed": "Não deu para salvar a legenda.",
     "summary": "{{minutes}} min · +{{xp}} XP",
     "summaryWithSubject": "{{minutes}} min · {{subject}} · +{{xp}} XP",
-    "notInFeedRetry": "Ainda não apareceu no feed · Tentar de novo"
+    "notInFeedRetry": "Ainda não apareceu no feed · Tentar de novo",
+    "addPhoto": "Adicionar uma foto",
+    "addPhotoFailed": "Não deu para adicionar a foto. Tente de novo.",
+    "takePhoto": "Tirar uma foto",
+    "chooseFromLibrary": "Escolher da galeria"
   },
   "complete": {
     "title": "Sessão Completa!",

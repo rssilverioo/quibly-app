@@ -56,7 +56,11 @@
     "captionFailed": "Couldn't save the caption.",
     "summary": "{{minutes}} min · +{{xp}} XP",
     "summaryWithSubject": "{{minutes}} min · {{subject}} · +{{xp}} XP",
-    "notInFeedRetry": "It hasn't shown up in the feed yet · Try again"
+    "notInFeedRetry": "It hasn't shown up in the feed yet · Try again",
+    "addPhoto": "Add a photo",
+    "addPhotoFailed": "Couldn't add the photo. Try again.",
+    "takePhoto": "Take a photo",
+    "chooseFromLibrary": "Choose from library"
   },
   "complete": {
     "title": "Session Complete!",

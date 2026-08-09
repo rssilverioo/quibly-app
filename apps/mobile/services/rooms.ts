@@ -305,6 +305,21 @@ export function createRoomPost(roomId: string, photo: PostPhotoFile, caption: st
   return api.upload<CreatedRoomPost>(`/rooms/${roomId}/posts`, formData);
 }
 
+/**
+ * Anexa uma foto a um post já publicado.
+ *
+ * O check-in nasce com foto; o post de sessão não — ele publica minutos e XP, e
+ * número não conta o que a pessoa estava fazendo.
+ *
+ * O servidor aplica a foto em **todas** as cópias da mesma sessão, então basta
+ * chamar com um post qualquer do grupo. Ver `FeedService.attachPhoto`.
+ */
+export function anexarFotoAoPost(postId: string, photo: PostPhotoFile) {
+  const formData = new FormData();
+  formData.append('photo', photo as any);
+  return api.upload<{ photo_url: string }>(`/feed/${postId}/photo`, formData);
+}
+
 export interface LeaderboardEntry {
   rank: number;
   user_id: string;

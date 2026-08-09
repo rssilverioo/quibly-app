@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -6,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ModerationService } from '../moderation/moderation.service';
+import { StorageService } from '../storage/storage.service';
 import { AUTOR } from '../common/autor.select';
 
 @Injectable()
@@ -14,6 +16,7 @@ export class FeedService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly moderation: ModerationService,
+    private readonly storageService: StorageService,
   ) {}
 
   async getLeagueFeed(
@@ -456,6 +459,70 @@ export class FeedService {
     await this.prisma.feedPost.delete({ where: { id: postId } });
 
     return { deleted: true };
+  }
+
+  /**
+   * Anexar uma foto ao post da sessão, depois de publicado.
+   *
+   * ## Por que isto existe
+   *
+   * O check-in nasce com foto; o post de sessão não. Quem termina um pomodoro
+   * publica só números — minutos e XP —, e números não contam o que a pessoa
+   * estava fazendo. A foto era o que faltava para o post de sessão dizer
+   * alguma coisa a quem lê o feed.
+   *
+   * ## Por que a foto é da sessão, e não do post
+   *
+   * Uma sessão publica em **todas** as salas de que a pessoa participa: são
+   * várias linhas de `FeedPost` com a mesma `sessionId`. Anexar a foto a uma só
+   * criaria o estado que ninguém sabe explicar — a mesma sessão aparecendo com
+   * foto numa sala e sem foto na outra.
+   *
+   * Então sobe **um** objeto no storage e ele passa a valer para as cópias
+   * irmãs. É também o que evita pagar N uploads pelo mesmo arquivo.
+   *
+   * Post sem sessão (o check-in) atualiza só a si mesmo, que é o certo: ali não
+   * há irmãos.
+   */
+  async attachPhoto(userId: string, postId: string, photo?: Express.Multer.File) {
+    if (!photo) {
+      throw new BadRequestException('A photo is required');
+    }
+    if (!photo.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Photo must be an image');
+    }
+
+    const post = await this.prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true, sessionId: true },
+    });
+
+    if (!post) throw new NotFoundException('Post not found');
+    if (post.userId !== userId) {
+      throw new ForbiddenException('You can only add a photo to your own posts');
+    }
+
+    // A chave sai da **sessão** quando há uma, e não do post: assim as cópias
+    // irmãs apontam para o mesmo objeto, e reenviar a foto sobrescreve em vez
+    // de deixar órfão o anterior.
+    const chave = post.sessionId
+      ? `session-posts/${userId}/${post.sessionId}`
+      : `session-posts/${userId}/${post.id}`;
+
+    const photoUrl = await this.storageService.uploadPublic(
+      chave,
+      photo.buffer,
+      photo.mimetype,
+    );
+
+    await this.prisma.feedPost.updateMany({
+      where: post.sessionId
+        ? { sessionId: post.sessionId, userId }
+        : { id: post.id },
+      data: { photoUrl, showProofPhoto: true },
+    });
+
+    return { photo_url: photoUrl };
   }
 
   async getPostComments(postId: string, page: number, limit: number) {

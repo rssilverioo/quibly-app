@@ -40,7 +40,7 @@ describe('FeedService.getLeagueFeed', () => {
       },
     };
 
-    const result = await new FeedService(prisma as any, {} as any, semBloqueios() as any).getLeagueFeed(
+    const result = await new FeedService(prisma as any, {} as any, semBloqueios() as any, {} as any).getLeagueFeed(
       'room-1',
       'user-1',
       1,
@@ -104,7 +104,7 @@ describe('FeedService.getChallengeMemberPosts', () => {
       },
     };
 
-    const result = await new FeedService(prisma as any, {} as any, semBloqueios() as any)
+    const result = await new FeedService(prisma as any, {} as any, semBloqueios() as any, {} as any)
       .getChallengeMemberPosts('challenge-1', 'requester', 'target-user', 1, 20);
 
     expect(prisma.feedPost.findMany).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe('getLeagueFeed — o feed começa quando a sala começou', () => {
   it('não mostra o que aconteceu antes da sala existir', async () => {
     const prisma = prismaCom(INICIO);
 
-    await new FeedService(prisma as any, {} as any, semBloqueios() as any)
+    await new FeedService(prisma as any, {} as any, semBloqueios() as any, {} as any)
       .getLeagueFeed('r1', 'u1', 1, 20);
 
     expect(prisma.feedPost.findMany).toHaveBeenCalledWith(
@@ -177,7 +177,7 @@ describe('getLeagueFeed — o feed começa quando a sala começou', () => {
     // lista via só o que entrou na janela.
     const prisma = prismaCom(INICIO);
 
-    await new FeedService(prisma as any, {} as any, semBloqueios() as any)
+    await new FeedService(prisma as any, {} as any, semBloqueios() as any, {} as any)
       .getLeagueFeed('r1', 'u1', 1, 20);
 
     expect(prisma.feedPost.count).toHaveBeenCalledWith({
@@ -190,7 +190,7 @@ describe('getLeagueFeed — o feed começa quando a sala começou', () => {
     // o filtro existe e não corta — que é o comportamento certo ali.
     const prisma = prismaCom(new Date('1970-01-01T00:00:00.000Z'));
 
-    await new FeedService(prisma as any, {} as any, semBloqueios() as any)
+    await new FeedService(prisma as any, {} as any, semBloqueios() as any, {} as any)
       .getLeagueFeed('r1', 'u1', 1, 20);
 
     const { where } = prisma.feedPost.findMany.mock.calls[0][0];

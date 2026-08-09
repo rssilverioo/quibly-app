@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
 
 import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard';
 import LevelUpAnimation from '../../components/LevelUpAnimation';
@@ -18,7 +19,7 @@ import {
   pickPrimaryCopy,
   type PublishedCopy,
 } from '../../lib/published-post';
-import { getMyRooms, getRoomFeed } from '../../services/rooms';
+import { anexarFotoAoPost, getMyRooms, getRoomFeed } from '../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 /**
@@ -64,20 +65,21 @@ import { useTheme, type Palette, radius, space, text } from '../../theme';
  * |---|---|
  * | `POST /sessions/:id/end` devolver o post criado | não devolve — ver `lib/published-post.ts` |
  * | `PATCH /feed/:postId` (legenda) | 404 |
- * | `DELETE /feed/:postId` | 404 |
- * | anexar foto a um post existente | não existe rota nenhuma |
+ * | `DELETE /feed/:postId` | **existe desde 09/08** |
+ * | anexar foto a um post existente | **existe desde 09/08** (`POST /feed/:postId/photo`) |
  *
  * As duas primeiras estão ligadas na forma que o contrato terá quando existir,
  * e falham hoje numa linha discreta em `c.danger` — sem alerta, sem perder o
  * que a pessoa escreveu (`§5.10`, estado "erro ao apagar").
  *
- * O `onAddPhoto` está **ausente** de propósito, e não é omissão: o `PostCard`
+ * O `onAddPhoto` ficou **ausente** por meses pelo motivo certo: o `PostCard`
  * documenta que "ausente = a linha não aparece — a ação só existe quando há
- * quem a atenda". Não há rota para anexar foto a um post que já existe, e
- * `POST /rooms/:id/posts` criaria um **segundo** post, não uma foto neste.
- * Oferecer "+ foto" para depois não ter onde salvar seria pior que não
- * oferecer — e omitir não fere a `§3.4`, porque a forma do card não depende
- * dela.
+ * quem a atenda", e não havia rota. Agora há, e a linha aparece.
+ *
+ * O mesmo raciocínio tinha sido aplicado errado ao "Apagar post": ele **era**
+ * oferecido sem rota, e falhava em 404 dizendo "não deu para apagar" — que a
+ * pessoa lê como culpa dela ou da rede. A ausência do "+ foto" era a decisão
+ * correta; a presença do "apagar" era a incoerente.
  */
 export default function SessionPublishedScreen() {
   const router = useRouter();
@@ -107,6 +109,7 @@ export default function SessionPublishedScreen() {
   const [roomCount, setRoomCount] = useState<number | null>(null);
   const [captionFailed, setCaptionFailed] = useState(false);
   const [deleteFailed, setDeleteFailed] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
   /**
    * A comemoração toca por cima do card e termina nele (`FLUXO §7.9`). Antes
    * ela chamava `goHome()` de `active.tsx` e **enterrava o post**.
@@ -204,6 +207,57 @@ export default function SessionPublishedScreen() {
       setDeleteFailed(true);
     }
   }, [copies, router]);
+
+  /**
+   * Anexar a foto depois de publicado.
+   *
+   * A câmera vem **primeiro** na folha de escolha: o post de sessão nasce logo
+   * depois de estudar, e a foto que interessa é a do caderno que ainda está
+   * aberto na mesa — não uma da galeria.
+   *
+   * O upload é de um post só. O servidor aplica nas irmãs da mesma sessão, o
+   * que evita pagar N envios pelo mesmo arquivo e impede o estado que ninguém
+   * sabe explicar: a mesma sessão com foto numa sala e sem foto na outra.
+   */
+  const escolherFoto = useCallback(async () => {
+    if (!primary) return;
+    Alert.alert('', t('published.addPhoto'), [
+      { text: t('published.takePhoto'), onPress: () => void anexar('camera') },
+      { text: t('published.chooseFromLibrary'), onPress: () => void anexar('galeria') },
+      { text: t('common:cancel'), style: 'cancel' },
+    ]);
+  }, [primary, t]);
+
+  const anexar = useCallback(async (origem: 'camera' | 'galeria') => {
+    if (!primary) return;
+    const permissao = origem === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissao.granted) return;
+
+    const escolha = origem === 'camera'
+      ? await ImagePicker.launchCameraAsync({ quality: 0.82 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.82 });
+    if (escolha.canceled || !escolha.assets[0]) return;
+
+    const asset = escolha.assets[0];
+    setPhotoFailed(false);
+    try {
+      const { photo_url } = await anexarFotoAoPost(primary.post.id, {
+        uri: asset.uri,
+        name: asset.fileName ?? 'foto.jpg',
+        type: asset.mimeType ?? 'image/jpeg',
+      });
+      // Todas as cópias, porque o servidor atualizou todas. Espelhar só a
+      // principal deixaria a tela discordando do banco.
+      setCopies((current) => current.map((copy) => ({
+        ...copy,
+        post: { ...copy.post, photo_url, proof_photo_url: photo_url, show_proof_photo: true },
+      })));
+    } catch {
+      setPhotoFailed(true);
+    }
+  }, [primary]);
 
   /** O `×` do chip: sai de uma sala e fica nas outras (`FLUXO §7.1`). */
   const onRemoveFromRoom = useCallback(async (copy: PublishedCopy) => {
@@ -358,12 +412,15 @@ export default function SessionPublishedScreen() {
             editable={Boolean(primary)}
             // Só quando há post de verdade a que a legenda possa pertencer.
             onCaptionChange={primary ? onCaptionChange : undefined}
-            // `onAddPhoto` ausente: não há rota para anexar foto a um post
-            // existente. Ver o cabeçalho deste arquivo.
+            // A foto vale para todas as cópias, como a legenda: é uma sessão
+            // replicada, não N posts independentes. Quem espalha é o servidor,
+            // por `sessionId` — ver `FeedService.attachPhoto`.
+            onAddPhoto={primary ? () => void escolherFoto() : undefined}
           />
         )}
 
         {captionFailed ? <Text style={styles.error}>{t('published.captionFailed')}</Text> : null}
+        {photoFailed ? <Text style={styles.error}>{t('published.addPhotoFailed')}</Text> : null}
 
         {/* Bloco 4 — não é barra fixa: rola com o conteúdo, 24pt abaixo do
             card. Só existe quando há feed para onde ir. */}
