@@ -463,3 +463,99 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Convite — /join/[code]
+   Um cartão só, centrado, no mesmo sistema da landing: a mesma paleta, as
+   mesmas três faces. Quem toca no link de um amigo e depois abre o site tem
+   que reconhecer o mesmo produto.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.convite {
+  min-height: 100dvh;
+  /* Flex e não grid com `place-items: center`: ali a trilha implícita é
+     dimensionada por `auto` e pode crescer até o `max-width` do cartão, ficando
+     mais larga que o container. O item flex não passa da caixa de conteúdo do
+     pai, e num cartão que é a única coisa da tela não vale correr o risco. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--papel);
+}
+
+.convite-cartao {
+  width: 100%;
+  max-width: 420px;
+  background: var(--branco);
+  border-radius: 24px;
+  overflow: hidden;
+  /* Sombra baixa e larga: o cartão pousa no papel, não flutua sobre ele. */
+  box-shadow: 0 1px 2px rgba(11, 27, 58, 0.06), 0 12px 32px rgba(11, 27, 58, 0.10);
+}
+
+/* Proporção fixa: a capa é foto de gente, e altura variável faria o cartão
+   pular de tamanho conforme a sala.
+
+   O coelho vai de **fundo** da própria `img`. Se a capa da sala não carregar —
+   URL assinada vencida, objeto apagado — o que sobra não é um bloco branco de
+   dois terços do cartão: é o coelho, que já era o estado para sala sem foto.
+   Fundo e não `onError` porque isto é componente de servidor, e um convite não
+   pode depender de JS para não parecer quebrado. */
+.convite-capa {
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  object-fit: cover;
+  display: block;
+  background: url('/coelho-convite.jpg') center / cover no-repeat;
+}
+
+.convite-corpo { padding: 1.75rem 1.5rem 1.5rem; text-align: center; }
+
+.convite-nome {
+  font-size: 1.65rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.9rem;
+}
+
+.convite-linha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--texto-suave);
+  margin-bottom: 0.75rem;
+}
+.convite-rosto { width: 26px; height: 26px; border-radius: 999px; object-fit: cover; }
+.convite-linha strong { color: var(--texto); font-weight: 700; }
+
+.convite-descricao {
+  font-size: 0.95rem;
+  color: var(--texto-suave);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.convite-meta {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  margin-bottom: 1.5rem;
+}
+
+.convite-botao { display: block; width: 100%; margin-bottom: 0.7rem; }
+
+.convite-codigo {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+/* `letter-spacing` largo e caixa alta: este código é para ser **copiado a
+   olho** por quem digita à mão na tela de entrar. */
+.convite-codigo .mono {
+  color: var(--marca);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  margin-left: 0.35rem;
+}

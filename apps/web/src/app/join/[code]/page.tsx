@@ -1,59 +1,147 @@
-'use client';
+import type { Metadata } from 'next';
 
-import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+/**
+ * A página que o convite abre.
+ *
+ * ## O que estava errado
+ *
+ * A versão anterior fazia três coisas contra quem chegava:
+ *
+ * 1. **Disparava o deep link no `useEffect`.** O iOS respondia com o alerta
+ *    *"Abrir no Quibly?"* antes da pessoa ter visto nada — um app desconhecido
+ *    pedindo para abrir, o que se responde com "Cancelar".
+ * 2. **Não dizia qual sala era.** "You've been invited to join a league!" serve
+ *    para qualquer convite de qualquer sala. Quem recebe não sabe de quem veio
+ *    nem para onde vai, e é essa a decisão que a página existe para apoiar.
+ * 3. **Mandava "baixe da App Store" por escrito**, sem link. O único caminho
+ *    que interessa — a pessoa não tem o app — era o único sem botão.
+ *
+ * ## Por que componente de servidor
+ *
+ * Metade do trabalho de um convite acontece **antes** do toque: no WhatsApp, na
+ * prévia do link. Um componente de cliente entrega HTML vazio ao robô que monta
+ * essa prévia, e o convite chega como uma URL crua. Buscando no servidor, o
+ * `generateMetadata` põe o nome e a capa da sala no cartão.
+ *
+ * ## Por que a sala aparece sem login
+ *
+ * Quem recebe convite é justamente quem não tem conta. `GET /invite/:code` é a
+ * única rota aberta da API, e devolve só o que esta página desenha — ver
+ * `convite-publico.controller.ts`.
+ */
 
-export default function JoinPage() {
-  const params = useParams();
-  const code = params.code as string;
-  const [showFallback, setShowFallback] = useState(false);
+interface Convite {
+  name: string;
+  description: string | null;
+  cover_url: string | null;
+  owner: { username: string; avatar_url: string | null };
+  member_count: number;
+  is_full: boolean;
+}
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const APP_STORE = 'https://apps.apple.com/app/id6760320166';
+
+async function buscarConvite(code: string): Promise<Convite | null> {
+  try {
+    const res = await fetch(`${API}/invite/${encodeURIComponent(code)}`, {
+      // O convite é estável, mas não eterno: o nome e a capa da sala mudam, e
+      // um minuto é curto o bastante para ninguém receber um cartão de link
+      // desatualizado, e longo o bastante para um convite viral não virar
+      // carga na API.
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as Convite;
+  } catch {
+    // A API fora do ar não pode virar erro 500 aqui. Sem os dados a página
+    // ainda cumpre o essencial: leva à App Store e mostra o código.
+    return null;
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const convite = await buscarConvite(code);
+  if (!convite) return { title: 'Quibly' };
+
+  const titulo = `${convite.owner.username} convidou você para ${convite.name}`;
+  return {
+    title: titulo,
+    description: 'Salas de estudo que contam os dias em que você aparece.',
+    openGraph: {
+      title: titulo,
+      description: convite.description ?? 'Entre na sala e comece a contar os seus dias.',
+      images: convite.cover_url ? [convite.cover_url] : undefined,
+    },
+  };
+}
+
+export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  const convite = await buscarConvite(code);
   const deepLink = `quibly://league/join/${encodeURIComponent(code)}`;
 
-  useEffect(() => {
-    window.location.href = deepLink;
-    const timer = setTimeout(() => setShowFallback(true), 1500);
-    return () => clearTimeout(timer);
-  }, [deepLink]);
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0A0A0F] to-[#141420] flex items-center justify-center p-6">
-      <div className="bg-[#141420] rounded-2xl p-10 max-w-[400px] w-full text-center border border-[#2A2A3E]">
-        <div className="w-16 h-16 rounded-2xl bg-quibly-primary flex items-center justify-center mx-auto mb-4 text-3xl font-extrabold text-white">
-          Q
-        </div>
-        <h1 className="text-[28px] font-bold text-white mb-2">Quibly</h1>
-
-        {!showFallback ? (
-          <div>
-            <p className="text-base text-quibly-text-secondary mb-6">Opening Quibly...</p>
-            <div className="w-8 h-8 border-[3px] border-quibly-border border-t-quibly-primary rounded-full animate-spin mx-auto" />
-          </div>
+    <main className="pagina convite">
+      <div className="convite-cartao">
+        {convite?.cover_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="convite-capa" src={convite.cover_url} alt="" />
         ) : (
-          <div>
-            <p className="text-base text-quibly-text-secondary mb-6">
-              You&apos;ve been invited to join a league!
-            </p>
-            <div className="bg-quibly-surface-light rounded-xl p-5 mb-6 border border-quibly-primary/25">
-              <p className="text-[11px] text-quibly-text-muted uppercase tracking-widest mb-2">
-                Invite Code
-              </p>
-              <p className="text-[28px] font-extrabold text-quibly-primary-light tracking-[4px]">
-                {code}
-              </p>
-            </div>
-            <a
-              href={deepLink}
-              className="block bg-quibly-primary hover:bg-quibly-primary-light text-white py-3.5 px-6 rounded-xl text-base font-bold no-underline mb-5 transition-colors"
-            >
-              Open in Quibly
-            </a>
-            <p className="text-[13px] text-quibly-text-muted leading-relaxed">
-              Don&apos;t have the app? Download Quibly from the App Store or Google Play,
-              then open this link again.
-            </p>
-          </div>
+          // A capa da sala vem primeiro; o coelho só entra quando a sala não
+          // tem foto. Um convite sem imagem nenhuma some no meio da conversa.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="convite-capa" src="/coelho-convite.jpg" alt="" />
         )}
+
+        <div className="convite-corpo">
+          <h1 className="display convite-nome">{convite?.name ?? 'Uma sala no Quibly'}</h1>
+
+          {convite ? (
+            <p className="convite-linha">
+              {convite.owner.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="convite-rosto" src={convite.owner.avatar_url} alt="" />
+              ) : null}
+              <span>
+                <strong>{convite.owner.username}</strong> convidou você
+              </span>
+            </p>
+          ) : null}
+
+          {convite?.description ? (
+            <p className="convite-descricao">{convite.description}</p>
+          ) : null}
+
+          {convite ? (
+            <p className="convite-meta">
+              {convite.member_count === 1
+                ? '1 pessoa estudando aqui'
+                : `${convite.member_count} pessoas estudando aqui`}
+              {convite.is_full ? ' · sala cheia' : ''}
+            </p>
+          ) : null}
+
+          {/* A App Store primeiro, e não o "abrir no app". Quem chega por um
+              convite quase nunca tem o Quibly instalado — e o botão de abrir,
+              para essa pessoa, é o que não faz nada. */}
+          <a className="btn btn-primario btn-grande convite-botao" href={APP_STORE}>
+            Baixar o Quibly
+          </a>
+          <a className="btn btn-fantasma convite-botao" href={deepLink}>
+            Já tenho o app
+          </a>
+
+          <p className="convite-codigo">
+            Código da sala <span className="mono">{code}</span>
+          </p>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
