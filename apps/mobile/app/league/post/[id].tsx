@@ -6,21 +6,21 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Clock, Minus, Pencil, X } from 'lucide-react-native';
+import { Camera, Images, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
+import SemanaDoCheckIn from '../../../components/checkin/SemanaDoCheckIn';
+import { Mascot } from '../../../components/mascot';
 import {
   createRoomPost,
   getMyRooms,
@@ -28,12 +28,6 @@ import {
   type RoomSummary,
 } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
-
-/** Retrato máximo: 3/4. Acima disso a foto some com o resto da tela. */
-const PORTRAIT_LIMIT = 3 / 4;
-
-/** Largura do quadro da mídia. As colunas de contexto dividem o que sobra. */
-const LARGURA_MIDIA = 172;
 
 /**
  * Âncora da barra "Concluir" acima do teclado.
@@ -46,43 +40,43 @@ const LARGURA_MIDIA = 172;
 const ACESSORIO_LEGENDA = 'legenda-do-post';
 
 /**
- * Compor um post de sala.
+ * O check-in: a foto que prova que você apareceu.
  *
- * ## Por que a mídia é o centro, e não dois botões
+ * ## O que esta tela era, e por que mudou
  *
- * A versão anterior mostrava "Tirar foto" e "Escolher foto" lado a lado, e os
- * dois **sumiam** assim que havia foto, trocados pela imagem. A tela mudava de
- * forma no meio da tarefa: o que estava num lugar passava a estar em outro, e o
- * espaço da foto só existia depois de haver foto.
+ * Ela punha a foto num quadro de 172pt ladeado por duas colunas de rótulo —
+ * "para onde vai" de um lado, "isto conta" do outro. As perguntas eram as
+ * certas, e a execução starvava o assunto: **a foto, que é o conteúdo inteiro
+ * de um check-in, aparecia menor que o texto que a explicava.**
  *
- * Aqui o quadro da mídia existe desde o início, vazio, no mesmo lugar e do mesmo
- * tamanho. Ele é o objeto da tela — trocar a foto é um lápis sobre o quadro, não
- * um botão que aparece e desaparece.
+ * E o lápis de trocar a foto pendurava 18pt abaixo do quadro, onde o card da
+ * legenda — desenhado depois, portanto por cima — cobria metade dele. O botão
+ * parecia estar lá e não recebia o toque. Relatado duas vezes pelo dono do
+ * produto antes de eu encontrar.
  *
- * ## Por que o contexto ladeia a foto
+ * ## A tese
  *
- * As duas perguntas que alguém tem antes de publicar são "para onde isto vai" e
- * "isto conta". Antes nenhuma das duas tinha resposta na tela: o nome da sala
- * não aparecia, e se a foto pontuava no desafio só se descobria depois. Agora as
- * duas ladeiam a mídia, que é onde o olho já está.
+ * A foto é a tela. Todo o resto flutua sobre ela.
  *
- * ## Por que "Publicar" subiu para o cabeçalho
+ * As duas perguntas continuam respondidas, por outros meios: a sala é uma
+ * etiqueta no topo, e "isto conta" virou `SemanaDoCheckIn` — sete células com a
+ * de hoje esperando. Publicar preenche. A resposta deixou de ser um rótulo e
+ * passou a ser a demonstração da consequência.
  *
- * Como botão de rodapé ele disputava espaço com o teclado — daí o
- * `KeyboardAvoidingView` e o acessório, que continuam aqui pela legenda. No
- * cabeçalho ele está sempre visível e nunca é coberto, e a tela deixa de ter um
- * bloco fixo embaixo empurrando o conteúdo.
+ * ## Por que a foto não é cortada
+ *
+ * `contain`, e não `cover`. Uma prova recortada é uma prova pela metade: se
+ * alguém fotografou a mesa inteira, a mesa inteira é o que a sala vê. O fundo
+ * escuro absorve a sobra sem que ela pareça erro.
  */
 export default function RoomPhotoPostScreen() {
   const { id: roomId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { t, i18n } = useTranslation('common');
+  const { t } = useTranslation('common');
   const { c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
+
   const [photo, setPhoto] = useState<PostPhotoFile | null>(null);
-  // A proporção real da foto escolhida. Teto de 3/4 (retrato máximo) para uma
-  // foto muito alta não empurrar a legenda e o botão para fora da tela.
-  const [ratio, setRatio] = useState(PORTRAIT_LIMIT);
   const [caption, setCaption] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,51 +84,47 @@ export default function RoomPhotoPostScreen() {
 
   useEffect(() => {
     if (!roomId) return;
-    // Falha em silêncio de propósito: o contexto é enfeite útil, e não poder
-    // mostrar o nome da sala não é razão para impedir a publicação.
+    // Falha em silêncio de propósito: o nome da sala é contexto útil, e não
+    // poder mostrá-lo não é razão para impedir a publicação.
     void getMyRooms()
       .then((salas) => setSala(salas.find((s) => s.id === roomId) ?? null))
       .catch(() => {});
   }, [roomId]);
 
   /**
-   * Se esta foto pontua no desafio da sala.
+   * Se esta foto marca o dia no desafio da sala.
    *
-   * Numa sala em modo `study` o que conta é tempo estudado, então uma foto entra
-   * no feed e **não** soma no ranking. Dizer isso antes de publicar é a
-   * diferença entre uma expectativa cumprida e a sensação de que o app comeu o
-   * post. Sem desafio ativo não há o que pontuar, e o indicador some.
+   * Em sala no modo `study` o que conta é tempo estudado, então a foto entra no
+   * feed e não marca o dia. Dizer isso **antes** de publicar é a diferença
+   * entre uma expectativa cumprida e a sensação de que o app comeu o post.
+   * `null` enquanto a sala não carregou — a faixa não afirma o que não sabe.
    */
   const desafio = sala?.active_challenge ?? null;
-  const pontua = desafio ? (desafio.participation_mode ?? 'photo') === 'photo' : null;
+  const marcaODia = desafio ? (desafio.participation_mode ?? 'photo') === 'photo' : null;
 
-  const adopt = (asset: ImagePicker.ImagePickerAsset) => {
+  const adotar = (asset: ImagePicker.ImagePickerAsset) => {
     setPhoto({
       uri: asset.uri,
       name: asset.fileName || 'estudo.jpg',
       type: asset.mimeType || 'image/jpeg',
     });
-    // A prova não pode ser recortada: mostra-se a foto inteira, na proporção
-    // que ela tem. Antes era `4/3` fixo com `cover`, que cortava.
-    const natural = asset.width && asset.height ? asset.width / asset.height : PORTRAIT_LIMIT;
-    setRatio(Math.max(PORTRAIT_LIMIT, natural));
   };
 
-  const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.82 });
-    if (!result.canceled && result.assets[0]) adopt(result.assets[0]);
+  const tirarFoto = async () => {
+    const permissao = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissao.granted) return;
+    const r = await ImagePicker.launchCameraAsync({ quality: 0.82 });
+    if (!r.canceled && r.assets[0]) adotar(r.assets[0]);
   };
 
-  const choosePhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.82 });
-    if (!result.canceled && result.assets[0]) adopt(result.assets[0]);
+  const escolherFoto = async () => {
+    const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissao.granted) return;
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.82 });
+    if (!r.canceled && r.assets[0]) adotar(r.assets[0]);
   };
 
-  const publish = async () => {
+  const publicar = async () => {
     if (!photo || !roomId || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -142,119 +132,111 @@ export default function RoomPhotoPostScreen() {
       await createRoomPost(roomId, photo, caption);
       router.back();
     } catch (err) {
-      // A foto NÃO se perde: ela continua no estado e o cabeçalho vira "Tentar
-      // de novo". Um `Alert.alert` aqui já custou o post de alguém.
+      // A foto **não** se perde: ela continua no estado e o botão vira "tentar
+      // de novo". Um alerta que fecha a tela aqui já custou o post de alguém.
       setError((err as Error)?.message ?? t('rooms.postError'));
       setSubmitting(false);
     }
   };
 
   const podePublicar = Boolean(photo) && !submitting;
-  const agora = new Date().toLocaleString(i18n.language, {
-    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-  });
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Press onPress={() => router.back()} style={styles.close}><X size={22} color={c.fgMuted} /></Press>
-        <Text style={styles.title}>{t('rooms.newCheckIn')}</Text>
-        {/* Ação em texto, e não um bloco fixo no rodapé: aqui ela nunca é
-            coberta pelo teclado da legenda. */}
-        <Press onPress={publish} disabled={!podePublicar} style={styles.close}>
-          {submitting
-            ? <ActivityIndicator color={c.accent} />
-            : (
-              <Text style={[styles.acao, !podePublicar && styles.acaoInativa]}>
-                {t(error ? 'rooms.tryAgain' : 'rooms.publish')}
-              </Text>
-            )}
-        </Press>
-      </View>
-
+    <SafeAreaView style={styles.tela} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
-          contentContainerStyle={styles.rolagem}
-          // `handled` e não `always`: escolher foto continua respondendo ao
-          // primeiro toque com o teclado aberto.
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-        >
-          {/* Toque em área vazia fecha o teclado. `Pressable` sem estilo de
-              toque: é área de descarte, não botão. */}
-          <Pressable onPress={Keyboard.dismiss} accessible={false}>
-
-            <View style={styles.trio}>
-              {/* Para onde vai */}
-              <View style={styles.lado}>
-                <Avatar uri={sala?.cover_url ?? null} name={sala?.name ?? '?'} size={36} />
-                <Text style={styles.ladoRotulo}>{t('rooms.postingTo')}</Text>
-                <Text style={styles.ladoValor} numberOfLines={2}>{sala?.name ?? '—'}</Text>
-              </View>
-
-              {/* A mídia. O quadro existe desde o início, vazio.
-                  **Tocar o quadro tira foto; o lápis escolhe da galeria.**
-                  Antes os dois abriam a galeria quando já havia foto, e o
-                  toque no quadro nunca chamava a câmera — o gesto grande da
-                  tela servia a ação secundária. */}
-              <View style={styles.midia}>
-                <Press onPress={takePhoto} style={[styles.quadro, { aspectRatio: photo ? ratio : PORTRAIT_LIMIT }]}>
-                  {photo
-                    ? <Image source={{ uri: photo.uri }} style={styles.foto} />
-                    : <Text style={styles.semFoto}>{t('rooms.noMedia')}</Text>}
-                </Press>
-                <Press onPress={choosePhoto} style={styles.lapis}>
-                  <Pencil size={18} color={c.fg} />
-                </Press>
-              </View>
-
-              {/* Se conta */}
-              <View style={styles.lado}>
-                {pontua === null ? null : (
-                  <>
-                    <View style={[styles.selo, pontua ? styles.seloVale : styles.seloNao]}>
-                      {pontua
-                        ? <Check size={18} color={c.fgOnAccent} strokeWidth={3} />
-                        : <Minus size={18} color={c.fgMuted} strokeWidth={3} />}
-                    </View>
-                    <Text style={styles.ladoValor} numberOfLines={2}>
-                      {t(pontua ? 'rooms.countsForChallenge' : 'rooms.doesNotCount')}
-                    </Text>
-                  </>
-                )}
-              </View>
+        {/* ── o palco: a foto, ou o convite de tirar uma ── */}
+        <View style={styles.palco}>
+          {photo ? (
+            <Image source={{ uri: photo.uri }} style={styles.foto} resizeMode="contain" />
+          ) : (
+            <View style={styles.vazio}>
+              <Mascot state="wave" size={132} />
+              <Text style={styles.vazioTitulo}>{t('rooms.checkInEmptyTitle')}</Text>
+              <Text style={styles.vazioTexto}>{t('rooms.checkInEmptyText')}</Text>
             </View>
+          )}
 
-            <View style={styles.cartao}>
+          {/* Escurecer topo e base é o que sustenta o texto sobre qualquer foto
+              — a de uma mesa clara ao meio-dia inclusive. */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.62)', 'transparent']}
+            style={styles.scrimTopo}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.78)']}
+            style={styles.scrimBase}
+            pointerEvents="none"
+          />
+
+          <View style={styles.chrome}>
+            <Press onPress={() => router.back()} style={styles.fechar} accessibilityLabel={t('close')}>
+              <X size={22} color="#FFFFFF" />
+            </Press>
+            {sala ? (
+              <View style={styles.etiquetaSala}>
+                <Text style={styles.etiquetaTexto} numberOfLines={1}>{sala.name}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Trocar a foto vive **dentro** do palco e alinhado ao topo direito,
+              onde nada é desenhado depois dele. Era isto que sumia embaixo do
+              card da legenda. */}
+          {photo ? (
+            <View style={styles.trocar}>
+              <Press onPress={tirarFoto} style={styles.trocarBotao} accessibilityLabel={t('rooms.takePhoto')}>
+                <Camera size={18} color="#FFFFFF" />
+              </Press>
+              <Press onPress={escolherFoto} style={styles.trocarBotao} accessibilityLabel={t('rooms.choosePhoto')}>
+                <Images size={18} color="#FFFFFF" />
+              </Press>
+            </View>
+          ) : null}
+
+          {/* ── o pé: legenda, semana e a ação ── */}
+          <View style={styles.pe}>
+            {photo ? (
               <TextInput
                 value={caption}
                 onChangeText={setCaption}
                 placeholder={t('rooms.captionPlaceholder')}
-                placeholderTextColor={c.fgSubtle}
+                placeholderTextColor="rgba(255,255,255,0.5)"
                 multiline
                 maxLength={280}
                 style={styles.legenda}
                 inputAccessoryViewID={Platform.OS === 'ios' ? ACESSORIO_LEGENDA : undefined}
               />
-            </View>
-
-            <View style={styles.cartao}>
-              <View style={styles.linha}>
-                <Clock size={18} color={c.fgMuted} />
-                <Text style={styles.linhaRotulo}>{t('rooms.checkInTime')}</Text>
-                {/* Só exibido. Quem carimba a hora é o servidor — o cliente
-                    nunca manda tempo, e mostrar um campo editável aqui
-                    prometeria um controle que não existe. */}
-                <Text style={styles.linhaValor}>{agora}</Text>
-              </View>
-            </View>
+            ) : null}
 
             {error ? <Text style={styles.erro}>{error}</Text> : null}
-          </Pressable>
-        </ScrollView>
+
+            {photo ? (
+              <View style={styles.acaoLinha}>
+                <SemanaDoCheckIn marcaODia={marcaODia} />
+                <Press onPress={publicar} disabled={!podePublicar} style={[styles.publicar, !podePublicar && styles.publicarInativo]}>
+                  {submitting
+                    ? <ActivityIndicator color={c.fgOnAccent} />
+                    : <Text style={styles.publicarTexto}>{t(error ? 'rooms.tryAgain' : 'rooms.publish')}</Text>}
+                </Press>
+              </View>
+            ) : (
+              <View style={styles.escolhas}>
+                <Press onPress={tirarFoto} style={styles.escolhaPrimaria}>
+                  <Camera size={19} color={c.fgOnAccent} />
+                  <Text style={styles.escolhaPrimariaTexto}>{t('rooms.takePhoto')}</Text>
+                </Press>
+                <Press onPress={escolherFoto} style={styles.escolhaSecundaria}>
+                  <Images size={19} color="#FFFFFF" />
+                  <Text style={styles.escolhaSecundariaTexto}>{t('rooms.choosePhoto')}</Text>
+                </Press>
+              </View>
+            )}
+          </View>
+        </View>
       </KeyboardAvoidingView>
 
       {Platform.OS === 'ios' ? (
@@ -270,67 +252,150 @@ export default function RoomPhotoPostScreen() {
   );
 }
 
+/**
+ * O palco é escuro nos dois temas, e é a única tela do app assim junto do
+ * login.
+ *
+ * Não é preferência: é a régua de qualquer superfície onde uma imagem é o
+ * conteúdo. Fundo claro em volta de uma foto rouba o contraste dela e faz a
+ * borda da imagem competir com a moldura. Todo app de câmera do mundo é escuro
+ * pela mesma razão.
+ */
 const makeStyles = (c: Palette) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: c.bg },
+  tela: { flex: 1, backgroundColor: '#08080C' },
   fill: { flex: 1 },
-  header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.sm },
-  close: { minWidth: 64, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { ...text.bodyStrong, color: c.fg, flex: 1, textAlign: 'center' },
-  acao: { ...text.bodyStrong, color: c.accent },
-  acaoInativa: { color: c.fgSubtle },
-  rolagem: { padding: space.lg, gap: space.lg },
-
-  trio: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.sm },
-  // As colunas ficam estreitas de propósito: elas contextualizam a mídia, não
-  // competem com ela.
-  lado: { flex: 1, alignItems: 'center', gap: space.xs, paddingTop: space.lg },
-  ladoRotulo: { ...text.caption, color: c.fgSubtle, textAlign: 'center' },
-  ladoValor: { ...text.caption, color: c.fgMuted, textAlign: 'center' },
+  palco: { flex: 1, justifyContent: 'center' },
+  foto: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
 
   /**
-   * O lápis pendura 18pt abaixo do quadro, e sem esta folga o card da legenda
-   * — desenhado depois, portanto por cima — cobria metade dele. No aparelho o
-   * botão simplesmente não recebia o toque: parecia estar lá e não estava.
+   * O vão embaixo compensa o pé, que é absoluto.
+   *
+   * `justifyContent: 'center'` centraliza na altura **inteira** do palco, e o
+   * pé cobre os últimos ~200pt. Sem esta folga o conteúdo fica ótico-baixo: um
+   * buraco no topo e o coelho encostando nos botões.
    */
-  midia: { paddingBottom: 22 },
-  quadro: {
-    width: LARGURA_MIDIA,
-    borderRadius: radius.md,
-    backgroundColor: c.surface,
-    borderWidth: 1,
-    borderColor: c.border,
+  vazio: {
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: space.xl,
+    paddingBottom: 180,
+    gap: space.sm,
+  },
+  vazioTitulo: { ...text.title3, color: '#FFFFFF', textAlign: 'center' },
+  vazioTexto: {
+    ...text.body,
+    color: 'rgba(255,255,255,0.62)',
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+
+  scrimTopo: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
+  scrimBase: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 320 },
+
+  chrome: {
+    position: 'absolute',
+    top: 0,
+    left: space.sm,
+    right: space.sm,
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
+  fechar: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  etiquetaSala: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  etiquetaTexto: {
+    ...text.caption,
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: space.md,
+    paddingVertical: 5,
+    borderRadius: radius.full,
     overflow: 'hidden',
   },
-  foto: { width: '100%', height: '100%' },
-  semFoto: { ...text.caption, color: c.fgSubtle },
-  lapis: {
+
+  trocar: {
     position: 'absolute',
-    bottom: -18,
-    alignSelf: 'center',
-    width: 36,
-    height: 36,
+    top: 60,
+    right: space.lg,
+    gap: space.sm,
+  },
+  trocarBotao: {
+    width: 42,
+    height: 42,
     borderRadius: radius.full,
-    backgroundColor: c.bg,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: c.border,
+    borderColor: 'rgba(255,255,255,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  selo: { width: 28, height: 28, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
-  seloVale: { backgroundColor: c.accent },
-  seloNao: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+  pe: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    // Respiro maior embaixo: o botão encostava na borda da tela, que num
+    // aparelho com barra de gestos é onde o polegar arrasta o sistema.
+    paddingBottom: space.xl,
+    gap: space.md,
+  },
+  legenda: {
+    ...text.body,
+    color: '#FFFFFF',
+    maxHeight: 96,
+    textAlignVertical: 'top',
+  },
+  erro: { ...text.caption, color: '#FF8080' },
 
-  cartao: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, paddingHorizontal: space.lg },
-  legenda: { minHeight: 96, color: c.fg, ...text.body, textAlignVertical: 'top', paddingVertical: space.md },
-  linha: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.md },
-  linhaRotulo: { ...text.body, color: c.fg, flex: 1 },
-  linhaValor: { ...text.body, color: c.fgMuted },
+  acaoLinha: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md },
+  publicar: {
+    backgroundColor: c.accent,
+    borderRadius: radius.full,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.md,
+    minWidth: 132,
+    alignItems: 'center',
+  },
+  publicarInativo: { opacity: 0.45 },
+  publicarTexto: { ...text.bodyStrong, color: c.fgOnAccent },
 
-  erro: { ...text.caption, color: c.danger },
-  barraTeclado: { backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border, alignItems: 'flex-end', paddingHorizontal: space.lg, paddingVertical: space.sm },
+  escolhas: { gap: space.sm },
+  escolhaPrimaria: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    backgroundColor: c.accent,
+    borderRadius: radius.full,
+    paddingVertical: space.md,
+  },
+  escolhaPrimariaTexto: { ...text.bodyStrong, color: c.fgOnAccent },
+  escolhaSecundaria: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingVertical: space.md,
+  },
+  escolhaSecundariaTexto: { ...text.bodyStrong, color: '#FFFFFF' },
+
+  barraTeclado: {
+    backgroundColor: c.surface,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+    alignItems: 'flex-end',
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+  },
   concluir: { paddingHorizontal: space.md, paddingVertical: space.xs },
   concluirTexto: { ...text.bodyStrong, color: c.accent },
 });

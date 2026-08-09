@@ -143,7 +143,11 @@
     "deleteConfirm": "Delete",
     "cancel": "Cancel",
     "nameTooShort": "The name needs at least 2 letters.",
-    "editError": "Couldn't save. Try again."
+    "editError": "Couldn't save. Try again.",
+    "checkInEmptyTitle": "Show the room you showed up",
+    "checkInEmptyText": "Your desk, your notes, your screen. Whatever proves you sat down today.",
+    "checkInMarksToday": "This marks today in the challenge",
+    "checkInFeedOnly": "Goes to the feed. In this room, study time marks the day."
   },
   "members": "Members",
   "members_one": "{{count}} member",
@@ -209,5 +213,6 @@
     "comingSoon": "The plan is coming soon",
     "dismiss": "Not now",
     "joinIsFree": "Joining other people's rooms is always unlimited."
-  }
+  },
+  "close": "Close"
 }

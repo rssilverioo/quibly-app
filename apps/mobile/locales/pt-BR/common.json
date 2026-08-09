@@ -143,7 +143,11 @@
     "deleteConfirm": "Apagar",
     "cancel": "Cancelar",
     "nameTooShort": "O nome precisa ter pelo menos 2 letras.",
-    "editError": "Não deu para salvar. Tente de novo."
+    "editError": "Não deu para salvar. Tente de novo.",
+    "checkInEmptyTitle": "Mostre à sala que você apareceu",
+    "checkInEmptyText": "Sua mesa, seu caderno, sua tela. O que provar que você sentou hoje.",
+    "checkInMarksToday": "Isto marca o dia de hoje no desafio",
+    "checkInFeedOnly": "Entra no feed. Nesta sala, quem marca o dia é o tempo estudado."
   },
   "members": "Membros",
   "members_one": "{{count}} membro",
@@ -209,5 +213,6 @@
     "comingSoon": "O plano chega em breve",
     "dismiss": "Agora não",
     "joinIsFree": "Participar das salas dos outros é sempre ilimitado."
-  }
+  },
+  "close": "Fechar"
 }
