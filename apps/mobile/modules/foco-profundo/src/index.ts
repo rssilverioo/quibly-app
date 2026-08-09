@@ -30,7 +30,30 @@ interface FocoProfundoNativo {
   segundosRestantes(): number;
 }
 
+/**
+ * Se o **build** carrega o foco profundo.
+ *
+ * Três chaves ligam este recurso, e elas andam juntas — `lib/foco-contrato.test`
+ * recusa meia ligação:
+ *
+ * 1. esta constante;
+ * 2. `com.apple.developer.family-controls` no `ios.entitlements` do `app.json`;
+ * 3. os `expo-target.config.js` em `targets/foco-monitor` e `targets/foco-escudo`.
+ *
+ * Ligar só esta faz o interruptor aparecer e a permissão falhar — promete e não
+ * cumpre, que é pior que não ter o recurso.
+ *
+ * **E há uma quarta chave, do lado da Apple**, que custou cinco builds: no App
+ * ID existem duas linhas parecidas, `Family Controls (Development)` e
+ * `Family Controls (Distribution)`. A EAS marca a primeira ao sincronizar
+ * capabilities, e um perfil App Store precisa da **segunda**. Com a de
+ * desenvolvimento só, o Xcode recusa a assinatura dizendo que falta a
+ * capability — mesmo com a EAS relatando `Enabled: Family Controls`.
+ */
+const FOCO_NO_BUILD = true;
+
 function resolver(): FocoProfundoNativo | null {
+  if (!FOCO_NO_BUILD) return null;
   if (Platform.OS !== 'ios') return null;
   try {
     return requireNativeModule<FocoProfundoNativo>('FocoProfundo');

@@ -92,3 +92,43 @@ describe('cada extensão declara a classe que o Info.plist manda instanciar', ()
     });
   }
 });
+
+/**
+ * O foco profundo é ligado por **três chaves**, e elas têm que virar juntas.
+ *
+ * Desligado em 09/08 para destravar o TestFlight — os perfis de provisionamento
+ * saíam sem a capability do Family Controls e o resto do trabalho estava preso
+ * junto. O código ficou inteiro; o que saiu foi a participação no build.
+ *
+ * Meia ligação é o pior estado possível:
+ *
+ * - só a constante → o interruptor aparece, a permissão falha, o app promete e
+ *   não cumpre;
+ * - só o entitlement → assinatura pede uma capability que os perfis não têm, e
+ *   o build volta a falhar exatamente como falhou cinco vezes;
+ * - só os alvos → as extensões entram sem direito de mexer no escudo, e a
+ *   garantia (2) some em silêncio.
+ */
+describe('as três chaves do foco profundo estão no mesmo estado', () => {
+  const ligadaNoJs = /const FOCO_NO_BUILD = true;/.test(
+    ler('../modules/foco-profundo/src/index.ts'),
+  );
+  const noEntitlement = 'com.apple.developer.family-controls' in
+    (JSON.parse(ler('../app.json')).expo.ios.entitlements ?? {});
+  const alvosLigados = ['foco-monitor', 'foco-escudo'].map((alvo) => {
+    try {
+      ler(`../targets/${alvo}/expo-target.config.js`);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  it('ou as três ligadas, ou as três desligadas', () => {
+    expect([noEntitlement, ...alvosLigados]).toEqual([
+      ligadaNoJs,
+      ligadaNoJs,
+      ligadaNoJs,
+    ]);
+  });
+});
