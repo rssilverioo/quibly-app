@@ -186,4 +186,36 @@ export const conteudo = {
       codigo: 'Código da sala',
     },
   },
+
+  /**
+   * A página `/download` — o link da bio do Instagram.
+   *
+   * Um link só para todo mundo: quem abre no iPhone vai para a App Store, quem
+   * abre no Android vai para a Play, e quem abre no computador escolhe. O
+   * idioma sai do navegador, como no convite — ver `lib/idioma`.
+   */
+  download: {
+    en: {
+      titulo: 'Download Quibly',
+      descricao: 'Study rooms that count the days you show up.',
+      subtitulo: 'Pick your phone and start counting your days.',
+      appStore: 'Download on the App Store',
+      playStore: 'Get it on Google Play',
+      androidEmBreve: 'Android is on the way',
+      androidTexto:
+        "Quibly isn't on Google Play yet. It's coming — for now, the app is on iPhone.",
+      levando: 'Taking you to the App Store…',
+    },
+    pt: {
+      titulo: 'Baixar o Quibly',
+      descricao: 'Salas de estudo que contam os dias em que você aparece.',
+      subtitulo: 'Escolha o seu telefone e comece a contar os seus dias.',
+      appStore: 'Baixar na App Store',
+      playStore: 'Disponível no Google Play',
+      androidEmBreve: 'O Android está a caminho',
+      androidTexto:
+        'O Quibly ainda não está na Google Play. Está chegando — por enquanto, o app é no iPhone.',
+      levando: 'Levando você para a App Store…',
+    },
+  },
 } as const;
