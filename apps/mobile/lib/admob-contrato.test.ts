@@ -53,6 +53,25 @@ describe('AdMob — o identificador que vai para a loja', () => {
     expect(idDoPlist).toContain(NOSSO);
   });
 
+  it('os blocos de banner ou estão por preencher, ou são blocos de verdade', () => {
+    /*
+     O App ID e o bloco começam iguais e diferem num caractere: `~` contra `/`.
+     O App ID é o que está à mão na hora de preencher o bloco, então colá-lo no
+     lugar errado é o erro fácil — e ele passaria por qualquer conferência de
+     prefixo, viraria pedido inválido e sumiria com a faixa em silêncio.
+
+     Marcador por preencher é aceito de propósito: cai no anúncio de teste, que
+     é o padrão certo para errar.
+    */
+    const eas = ler('eas.json');
+    for (const [, valor] of eas.matchAll(/"EXPO_PUBLIC_ADMOB_BANNER_\w+":\s*"([^"]*)"/g)) {
+      if (!valor.startsWith('ca-app-pub-')) continue;
+      expect(valor, `${valor} parece App ID, não bloco de anúncio`).toContain('/');
+      expect(valor).not.toContain('~');
+      expect(valor).not.toContain(TESTE);
+    }
+  });
+
   it('o publisher é o mesmo do app-ads.txt, senão o inventário não se verifica', () => {
     const appAds = readFileSync(
       join(raiz, '../../apps/web/public/app-ads.txt'),

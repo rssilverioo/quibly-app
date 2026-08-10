@@ -52,9 +52,22 @@ function unidadeDoAmbiente(): string | null {
       ? process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS
       : process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID;
   const valor = daPlataforma?.trim();
-  // `ca-app-pub-…` é o formato real. Qualquer outra coisa — placeholder
-  // esquecido, string vazia — não vale, e cair no teste é melhor que quebrar.
-  return valor && valor.startsWith('ca-app-pub-') ? valor : null;
+  if (!valor || !valor.startsWith('ca-app-pub-')) return null;
+  /*
+   Bloco de anúncio tem **barra**; app tem **til**.
+
+     app    ca-app-pub-7106022757613059~7466871837
+     bloco  ca-app-pub-7106022757613059/1234567890
+
+   Os dois começam igual, e o do app é o que está à mão na hora de preencher
+   isto — é o erro fácil de cometer e impossível de ver relendo. Colado aqui,
+   ele passaria no teste do prefixo, viraria pedido de anúncio inválido e a
+   faixa sumiria calada, que é como o produto perde receita sem ninguém notar.
+
+   Cair no anúncio de teste é ruim; servir um identificador inválido em
+   produção é pior, porque parece que está funcionando.
+  */
+  return valor.includes('/') ? valor : null;
 }
 
 export default function FaixaDeAnuncio() {
