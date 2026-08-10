@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -27,7 +28,10 @@ import { join } from 'node:path';
 export class HealthController {
   private readonly subiuEm = new Date();
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * Qual commit está rodando, na ordem em que as fontes merecem confiança.
@@ -66,8 +70,25 @@ export class HealthController {
     }
   }
 
+  /**
+   * `ok` | `esquema-atrasado` | `inalcancavel`.
+   *
+   * Três respostas porque são três consertos diferentes: nada, rodar a
+   * migração, e olhar a `DATABASE_URL`. Um booleano juntaria os dois últimos.
+   */
+  private async sondarBanco(): Promise<string> {
+    try {
+      await this.prisma.profile.findFirst({ select: { bannedAt: true } });
+      return 'ok';
+    } catch (erro) {
+      const codigo = (erro as { code?: string })?.code;
+      // `P2022` é "a coluna não existe" — banco de pé, esquema atrasado.
+      return codigo === 'P2022' ? 'esquema-atrasado' : 'inalcancavel';
+    }
+  }
+
   @Get()
-  health() {
+  async health() {
     return {
       status: 'ok',
       // `RAILWAY_GIT_COMMIT_SHA` é injetada pela plataforma. O fallback existe
@@ -101,6 +122,17 @@ export class HealthController {
        * `session_actions_configured`. Num serviço recém-criado, é a primeira
        * coisa que falta e a última em que se pensa.
        */
+      /**
+       * Se o banco responde **e** tem o esquema que este código espera.
+       *
+       * `SELECT 1` prova só que há conexão. O que derruba um serviço recém-criado
+       * é outra coisa: o banco de pé com o esquema atrasado, e aí toda rota
+       * autenticada falha porque o guard lê uma coluna que não existe.
+       *
+       * Por isso a sonda lê `banned_at` — a coluna mais nova, criada em 10/08.
+       * Se ela responde, a migração chegou.
+       */
+      database: await this.sondarBanco(),
       firebaseConfigured: Boolean(
         this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON') ||
           (this.configService.get<string>('FIREBASE_PROJECT_ID') &&

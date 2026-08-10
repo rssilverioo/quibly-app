@@ -1,14 +1,24 @@
 import { readFileSync } from 'node:fs';
 import { HealthController } from './health.controller';
 
-jest.mock('node:fs', () => ({ readFileSync: jest.fn() }));
+//  entra porque importar o `PrismaService` carrega o
+// `@prisma/client`, que o usa ao localizar o engine. Sem ele o mock derruba a
+// suíte inteira num erro que não tem nada a ver com o que se testa aqui.
+jest.mock('node:fs', () => ({
+  ...jest.requireActual('node:fs'),
+  readFileSync: jest.fn(),
+}));
 const lerArquivo = readFileSync as unknown as jest.Mock;
 
 function makeController(vars: Record<string, string> = {}) {
-  return new HealthController({
-    get: (chave: string) => vars[chave],
-  } as any);
+  return new HealthController(
+    { get: (chave: string) => vars[chave] } as any,
+    prismaFalso() as any,
+  );
 }
+
+/** Banco que responde — a sonda de esquema não é o assunto destes testes. */
+const prismaFalso = () => ({ profile: { findFirst: jest.fn().mockResolvedValue(null) } });
 
 describe('HealthController', () => {
   beforeEach(() => {
@@ -18,21 +28,21 @@ describe('HealthController', () => {
     });
   });
 
-  it('devolve o SHA que a plataforma injetou', () => {
-    const r = makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health();
+  it('devolve o SHA que a plataforma injetou', async () => {
+    const r = await makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health();
 
     expect(r.status).toBe('ok');
     expect(r.commit).toBe('abc123');
   });
 
-  it('cai em GIT_COMMIT_SHA fora do Railway', () => {
-    expect(makeController({ GIT_COMMIT_SHA: 'def456' }).health().commit).toBe('def456');
+  it('cai em GIT_COMMIT_SHA fora do Railway', async () => {
+    expect((await makeController({ GIT_COMMIT_SHA: 'def456' }).health()).commit).toBe('def456');
   });
 
-  it('diz "desconhecido" em vez de undefined quando não há SHA', () => {
+  it('diz "desconhecido" em vez de undefined quando não há SHA', async () => {
     // Numa resposta que alguém lê durante um incidente, `undefined` é um
     // susto; "desconhecido" é uma informação.
-    expect(makeController().health().commit).toBe('desconhecido');
+    expect((await makeController().health()).commit).toBe('desconhecido');
   });
 
   /**
@@ -43,32 +53,32 @@ describe('HealthController', () => {
    * deploy — mentindo com confiança, o que é pior que "desconhecido" numa rota
    * que existe para ser lida durante um incidente.
    */
-  it('usa o SHA carimbado no build quando não há variável', () => {
+  it('usa o SHA carimbado no build quando não há variável', async () => {
     lerArquivo.mockReturnValue('86068d6\n');
 
-    expect(makeController().health().commit).toBe('86068d6');
+    expect((await makeController().health()).commit).toBe('86068d6');
   });
 
-  it('a variável da plataforma ganha do carimbo', () => {
+  it('a variável da plataforma ganha do carimbo', async () => {
     // Se as duas existem, quem injetou é a plataforma, e ela sabe mais.
     lerArquivo.mockReturnValue('carimbo');
 
-    expect(makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health().commit).toBe('abc123');
+    expect((await makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health()).commit).toBe('abc123');
   });
 
-  it('carimbo vazio não vira string vazia na resposta', () => {
+  it('carimbo vazio não vira string vazia na resposta', async () => {
     // Build sem git escreve arquivo vazio; a resposta tem que continuar legível.
     lerArquivo.mockReturnValue('   ');
 
-    expect(makeController().health().commit).toBe('desconhecido');
+    expect((await makeController().health()).commit).toBe('desconhecido');
   });
 
   /**
    * A rota é pública. Se um dia alguém acrescentar nome de bucket, host de
    * banco ou lista de variáveis aqui, isto quebra — que é o objetivo.
    */
-  it('não expõe nada além de estado, versão, tempo de vida e prontidão', () => {
-    const r = makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health();
+  it('não expõe nada além de estado, versão, tempo de vida e prontidão', async () => {
+    const r = await makeController({ RAILWAY_GIT_COMMIT_SHA: 'abc123' }).health();
 
     // A lista é fechada de propósito: esta rota é pública, e a única forma de
     // ela continuar servindo durante um incidente é ninguém poder acrescentar
@@ -83,6 +93,7 @@ describe('HealthController', () => {
       [
         'commit',
         'corsOrigins',
+        'database',
         'firebaseConfigured',
         'sessionActionsConfigured',
         'startedAt',
@@ -101,21 +112,21 @@ describe('HealthController', () => {
    * quatro rodadas, e é o que este booleano separa num `curl`.
    */
   describe('sessionActionsConfigured', () => {
-    it('é booleano, e nunca o valor do segredo', () => {
-      const r = makeController({ SESSION_ACTION_SECRET: 'segredo-de-verdade' }).health();
+    it('é booleano, e nunca o valor do segredo', async () => {
+      const r = await makeController({ SESSION_ACTION_SECRET: 'segredo-de-verdade' }).health();
 
       expect(r.sessionActionsConfigured).toBe(true);
       expect(JSON.stringify(r)).not.toContain('segredo-de-verdade');
     });
 
-    it('é falso quando a variável falta', () => {
-      expect(makeController({}).health().sessionActionsConfigured).toBe(false);
+    it('é falso quando a variável falta', async () => {
+      expect((await makeController({}).health()).sessionActionsConfigured).toBe(false);
     });
 
-    it('é falso quando a variável existe vazia — que é o caso que engana', () => {
+    it('é falso quando a variável existe vazia — que é o caso que engana', async () => {
       // Uma variável setada como string vazia no painel parece configurada na
       // lista e não serve para assinar nada.
-      expect(makeController({ SESSION_ACTION_SECRET: '   ' }).health().sessionActionsConfigured)
+      expect((await makeController({ SESSION_ACTION_SECRET: '   ' }).health()).sessionActionsConfigured)
         .toBe(false);
     });
   });

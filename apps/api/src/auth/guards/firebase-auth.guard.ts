@@ -122,9 +122,19 @@ export class FirebaseAuthGuard implements CanActivate {
       this.logger.error(
         `Falha ao autenticar que não é do token: ${(error as Error)?.message ?? error}`,
       );
-      throw new ServiceUnavailableException(
-        'Authentication is temporarily unavailable',
-      );
+      /*
+       O código vai na resposta, a mensagem não.
+
+       Código de erro do Prisma (`P2022` = coluna ausente, `P1001` = banco
+       inalcançável) é vocabulário fechado e público, e é exatamente o que
+       distingue "falta migração" de "banco fora do ar" sem precisar de acesso
+       ao log da plataforma. A **mensagem** fica de fora: ela costuma trazer
+       nome de tabela, de coluna e às vezes host.
+      */
+      throw new ServiceUnavailableException({
+        message: 'Authentication is temporarily unavailable',
+        code: (error as { code?: string })?.code ?? 'desconhecido',
+      });
     }
   }
 }
