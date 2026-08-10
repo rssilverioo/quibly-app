@@ -160,8 +160,25 @@ export class RoomsService {
     if (!membership) throw new ForbiddenException('You are not a room member');
 
     const caption = rawCaption?.trim() || null;
-    if (!photo && !caption) {
-      throw new BadRequestException('A photo or caption is required');
+    /*
+     A foto é obrigatória — **ela é o check-in**.
+
+     Isto dizia "foto ou legenda", e o app nunca deixou publicar sem foto: duas
+     regras para a mesma pergunta, com a mais restritiva vencendo em silêncio.
+     Quem tentasse pela API conseguia um post de texto que a tela não sabia
+     produzir. Encontrado pelo dono do produto em 10/08, e resolvido para o lado
+     da foto por decisão dele.
+
+     O motivo não é estético. `challenges.service.ts` conta **dia com foto**
+     como presença na sala. Aceitar post de texto faria a presença ser
+     reivindicável digitando uma linha — e aí o número que a sala mostra deixa
+     de significar "apareceu e estudou". A foto é a prova barata que sustenta o
+     resto do produto.
+
+     A legenda continua opcional: ela acompanha a foto, não a substitui.
+    */
+    if (!photo) {
+      throw new BadRequestException('A photo is required');
     }
     if (photo && !photo.mimetype.startsWith('image/')) {
       throw new BadRequestException('Photo must be an image');

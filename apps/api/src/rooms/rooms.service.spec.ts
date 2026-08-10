@@ -167,6 +167,61 @@ describe('RoomsService.listForUser', () => {
     });
     expect(result).toEqual(expect.objectContaining({ kind: 'standalone' }));
   });
+
+  it('recusa post sem foto — a foto é o check-in', async () => {
+    /*
+     A regra dizia "foto ou legenda", e o app nunca deixou publicar sem foto:
+     duas réguas para a mesma pergunta, com a mais restritiva vencendo calada.
+     Pela API dava para criar um post de texto que a tela não sabia produzir.
+
+     O motivo de fechar para o lado da foto não é estético: `challenges.service`
+     conta **dia com foto** como presença na sala. Post de texto tornaria a
+     presença reivindicável digitando uma linha.
+    */
+    const prisma = {
+      leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'm1' }) },
+      feedPost: { create: jest.fn() },
+    };
+    const service = new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      { uploadPublic: jest.fn() } as any,
+      {} as any,
+    );
+
+    await expect(
+      service.createPost('room-1', 'user-1', 'só texto', undefined),
+    ).rejects.toThrow('A photo is required');
+    expect(prisma.feedPost.create).not.toHaveBeenCalled();
+  });
+
+  it('a legenda continua opcional — ela acompanha a foto, não a substitui', async () => {
+    const prisma = {
+      leagueMember: { findUnique: jest.fn().mockResolvedValue({ id: 'm1' }) },
+      feedPost: {
+        create: jest.fn().mockResolvedValue({ id: 'p1' }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'p1' }),
+      },
+      league: { findUnique: jest.fn().mockResolvedValue({ id: 'room-1' }) },
+    };
+    const service = new RoomsService(
+      prisma as any,
+      {} as any,
+      {} as any,
+      { uploadPublic: jest.fn().mockResolvedValue('https://cdn/x.jpg') } as any,
+      {} as any,
+    );
+
+    await service.createPost('room-1', 'user-1', undefined, {
+      buffer: Buffer.from('image'),
+      mimetype: 'image/jpeg',
+    } as Express.Multer.File);
+
+    expect(prisma.feedPost.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ caption: null }),
+    });
+  });
 });
 
 /**

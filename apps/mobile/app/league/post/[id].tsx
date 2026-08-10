@@ -167,6 +167,18 @@ export default function RoomPhotoPostScreen() {
     }
   };
 
+  /**
+   * A foto é o check-in, e por isso ela manda no botão.
+   *
+   * A legenda é opcional e acompanha a foto — não a substitui. O servidor
+   * concorda desde 10/08: até então ele aceitava "foto **ou** legenda", e a
+   * tela nunca deixou publicar sem foto. Duas réguas para a mesma pergunta,
+   * com a mais restritiva vencendo em silêncio.
+   *
+   * O motivo de a foto mandar não é estético: a contagem do desafio conta dia
+   * com foto como presença na sala. Post de texto tornaria a presença
+   * reivindicável digitando uma linha.
+   */
   const podePublicar = Boolean(photo) && !submitting;
   const agora = new Date().toLocaleString(i18n.language, {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -179,12 +191,23 @@ export default function RoomPhotoPostScreen() {
         <Text style={styles.title}>{t('rooms.newCheckIn')}</Text>
         {/* Ação em texto, e não um bloco fixo no rodapé: aqui ela nunca é
             coberta pelo teclado da legenda. */}
+        {/*
+          Sem foto, o rótulo **diz** o que falta em vez de só apagar.
+
+          Um botão desativado e mudo é indistinguível de um botão quebrado:
+          quem só queria escrever ficava olhando o "Publicar" apagado sem
+          nenhuma pista de que a foto era o que faltava.
+        */}
         <Press onPress={publish} disabled={!podePublicar} style={styles.close}>
           {submitting
             ? <ActivityIndicator color={c.accent} />
             : (
               <Text style={[styles.acao, !podePublicar && styles.acaoInativa]}>
-                {t(error ? 'rooms.tryAgain' : 'rooms.publish')}
+                {error
+                  ? t('rooms.tryAgain')
+                  : photo
+                    ? t('rooms.publish')
+                    : t('rooms.photoRequired')}
               </Text>
             )}
         </Press>

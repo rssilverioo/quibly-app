@@ -155,7 +155,8 @@
     "roomSizeTooSmall": "A sala já tem {{count}} pessoas. Escolha um tamanho maior.",
     "leaderDays": "dias · líder",
     "yourDays": "dias · você",
-    "postPhotoWhere": "Em qual sala?"
+    "postPhotoWhere": "Em qual sala?",
+    "photoRequired": "Adicione uma foto"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

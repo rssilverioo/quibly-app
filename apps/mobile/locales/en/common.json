@@ -155,7 +155,8 @@
     "roomSizeTooSmall": "The room already has {{count}} members. Pick a bigger size.",
     "leaderDays": "days · leader",
     "yourDays": "days · you",
-    "postPhotoWhere": "To which room?"
+    "postPhotoWhere": "To which room?",
+    "photoRequired": "Add a photo"
   },
   "members": "Members",
   "members_one": "{{count}} member",
