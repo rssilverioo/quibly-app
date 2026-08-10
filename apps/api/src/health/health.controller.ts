@@ -89,8 +89,7 @@ export class HealthController {
        * Domínio permitido não é segredo. É o oposto: é o que a API anuncia a
        * qualquer navegador que pergunte, no cabeçalho da resposta.
        */
-      corsOrigins: this.configService
-        .get<string>('CORS_ORIGINS', '')
+      corsOrigins: (this.configService.get<string>('CORS_ORIGINS') ?? '')
         .split(',')
         .map((o) => o.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
         .filter(Boolean),

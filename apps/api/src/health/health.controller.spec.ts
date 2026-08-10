@@ -73,8 +73,14 @@ describe('HealthController', () => {
     // A lista é fechada de propósito: esta rota é pública, e a única forma de
     // ela continuar servindo durante um incidente é ninguém poder acrescentar
     // nome de bucket, host de banco ou lista de variáveis sem passar por aqui.
+    //
+    // `corsOrigins` entrou em 10/08 e passou por este teste conscientemente:
+    // domínio permitido não é segredo — é o contrário, é o que a API já anuncia
+    // no cabeçalho a qualquer navegador que pergunte. E foi acrescentado porque
+    // de fora não havia como distinguir "CORS_ORIGINS não configurada" de
+    // "configurada com um valor que não casa": as duas recusam tudo, caladas.
     expect(Object.keys(r).sort()).toEqual(
-      ['commit', 'sessionActionsConfigured', 'startedAt', 'status', 'uptimeSeconds'].sort(),
+      ['commit', 'corsOrigins', 'sessionActionsConfigured', 'startedAt', 'status', 'uptimeSeconds'].sort(),
     );
   });
 
