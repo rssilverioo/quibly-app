@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { converterChaves } from './camel';
 
 /**
  * A API.
@@ -35,7 +36,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(error.message || `Request failed: ${res.status}`);
   }
 
-  return res.json();
+  /*
+   A resposta volta para `camelCase` aqui, na borda.
+
+   A API converte tudo para `snake_case` na saída (`SnakeCaseInterceptor`), e
+   este painel foi escrito lendo `camelCase` — 69 campos em 9 páginas, nenhum
+   deles existente na resposta. Campo simples virava `undefined` e a tela
+   mostrava vazio; array virava `undefined` e o `.map()` derrubava a página, que
+   é o "erro na rota" relatado em 10/08.
+
+   Converter aqui é o que torna a próxima página certa por construção: quem
+   escreve vai continuar escrevendo `camelCase`, porque é a convenção do
+   TypeScript e do resto deste projeto. Renomear os 69 campos consertaria só o
+   que existe hoje.
+
+   204 e corpo vazio devolvem `null` em vez de estourar no `json()`.
+  */
+  if (res.status === 204) return null as T;
+  const texto = await res.text();
+  if (!texto) return null as T;
+  return converterChaves<T>(JSON.parse(texto));
 }
 
 export const api = {

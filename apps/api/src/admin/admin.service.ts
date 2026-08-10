@@ -209,6 +209,31 @@ export class AdminService {
     return perfil;
   }
 
+  /**
+   * Troca o plano e **só** o plano.
+   *
+   * `subscriptionStatus`, `subscriptionPlatform` e `currentPeriodEnd` ficam
+   * intocados de propósito: eles são o registro de uma cobrança, e esta rota não
+   * cobra ninguém. Preenchê-los aqui faria a tela de receita contar cortesia
+   * como venda, e o erro só apareceria no fechamento do mês.
+   */
+  async setPlan(userId: string, plan: 'FREE' | 'PRO') {
+    const existe = await this.prisma.profile.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!existe) throw new NotFoundException('User not found');
+
+    const perfil = await this.prisma.profile.update({
+      where: { id: userId },
+      data: { plan },
+      select: { id: true, username: true, handle: true, plan: true },
+    });
+
+    this.logger.log(`Plano ${plan} aplicado à mão: ${perfil.handle} (${userId})`);
+    return perfil;
+  }
+
   // ─── Revenue ───
 
   async getRevenue() {

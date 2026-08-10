@@ -72,6 +72,7 @@ export default function AdminUserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingBadge, setSavingBadge] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
 
   /**
    * Concede ou remove o selo.
@@ -84,6 +85,29 @@ export default function AdminUserDetailPage() {
    * afirmação sobre uma pessoa real; mostrar otimista e depois voltar atrás
    * faria o painel mentir sobre quem foi verificado.
    */
+  /**
+   * O plano, à mão.
+   *
+   * Cortesia, teste e suporte — **não** assinatura. A rota mexe em `plan` e nada
+   * mais; os campos de cobrança ficam como estão, e é o que permite separar
+   * depois quem pagou de quem recebeu. Se isto preenchesse `subscriptionStatus`,
+   * a tela de receita passaria a contar cortesia como venda.
+   *
+   * Como no selo, o estado local só muda depois da resposta.
+   */
+  async function setPlano(next: 'FREE' | 'PRO') {
+    if (!user || savingPlan || user.plan === next) return;
+    setSavingPlan(true);
+    try {
+      await api.patch(`/admin/users/${userId}/plan`, { plan: next });
+      setUser({ ...user, plan: next });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update plan');
+    } finally {
+      setSavingPlan(false);
+    }
+  }
+
   async function setBadge(next: 'BLUE' | 'GOLD' | null) {
     if (!user || savingBadge) return;
     const value = user.verification === next ? null : next;
@@ -180,6 +204,29 @@ export default function AdminUserDetailPage() {
             pessoa" em vez de "pagou", que foi o que aconteceu com o X.
           */}
           <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-xs font-medium text-quibly-text-muted mb-2">
+              Plan
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <BadgeToggle
+                active={user.plan === 'PRO'}
+                disabled={savingPlan}
+                onClick={() => setPlano('PRO')}
+                color="#E8B923"
+                label="Pro"
+                hint="Grant manually — not a purchase"
+              />
+              {user.plan === 'PRO' && (
+                <button
+                  onClick={() => setPlano('FREE')}
+                  disabled={savingPlan}
+                  className="text-xs text-quibly-text-muted hover:text-quibly-text underline disabled:opacity-50"
+                >
+                  Back to free
+                </button>
+              )}
+            </div>
+
             <p className="text-xs font-medium text-quibly-text-muted mb-2">
               Verification
             </p>

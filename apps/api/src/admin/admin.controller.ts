@@ -19,6 +19,7 @@ import { AdminService } from './admin.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { ENTITLEMENT_KEYS, EntitlementKey } from '../entitlements/entitlements.constants';
+import { SetPlanDto } from './dto/set-plan.dto';
 import { SetVerifiedDto } from './dto/set-verified.dto';
 
 @Controller('admin')
@@ -60,6 +61,17 @@ export class AdminController {
   @Patch('users/:id/verification')
   setVerified(@Param('id') id: string, @Body() dto: SetVerifiedDto) {
     return this.adminService.setVerified(id, dto.verification ?? null);
+  }
+
+  /**
+   * O plano, à mão. Cortesia, teste e suporte — **não** assinatura.
+   *
+   * Ver `SetPlanDto`: os campos de cobrança não são tocados, e é o que permite
+   * separar depois quem pagou de quem recebeu.
+   */
+  @Patch('users/:id/plan')
+  setPlan(@Param('id') id: string, @Body() dto: SetPlanDto) {
+    return this.adminService.setPlan(id, dto.plan);
   }
 
   @Get('revenue')
