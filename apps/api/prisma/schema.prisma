@@ -255,6 +255,22 @@ model StudySession {
   /// applied. `totalDurationMinutes` is what got credited; this is what was
   /// measured. When they disagree, the cap clipped the session.
   measuredSeconds Int?      @map("measured_seconds")
+  /// Identidade que o app dá à sessão **antes** de o servidor conhecê-la.
+  ///
+  /// Existe por causa da sessão que nasce em modo avião: ela roda no aparelho
+  /// e só é registrada quando a rede volta. Se essa chamada de registro se
+  /// perder no caminho e o app repetir, sem esta chave o resultado seriam duas
+  /// sessões para o mesmo estudo. Único por usuário, então repetir é no-op.
+  ///
+  /// NULL para toda sessão nascida com rede, que é a maioria — o servidor
+  /// continua sendo quem batiza.
+  clientSessionId String?  @map("client_session_id") @db.Uuid
+  /// Como a sessão chegou: NULL (o normal, criada online) ou 'offline_start'.
+  /// Quem nasceu offline teve `startedAt` **declarado pelo aparelho** e depois
+  /// limitado pelo servidor — ver `inicioAceitavel`. Guardado para a trilha:
+  /// sem isto não há como separar, depois, o tempo que o servidor testemunhou
+  /// do tempo que ele aceitou sob palavra.
+  origin          String?  @map("origin")
 
   user         Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject      Subject            @relation(fields: [subjectId], references: [id], onDelete: Restrict)
@@ -268,6 +284,10 @@ model StudySession {
 
   @@index([userId])
   @@index([userId, startedAt(sort: Desc)])
+  /// Idempotência do registro tardio. Por usuário, não global: o id vem do
+  /// aparelho, e dois aparelhos podem colidir sem que isso seja problema de
+  /// ninguém.
+  @@unique([userId, clientSessionId])
   @@index([leagueId])
   @@index([status])
   /// The sweeper's query: every live session whose heartbeat went stale.

@@ -6,6 +6,8 @@ import {
   pausedMillisWithin,
   sweepCreditInstant,
   silencioToleradoAte,
+  inicioAceitavel,
+  provaCobreOSilencio,
 } from './session-timing';
 
 const T0 = new Date('2026-07-29T10:00:00.000Z');
@@ -217,5 +219,88 @@ describe('silencioToleradoAte — o modo avião', () => {
     // desconectado não tem como mexer nele.
     const longo = { ...pomodoro, workDuration: 50, breakDuration: 10 };
     expect(silencioToleradoAte(longo, minutos(5))).toEqual(minutos(245));
+  });
+});
+
+describe('inicioAceitavel — a sessão que nasceu em modo avião', () => {
+  const AGORA = new Date('2026-08-10T12:00:00.000Z');
+  const atras = (min: number) => new Date(AGORA.getTime() - min * 60_000);
+  const pomodoro = { timerMode: 'pomodoro', workDuration: 25, breakDuration: 5 };
+
+  it('sem dica, o servidor carimba — o caminho normal não muda', () => {
+    expect(inicioAceitavel(null, AGORA, pomodoro)).toEqual(AGORA);
+  });
+
+  it('aceita um início dentro do que o plano justifica', () => {
+    expect(inicioAceitavel(atras(40), AGORA, pomodoro)).toEqual(atras(40));
+  });
+
+  it('corta o que passa do plano — o pior caso é uma sessão, não um dia', () => {
+    // 4x(25+5) = 120, mais 5 de folga. Três horas viram 125 minutos.
+    expect(inicioAceitavel(atras(180), AGORA, pomodoro)).toEqual(atras(125));
+  });
+
+  it('blocos maiores justificam mais, e é correto', () => {
+    const longo = { timerMode: 'pomodoro', workDuration: 50, breakDuration: 10 };
+    expect(inicioAceitavel(atras(300), AGORA, longo)).toEqual(atras(245));
+  });
+
+  it('nunca aceita um início no futuro', () => {
+    // Relógio adiantado no aparelho faria a sessão nascer contando para trás.
+    const futuro = new Date(AGORA.getTime() + 60 * 60_000);
+    expect(inicioAceitavel(futuro, AGORA, pomodoro)).toEqual(AGORA);
+  });
+
+  it('o cronômetro livre quase não retroage — ele não tem plano', () => {
+    const livre = { timerMode: 'stopwatch', workDuration: 25, breakDuration: 5 };
+    expect(inicioAceitavel(atras(60), AGORA, livre)).toEqual(atras(5));
+  });
+});
+
+describe('provaCobreOSilencio', () => {
+  const DE = new Date('2026-08-10T12:00:00.000Z');
+  const ATE = new Date('2026-08-10T12:10:00.000Z');
+  const em = (seg: number) => DE.getTime() + seg * 1000;
+
+  it('batidas regulares cobrem o intervalo', () => {
+    const batidas = Array.from({ length: 20 }, (_, i) => em((i + 1) * 30));
+    expect(provaCobreOSilencio(batidas, DE, ATE)).toBe(true);
+  });
+
+  it('duas pontas e nada no meio não provam nada', () => {
+    /*
+     É a diferença entre quem estudou e quem fechou o app e voltou depois: os
+     dois conseguem estar vivos no começo e no fim.
+    */
+    expect(provaCobreOSilencio([em(30), em(570)], DE, ATE)).toBe(false);
+  });
+
+  it('uma batida perdida é normal e não invalida', () => {
+    // O app dorme, o iOS suspende. A tolerância é o dobro do intervalo.
+    const batidas = Array.from({ length: 20 }, (_, i) => em((i + 1) * 30)).filter(
+      (_, i) => i !== 5,
+    );
+    expect(provaCobreOSilencio(batidas, DE, ATE)).toBe(true);
+  });
+
+  it('o buraco no fim também conta', () => {
+    // Parou de bater aos 5 minutos e reapareceu aos 10: os últimos 5 não têm prova.
+    const batidas = Array.from({ length: 10 }, (_, i) => em((i + 1) * 30));
+    expect(provaCobreOSilencio(batidas, DE, ATE)).toBe(false);
+  });
+
+  it('batidas fora do intervalo são ignoradas, não somam', () => {
+    // Um registro antigo não pode cobrir um silêncio novo.
+    const antigas = [em(-600), em(-300)];
+    expect(provaCobreOSilencio(antigas, DE, ATE)).toBe(false);
+  });
+
+  it('intervalo vazio é coberto por definição', () => {
+    expect(provaCobreOSilencio([], DE, DE)).toBe(true);
+  });
+
+  it('desordenadas são ordenadas antes de conferir', () => {
+    const batidas = Array.from({ length: 20 }, (_, i) => em((i + 1) * 30)).reverse();
+    expect(provaCobreOSilencio(batidas, DE, ATE)).toBe(true);
   });
 });

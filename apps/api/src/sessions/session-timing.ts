@@ -284,3 +284,106 @@ export function silencioToleradoAte(
 
   return fimDoPlano > janelaCurta ? fimDoPlano : janelaCurta;
 }
+
+/**
+ * Quanto para trás o servidor aceita que uma sessão tenha começado.
+ *
+ * ## O que isto abre, e por quê
+ *
+ * `StartSessionDto` diz, em comentário, que não existe timestamp de início no
+ * pedido: "o servidor carimba `startedAt` ele mesmo". Essa invariante é o que
+ * impede alguém de reivindicar tempo que não estudou, e ela está sendo aberta
+ * **de propósito**, com o dono do produto ciente, para o caso do modo avião:
+ * quem liga o avião antes de sentar não conseguia nem começar.
+ *
+ * ## O limite é o plano, e o plano é declarado antes
+ *
+ * A sessão nascida offline chega com um início declarado pelo aparelho. Ele é
+ * **cortado** ao que o plano dela justifica: um pomodoro de 4x(25+5) pode
+ * afirmar no máximo 125 minutos para trás; um de 4x(50+10), 245.
+ *
+ * Assim o pior caso deixa de ser "reivindico as três horas em que fui almoçar"
+ * e passa a ser "reivindico uma sessão planejada". Somado ao teto diário, a
+ * fraude possível é de uma sessão, não de um dia.
+ *
+ * ## Nunca para o futuro
+ *
+ * Um relógio adiantado no aparelho mandaria um início à frente do servidor, e
+ * a sessão nasceria com duração negativa — ou, pior, contando para trás. `now`
+ * é o piso superior, sempre.
+ *
+ * ## Sem dica, agora
+ *
+ * O caminho normal (sessão criada com rede) não manda nada, e continua sendo o
+ * servidor quem carimba. Esta função só existe para o outro caminho.
+ */
+export function inicioAceitavel(
+  dica: Date | null,
+  now: Date,
+  sessao: Pick<PlanoDaSessao, 'timerMode' | 'workDuration' | 'breakDuration'>,
+): Date {
+  if (!dica) return now;
+  if (dica >= now) return now;
+
+  const planoSegundos =
+    sessao.timerMode === 'pomodoro'
+      ? CICLOS_PLANEJADOS * (sessao.workDuration + sessao.breakDuration) * 60 +
+        FOLGA_SOBRE_O_PLANO_SEGUNDOS
+      : /*
+         Cronômetro livre não tem plano, então não tem justificativa própria
+         para retroagir. Fica com a janela curta — o suficiente para cobrir o
+         tempo entre começar e a rede voltar num caso normal, e pouco demais
+         para valer a pena forjar.
+        */
+        HEARTBEAT_GRACE_SECONDS;
+
+  const maisAntigoAceitavel = new Date(now.getTime() - planoSegundos * 1000);
+  return dica > maisAntigoAceitavel ? dica : maisAntigoAceitavel;
+}
+
+/**
+ * A prova de continuidade cobre o intervalo em que o servidor não ouviu nada?
+ *
+ * O app grava um instante por batida mesmo sem rede (`lib/sessao-em-cache.ts`)
+ * e manda o registro na reconexão. Aqui se decide se aquele silêncio conta como
+ * estudo ou é descartado.
+ *
+ * ## O que se exige
+ *
+ * Que as batidas **cubram** o intervalo sem buraco maior que a tolerância. Uma
+ * lista com duas pontas e nada no meio prova que o app estava vivo em dois
+ * instantes, não que esteve vivo o tempo todo — e é exatamente essa a diferença
+ * entre quem estudou e quem fechou o app e voltou depois.
+ *
+ * ## O que não se exige
+ *
+ * Que os instantes sejam verdadeiros. Eles vêm do relógio do aparelho, que a
+ * pessoa mexe nos Ajustes. Não importa: o intervalo `[de, ate]` é medido pelo
+ * **servidor**, e a prova só pode preenchê-lo, nunca esticá-lo. O teto do que
+ * se pode afirmar é o tempo que de fato passou.
+ *
+ * A tolerância é o dobro do intervalo de batida: uma batida perdida é normal
+ * (o app dorme, o iOS suspende), duas seguidas já é ausência.
+ */
+export function provaCobreOSilencio(
+  batidas: readonly number[],
+  de: Date,
+  ate: Date,
+  toleranciaSegundos = HEARTBEAT_INTERVAL_SECONDS * 2,
+): boolean {
+  const inicio = de.getTime();
+  const fim = ate.getTime();
+  if (fim <= inicio) return true;
+
+  const toleranciaMs = toleranciaSegundos * 1000;
+  const dentro = batidas
+    .filter((b) => Number.isFinite(b) && b > inicio && b <= fim)
+    .sort((a, b) => a - b);
+
+  let cursor = inicio;
+  for (const batida of dentro) {
+    if (batida - cursor > toleranciaMs) return false;
+    cursor = batida;
+  }
+  return fim - cursor <= toleranciaMs;
+}
