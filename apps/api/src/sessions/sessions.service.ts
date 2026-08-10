@@ -21,6 +21,7 @@ import {
   endedEarly as isEndedEarly,
   HEARTBEAT_GRACE_SECONDS,
   silencioToleradoAte,
+  inicioAceitavel,
   HEARTBEAT_INTERVAL_SECONDS,
   measuredSeconds,
   SessionAnomalyKind,
@@ -278,6 +279,39 @@ export class SessionsService {
     // devices could ping-pong between themselves and a user could never tell
     // which timer was real. Refusing and handing back the live session lets the
     // client decide: resume it, or end it and try again.
+    /*
+     Registro tardio repetido devolve a mesma sessão, e não uma nova.
+
+     A sessão nascida em modo avião roda no aparelho e só é registrada quando a
+     rede volta. Se essa chamada chegar ao servidor mas a resposta se perder, o
+     app repete — e sem esta busca o mesmo estudo viraria duas sessões, ou
+     esbarraria no conflito de sobreposição logo abaixo e ficaria sem registro
+     nenhum, que é pior.
+    */
+    if (dto.client_session_id) {
+      const jaRegistrada = await this.prisma.studySession.findFirst({
+        where: { userId, clientSessionId: dto.client_session_id },
+        include: { proofChecks: true },
+      });
+      if (jaRegistrada) {
+        return {
+          ...jaRegistrada,
+          scheduled_proof_check_times: [],
+          heartbeat_interval_seconds: HEARTBEAT_INTERVAL_SECONDS,
+          heartbeat_grace_seconds: HEARTBEAT_GRACE_SECONDS,
+          live_action_token: cunharTokenDeAcao(
+            jaRegistrada.id,
+            userId,
+            process.env.SESSION_ACTION_SECRET,
+          ),
+          silence_tolerated_until: silencioToleradoAte(
+            jaRegistrada,
+            jaRegistrada.lastHeartbeatAt,
+          ).toISOString(),
+        };
+      }
+    }
+
     const existingSession = await this.prisma.studySession.findFirst({
       where: { userId, status: { in: [...LIVE_STATUSES] } },
       select: { id: true, status: true, startedAt: true, subjectId: true },
@@ -311,6 +345,22 @@ export class SessionsService {
     const now = new Date();
     const isStopwatch = dto.timer_mode === 'stopwatch';
 
+    /*
+     O início declarado pelo aparelho, cortado.
+
+     `inicioAceitavel` limita ao que o plano da sessão justifica e nunca aceita
+     o futuro. Sem dica — o caminho normal — devolve `now`, e nada muda.
+    */
+    const comecouEm = inicioAceitavel(
+      dto.started_at_hint ? new Date(dto.started_at_hint) : null,
+      now,
+      {
+        timerMode: dto.timer_mode,
+        workDuration: dto.work_duration ?? 25,
+        breakDuration: dto.break_duration ?? 5,
+      },
+    );
+
     const session = await this.prisma.studySession.create({
       data: {
         userId,
@@ -327,10 +377,14 @@ export class SessionsService {
           : { breakDuration: dto.break_duration }),
         proofMode: dto.proof_mode,
         status: 'active',
-        startedAt: now,
+        startedAt: comecouEm,
         // Treat the start as the first beat, so a session that dies before its
         // first heartbeat is still swept on schedule instead of hanging around.
         lastHeartbeatAt: now,
+        clientSessionId: dto.client_session_id ?? null,
+        // A trilha: sem isto não há como separar depois o tempo que o servidor
+        // testemunhou do que ele aceitou sob a palavra do aparelho.
+        origin: dto.started_at_hint ? 'offline_start' : null,
       },
     });
 

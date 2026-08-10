@@ -1,8 +1,22 @@
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsISO8601,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 /**
- * Note what is *not* here: no duration, no cycle count, no start timestamp.
- * The server stamps `startedAt` itself — see docs/API-SESSIONS.md §1.
+ * Note what is *not* here: no duration, no cycle count.
+ *
+ * O início **deixou de estar** nessa lista em 10/08, e a exceção é estreita.
+ * Uma sessão que nasce em modo avião roda no aparelho antes de o servidor saber
+ * dela, então ela chega com um início declarado — e o servidor o **corta** ao
+ * que o plano justifica (`inicioAceitavel`). Fora esse caso, quem carimba
+ * continua sendo o servidor. Ver docs/API-SESSIONS.md §1.
  */
 export class StartSessionDto {
   @IsUUID()
@@ -36,4 +50,25 @@ export class StartSessionDto {
 
   @IsBoolean()
   proof_mode: boolean;
+
+  /**
+   * A identidade que o aparelho deu à sessão antes de o servidor conhecê-la.
+   *
+   * Torna o registro tardio idempotente: se a chamada se perder no caminho e o
+   * app repetir, sem isto o mesmo estudo viraria duas sessões.
+   */
+  @IsUUID()
+  @IsOptional()
+  client_session_id?: string;
+
+  /**
+   * Quando o aparelho diz que a sessão começou. **Uma dica, não um fato.**
+   *
+   * Só chega de sessão nascida offline, e é cortada pelo servidor ao que o
+   * plano dela justifica. Ausente — o caminho normal — o servidor carimba o
+   * agora dele, como sempre fez.
+   */
+  @IsISO8601()
+  @IsOptional()
+  started_at_hint?: string;
 }

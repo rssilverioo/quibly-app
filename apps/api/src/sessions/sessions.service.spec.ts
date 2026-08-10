@@ -397,6 +397,82 @@ describe('SessionsService.startSession', () => {
     );
   });
 
+  describe('a sessão que nasceu em modo avião', () => {
+    /*
+     O pedido do dono do produto: quem liga o avião antes de sentar não
+     conseguia nem começar, porque `startSession` esperava a rede.
+    */
+    beforeEach(() => {
+      prisma.studySession.findUnique.mockResolvedValue({
+        id: 'session-1',
+        proofChecks: [],
+        startedAt: NOW,
+        lastHeartbeatAt: NOW,
+        timerMode: 'pomodoro',
+        workDuration: 25,
+        breakDuration: 5,
+      });
+    });
+
+    it('aceita o início declarado quando o plano o justifica', async () => {
+      const quarentaMin = new Date(NOW.getTime() - 40 * 60_000);
+      await service.startSession('user-1', {
+        ...dto,
+        started_at_hint: quarentaMin.toISOString(),
+      } as never);
+
+      const data = prisma.studySession.create.mock.calls[0][0].data;
+      expect(data.startedAt).toEqual(quarentaMin);
+      // `lastHeartbeatAt` é o agora do servidor, não a dica: o batimento é o
+      // que ele testemunhou, e testemunhar é diferente de aceitar.
+      expect(data.lastHeartbeatAt).toEqual(NOW);
+      expect(data.origin).toBe('offline_start');
+    });
+
+    it('corta um início que passa do que o plano justifica', async () => {
+      await service.startSession('user-1', {
+        ...dto,
+        started_at_hint: new Date(NOW.getTime() - 5 * 60 * 60_000).toISOString(),
+      } as never);
+
+      const data = prisma.studySession.create.mock.calls[0][0].data;
+      // 4x(25+5) + 5 de folga = 125 minutos, e não as cinco horas pedidas.
+      expect(data.startedAt).toEqual(new Date(NOW.getTime() - 125 * 60_000));
+    });
+
+    it('sem dica, nada muda: o servidor carimba e a origem fica nula', async () => {
+      await service.startSession('user-1', dto);
+      const data = prisma.studySession.create.mock.calls[0][0].data;
+      expect(data.startedAt).toEqual(NOW);
+      expect(data.origin).toBeNull();
+    });
+
+    it('registrar duas vezes devolve a mesma sessão, e não cria outra', async () => {
+      /*
+       A resposta do registro pode se perder no caminho, e o app repete. Sem
+       idempotência o mesmo estudo viraria duas sessões — ou esbarraria no
+       conflito de sobreposição e ficaria sem registro nenhum, que é pior.
+      */
+      prisma.studySession.findFirst.mockResolvedValueOnce({
+        id: 'ja-existe',
+        proofChecks: [],
+        startedAt: NOW,
+        lastHeartbeatAt: NOW,
+        timerMode: 'pomodoro',
+        workDuration: 25,
+        breakDuration: 5,
+      });
+
+      const r = await service.startSession('user-1', {
+        ...dto,
+        client_session_id: '11111111-1111-4111-8111-111111111111',
+      } as never);
+
+      expect(r.id).toBe('ja-existe');
+      expect(prisma.studySession.create).not.toHaveBeenCalled();
+    });
+  });
+
   it('stamps startedAt and seeds the first heartbeat itself', async () => {
     prisma.studySession.findUnique.mockResolvedValue({
       id: 'session-1',
