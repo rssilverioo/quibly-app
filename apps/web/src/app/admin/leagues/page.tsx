@@ -62,7 +62,7 @@ export default function LeaguesPage() {
       setLeagues(res.leagues);
       setPagination(res.pagination);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load leagues');
+      setError(err instanceof Error ? err.message : 'Não deu para carregar leagues');
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,10 @@ export default function LeaguesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-quibly-text">Leagues</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-quibly-text">Salas</h1>
+        <p className="mt-1 text-sm text-quibly-text-muted">As salas de estudo e quem está dentro delas.</p>
+      </div>
 
       {error && (
         <div className="text-quibly-error text-sm bg-quibly-error/10 rounded-lg px-4 py-2">
@@ -93,7 +96,7 @@ export default function LeaguesPage() {
       <Card>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
           <Input
-            placeholder="Search leagues..."
+            placeholder="Buscar sala"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -120,13 +123,13 @@ export default function LeaguesPage() {
             <Table>
               <Thead>
                 <Tr>
-                  <Th>Name</Th>
-                  <Th>Owner</Th>
-                  <Th>Mode</Th>
-                  <Th>Status</Th>
-                  <Th>Members</Th>
-                  <Th>Privacy</Th>
-                  <Th>Created</Th>
+                  <Th>Nome</Th>
+                  <Th>Dono</Th>
+                  <Th>Modo</Th>
+                  <Th>Situação</Th>
+                  <Th>Membros</Th>
+                  <Th>Privacidade</Th>
+                  <Th>Criada em</Th>
                 </Tr>
               </Thead>
               <Tbody>

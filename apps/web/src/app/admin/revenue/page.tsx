@@ -42,7 +42,7 @@ export default function RevenuePage() {
         const result = await api.get<RevenueData>('/admin/revenue');
         setData(result);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load revenue data');
+        setError(err instanceof Error ? err.message : 'Não deu para carregar revenue data');
       } finally {
         setLoading(false);
       }
@@ -62,7 +62,7 @@ export default function RevenuePage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <p className="text-quibly-error text-lg font-medium mb-2">Error</p>
+          <p className="text-quibly-error text-lg font-medium mb-2">Erro</p>
           <p className="text-quibly-text-muted">{error}</p>
         </div>
       </div>
@@ -73,20 +73,23 @@ export default function RevenuePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-quibly-text">Revenue</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-quibly-text">Receita</h1>
+        <p className="mt-1 text-sm text-quibly-text-muted">Quem assina, por qual plataforma, e quando vence.</p>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard title="PRO Users" value={formatNumber(data.proUsers)} />
-        <StatCard title="FREE Users" value={formatNumber(data.freeUsers)} />
+        <StatCard title="No Pro" value={formatNumber(data.proUsers)} />
+        <StatCard title="No plano grátis" value={formatNumber(data.freeUsers)} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <h2 className="text-lg font-semibold text-quibly-text mb-4">Plan Breakdown</h2>
+          <h2 className="text-lg font-semibold text-quibly-text mb-4">Distribuição por plano</h2>
           <Table>
             <Thead>
               <Tr>
-                <Th>Platform</Th>
+                <Th>Plataforma</Th>
                 <Th>Users</Th>
               </Tr>
             </Thead>
@@ -111,12 +114,12 @@ export default function RevenuePage() {
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-quibly-text mb-4">Subscription Status</h2>
+          <h2 className="text-lg font-semibold text-quibly-text mb-4">Situação da assinatura</h2>
           <Table>
             <Thead>
               <Tr>
-                <Th>Status</Th>
-                <Th>Count</Th>
+                <Th>Situação</Th>
+                <Th>Quantidade</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -143,16 +146,16 @@ export default function RevenuePage() {
       </div>
 
       <Card>
-        <h2 className="text-lg font-semibold text-quibly-text mb-4">Recent Subscriptions</h2>
+        <h2 className="text-lg font-semibold text-quibly-text mb-4">Assinaturas recentes</h2>
         <Table>
           <Thead>
             <Tr>
-              <Th>User</Th>
-              <Th>Email</Th>
-              <Th>Platform</Th>
-              <Th>Status</Th>
-              <Th>Period End</Th>
-              <Th>Joined</Th>
+              <Th>Pessoa</Th>
+              <Th>E-mail</Th>
+              <Th>Plataforma</Th>
+              <Th>Situação</Th>
+              <Th>Vence em</Th>
+              <Th>Entrou em</Th>
             </Tr>
           </Thead>
           <Tbody>

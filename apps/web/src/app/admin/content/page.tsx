@@ -112,7 +112,7 @@ export default function ContentPage() {
       setFlashcardSets(res.flashcardSets ?? []);
       setFcPagination(res.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 1 });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load flashcard sets');
+      setError(err instanceof Error ? err.message : 'Não deu para carregar flashcard sets');
     } finally {
       setFcLoading(false);
     }
@@ -129,7 +129,7 @@ export default function ContentPage() {
       setQuizzes(res.quizzes ?? []);
       setQzPagination(res.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 1 });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load quizzes');
+      setError(err instanceof Error ? err.message : 'Não deu para carregar quizzes');
     } finally {
       setQzLoading(false);
     }
@@ -191,7 +191,10 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-quibly-text">Content</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-quibly-text">Conteúdo</h1>
+        <p className="mt-1 text-sm text-quibly-text-muted">Baralhos, quizzes e documentos gerados por IA — o que custa dinheiro em geração.</p>
+      </div>
 
       {error && (
         <div className="text-quibly-error text-sm bg-quibly-error/10 rounded-lg px-4 py-2">
@@ -220,7 +223,7 @@ export default function ContentPage() {
         <Card>
           <div className="flex items-center gap-4 mb-4">
             <Input
-              placeholder="Search flashcard sets..."
+              placeholder="Buscar baralho"
               value={fcSearch}
               onChange={(e) => setFcSearch(e.target.value)}
               className="max-w-sm"
@@ -236,11 +239,11 @@ export default function ContentPage() {
               <Table>
                 <Thead>
                   <Tr>
-                    <Th>Title</Th>
-                    <Th>User</Th>
-                    <Th>Cards</Th>
-                    <Th>Language</Th>
-                    <Th>Created</Th>
+                    <Th>Título</Th>
+                    <Th>Pessoa</Th>
+                    <Th>Cartões</Th>
+                    <Th>Idioma</Th>
+                    <Th>Criada em</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -289,7 +292,7 @@ export default function ContentPage() {
         <Card>
           <div className="flex items-center gap-4 mb-4">
             <Input
-              placeholder="Search quizzes..."
+              placeholder="Buscar quiz"
               value={qzSearch}
               onChange={(e) => setQzSearch(e.target.value)}
               className="max-w-sm"
@@ -305,12 +308,12 @@ export default function ContentPage() {
               <Table>
                 <Thead>
                   <Tr>
-                    <Th>Title</Th>
-                    <Th>User</Th>
-                    <Th>Questions</Th>
-                    <Th>Score</Th>
-                    <Th>Language</Th>
-                    <Th>Created</Th>
+                    <Th>Título</Th>
+                    <Th>Pessoa</Th>
+                    <Th>Perguntas</Th>
+                    <Th>Acerto</Th>
+                    <Th>Idioma</Th>
+                    <Th>Criada em</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -334,7 +337,7 @@ export default function ContentPage() {
                       <Td>
                         {quiz.score !== null
                           ? `${quiz.score}/${quiz.totalQ}`
-                          : <span className="text-quibly-text-muted">N/A</span>}
+                          : <span className="text-quibly-text-muted">—</span>}
                       </Td>
                       <Td>{quiz.language}</Td>
                       <Td>{formatDate(quiz.createdAt)}</Td>
@@ -412,7 +415,7 @@ export default function ContentPage() {
             </div>
           </div>
         ) : (
-          <p className="text-quibly-text-muted text-center py-8">Failed to load flashcard set</p>
+          <p className="text-quibly-text-muted text-center py-8">Não deu para carregar o baralho</p>
         )}
       </Modal>
 
@@ -479,7 +482,7 @@ export default function ContentPage() {
             </div>
           </div>
         ) : (
-          <p className="text-quibly-text-muted text-center py-8">Failed to load quiz</p>
+          <p className="text-quibly-text-muted text-center py-8">Não deu para carregar o quiz</p>
         )}
       </Modal>
     </div>

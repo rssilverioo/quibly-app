@@ -107,12 +107,15 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-quibly-text">Users</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-quibly-text">Pessoas</h1>
+        <p className="mt-1 text-sm text-quibly-text-muted">Quem usa o Quibly. Aqui se concede o selo de verificado e se consulta o histórico de alguém.</p>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <Input
-            placeholder="Search by name, email, or handle..."
+            placeholder="Buscar por nome, e-mail ou @"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -156,14 +159,14 @@ export default function AdminUsersPage() {
           <Table>
             <Thead>
               <Tr>
-                <Th>User</Th>
-                <Th>Email</Th>
-                <Th>Plan</Th>
-                <Th>Level</Th>
+                <Th>Pessoa</Th>
+                <Th>E-mail</Th>
+                <Th>Plano</Th>
+                <Th>Nível</Th>
                 <Th>XP</Th>
-                <Th>Streak</Th>
-                <Th>Sessions</Th>
-                <Th>Joined</Th>
+                <Th>Sequência</Th>
+                <Th>Sessões</Th>
+                <Th>Entrou em</Th>
               </Tr>
             </Thead>
             <Tbody>

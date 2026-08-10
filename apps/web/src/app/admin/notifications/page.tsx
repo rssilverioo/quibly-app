@@ -96,7 +96,10 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-quibly-text">Notifications</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-quibly-text">Notificações</h1>
+        <p className="mt-1 text-sm text-quibly-text-muted">Disparo para um segmento — ou só para você, para testar antes.</p>
+      </div>
 
       {result && (
         <div
@@ -114,7 +117,7 @@ export default function NotificationsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
         <Card>
-          <h2 className="text-lg font-semibold text-quibly-text mb-4">Compose Notification</h2>
+          <h2 className="text-lg font-semibold text-quibly-text mb-4">Escrever notificação</h2>
 
           <div className="space-y-4">
             <div>
@@ -122,7 +125,7 @@ export default function NotificationsPage() {
                 Title
               </label>
               <Input
-                placeholder="Notification title..."
+                placeholder="Título"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -133,7 +136,7 @@ export default function NotificationsPage() {
                 Body
               </label>
               <textarea
-                placeholder="Notification message..."
+                placeholder="Mensagem"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={4}
@@ -203,7 +206,7 @@ export default function NotificationsPage() {
 
         {/* Preview */}
         <Card>
-          <h2 className="text-lg font-semibold text-quibly-text mb-4">Preview</h2>
+          <h2 className="text-lg font-semibold text-quibly-text mb-4">Prévia</h2>
 
           <div className="bg-quibly-surface-light border border-quibly-border rounded-lg p-4">
             {title.trim() || body.trim() ? (
@@ -231,7 +234,7 @@ export default function NotificationsPage() {
       {/* Confirmation Modal */}
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-quibly-text">Confirm Broadcast</h3>
+          <h3 className="text-lg font-semibold text-quibly-text">Confirmar envio</h3>
           <p className="text-sm text-quibly-text-secondary">
             Are you sure you want to send this notification to{' '}
             <span className="font-medium text-quibly-text">{getSegmentLabel(segment).toLowerCase()}</span>?
