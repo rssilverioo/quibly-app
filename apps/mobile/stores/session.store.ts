@@ -5,6 +5,7 @@ import { TIMER_PRESETS } from '@quibly/shared/constants';
 import * as sessionsService from '../services/sessions';
 import type { LiveSession } from '../services/sessions';
 import { HeartbeatController } from '../lib/heartbeat';
+import { pararFoco } from '../modules/foco-profundo/src';
 import {
   startLiveTimer,
   updateLiveTimer,
@@ -188,6 +189,37 @@ const initialState = {
  */
 let heartbeat: HeartbeatController | null = null;
 
+/**
+ * Derruba o bloqueio de apps quando a sessão morre **sozinha**.
+ *
+ * O módulo nativo documenta quatro garantias para o escudo nunca sobreviver à
+ * sessão, e a primeira é "a sessão acaba, o JS chama `parar()`". Só que ela
+ * cobria apenas o fim explícito: quem apertava encerrar. Quando a sessão morria
+ * por conta própria — cinco minutos sem rede e o servidor a varre — o timer
+ * parava, a Live Activity sumia, a notificação era cancelada... e o escudo
+ * ficava de pé.
+ *
+ * O resultado é o pior que este produto pode causar: a pessoa perde o
+ * progresso **e** continua com o telefone trancado, sem nada na tela ligando
+ * uma coisa à outra. As outras garantias existem, mas nenhuma serve aqui — o
+ * relógio do sistema só derruba no prazo original da sessão, a reconciliação
+ * concorda que o escudo ainda vale, e o teto de quatro horas é rede de
+ * segurança, não comportamento.
+ *
+ * Vale a mesma assimetria que já governa o fim explícito, em `active.tsx`:
+ * errar para o lado de liberar custa um bloqueio encurtado; errar para o outro
+ * custa um telefone preso por causa de uma falha de rede. Perder a conexão não
+ * é motivo para perder o telefone.
+ */
+function soltarOEscudo(): void {
+  try {
+    pararFoco();
+  } catch {
+    // Aparelho sem Family Controls, iOS 15, Android: `pararFoco` já é no-op,
+    // mas um erro daqui não pode impedir o resto do encerramento.
+  }
+}
+
 function stopHeartbeat(): void {
   heartbeat?.stop();
   heartbeat = null;
@@ -231,13 +263,15 @@ export const useSessionStore = create<SessionState>((set, get) => {
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
         clearLiveActionContext();
-      void stopLiveTimer();
+        void stopLiveTimer();
+        soltarOEscudo();
       },
       onSessionGone: () => {
         set({ isRunning: false, isDisconnected: true });
         cancelSessionNotifications().catch(() => {});
         clearLiveActionContext();
-      void stopLiveTimer();
+        void stopLiveTimer();
+        soltarOEscudo();
       },
     });
     heartbeat.start();
