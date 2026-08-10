@@ -143,7 +143,21 @@
       "expo-audio",
       "./plugins/withFirebaseModularHeaders",
       "@bacons/apple-targets",
-      "./plugins/withResourceBundleSigning"
+      "./plugins/withResourceBundleSigning",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "userTrackingUsageDescription": "Usamos isto para mostrar anúncios mais relevantes para você. Assine o Pro para não ver anúncio nenhum."
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Usamos isto para mostrar anúncios mais relevantes para você. Assine o Pro para não ver anúncio nenhum."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

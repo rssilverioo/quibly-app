@@ -1,6 +1,16 @@
 import { auth } from './firebase';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+/**
+ * A API.
+ *
+ * O padrão é a **produção**, e não `localhost`. Quando `NEXT_PUBLIC_API_URL`
+ * falta no build do site, cair em `localhost:3000` produz "Failed to fetch" no
+ * navegador de quem abre o painel — um erro de rede que se lê como "a API está
+ * fora", quando na verdade a variável é que não chegou. Errar para o lado da
+ * produção deixa o painel funcionando; quem desenvolve local define a variável,
+ * e sabe que definiu.
+ */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rabbit.tryquibly.com';
 
 async function getToken(): Promise<string | null> {
   const user = auth.currentUser;

@@ -4,7 +4,7 @@ import { ApiError, NetworkError } from './http-errors';
 // Re-exported so callers keep importing error types from `lib/api` as before.
 export { ApiError, NetworkError } from './http-errors';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://rabbit.tryquibly.com';
 
 // Cache token for 50 seconds to avoid repeated getIdToken() on concurrent requests
 let cachedToken: string | null = null;

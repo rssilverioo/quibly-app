@@ -17,7 +17,7 @@
         "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "quibly-70e89.firebasestorage.app",
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "419383312629",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:419383312629:web:ade425a08dc92e8107c5bc",
-        "EXPO_PUBLIC_API_URL": "https://api.tryquibly.com",
+        "EXPO_PUBLIC_API_URL": "https://rabbit.tryquibly.com",
         "EXPO_PUBLIC_REVENUECAT_API_KEY_IOS": "appl_yDPBiOwFltdZEpAwPfxcYlwwpzn",
         "EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID": "goog_YOUR_REVENUECAT_ANDROID_KEY",
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_mPumkcYjW3cfpwCsnMizqBS8Po3x7UEraYPb52Xefiam",
@@ -57,7 +57,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.tryquibly.com",
+        "EXPO_PUBLIC_API_URL": "https://rabbit.tryquibly.com",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBTHvWULoIoLPEe-zl6eCBlLVaPGVXU4os",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "quibly-70e89.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "quibly-70e89",
@@ -79,7 +79,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.tryquibly.com",
+        "EXPO_PUBLIC_API_URL": "https://rabbit.tryquibly.com",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBTHvWULoIoLPEe-zl6eCBlLVaPGVXU4os",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "quibly-70e89.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "quibly-70e89",

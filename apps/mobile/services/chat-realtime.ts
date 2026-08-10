@@ -2,7 +2,7 @@ import { io, type Socket } from 'socket.io-client';
 import { auth } from '../lib/firebase';
 import type { ChatMessageComAutor } from '../lib/chat-messages';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://rabbit.tryquibly.com';
 
 /**
  * Quanto tempo um "está digitando" vale sem ser renovado.

@@ -345,7 +345,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
       setLiveActionContext(
         session.id,
         (session as { live_action_token?: string | null }).live_action_token,
-        process.env.EXPO_PUBLIC_API_URL || 'https://api.tryquibly.com',
+        process.env.EXPO_PUBLIC_API_URL || 'https://rabbit.tryquibly.com',
       );
 
       void startLiveTimer(
