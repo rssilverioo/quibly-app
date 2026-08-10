@@ -134,6 +134,42 @@ describe('ChallengesService — a contagem de dias', () => {
     expect(r.entries[0].metricValue).toBe(2);
   });
 
+  it('detalhes e ranking dão o mesmo número, com ou sem fuso', async () => {
+    /*
+     O segundo defeito do print de 10/08.
+
+     A sala e o ranking mostravam "6 dias"; a aba de detalhes, na mesma sala e
+     sobre os mesmos posts, mostrava **0** em tudo — inclusive em "Total
+     check-ins", que é contagem crua.
+
+     A causa eram duas réguas. O ranking recuava para UTC quando a pessoa não
+     tinha fuso; os detalhes faziam `if (!local) continue` e descartavam o
+     check-in inteiro. Nenhum dos dois estava obviamente errado lendo sozinho —
+     o erro era existirem dois.
+
+     Este teste compara as duas telas em vez de conferir um número fixo: é a
+     divergência que é o defeito, e é ela que precisa ficar impossível.
+    */
+    for (const timezone of ['America/Sao_Paulo', null]) {
+      const { service } = servico({
+        timezone,
+        posts: [
+          { userId: 'eu', createdAt: new Date('2026-08-08T14:00:00.000Z') },
+          { userId: 'eu', createdAt: new Date('2026-08-09T14:00:00.000Z') },
+          { userId: 'eu', createdAt: new Date('2026-08-09T18:00:00.000Z') },
+        ],
+      });
+      const ranking = await service.leaderboard('sala', 'eu', 1, 10);
+      const detalhes: any = await service.details('sala', 'eu');
+      expect(detalhes.groupStats.totalDaysActive).toBe(2);
+      expect(detalhes.rankings[0].activeDays).toBe(
+        ranking.entries[0].metricValue,
+      );
+      // Três fotos em dois dias são dois check-ins, não três: check-in é dia.
+      expect(detalhes.groupStats.totalCheckIns).toBe(2);
+    }
+  });
+
   it('a foto conta mesmo em sala marcada `study` — o defeito relatado', async () => {
     /*
      Este era o defeito.

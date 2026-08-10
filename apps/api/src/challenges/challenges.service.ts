@@ -202,8 +202,7 @@ export class ChallengesService {
       league.members.map((m) => [m.userId, m.user.timezone ?? 'UTC']),
     );
     const diaLocal = (at: Date, userId: string) =>
-      this.localDateAndHour(at, fusoDe.get(userId) ?? 'UTC')?.date
-        ?? at.toISOString().slice(0, 10);
+      this.diaLocal(at, fusoDe.get(userId));
 
     const diasPorUsuario = new Map<string, Set<string>>();
     const marcar = (userId: string, dia: string) => {
@@ -399,20 +398,32 @@ export class ChallengesService {
 
     for (const checkIn of checkIns) {
       const timezone = memberById.get(checkIn.userId)?.user.timezone;
-      const local = timezone
-        ? this.localDateAndHour(checkIn.createdAt, timezone)
-        : null;
-      if (!local) continue;
-      marcarDia(activeDaysByUser, checkIn.userId, local.date);
-      groupActiveDays.add(local.date);
+      /*
+       Sem fuso, UTC — e não descartar.
+
+       Isto era `timezone ? … : null` seguido de `continue`: quem não tivesse
+       fuso declarado via **todos** os seus check-ins sumirem, e a tela mostrava
+       zero em tudo. Enquanto isso o ranking, que recua para UTC, mostrava 6
+       sobre os mesmos posts.
+      */
+      const dia = this.diaLocal(checkIn.createdAt, timezone);
+      const local = this.localDateAndHour(checkIn.createdAt, timezone ?? 'UTC');
+      marcarDia(activeDaysByUser, checkIn.userId, dia);
+      groupActiveDays.add(dia);
 
       // Madrugador e coruja seguem a mesma régua: são dias em que a pessoa
       // apareceu naquela faixa de hora. Três fotos antes das 9h de uma
       // segunda são uma manhã, não três.
-      if (local.hour >= 5 && local.hour < 9) {
-        marcarDia(earlyBirdDays, checkIn.userId, local.date);
-      } else if (local.hour >= 0 && local.hour < 5) {
-        marcarDia(nightOwlDays, checkIn.userId, local.date);
+      //
+      // A hora, ao contrário do dia, pode faltar de verdade: se o fuso for
+      // inválido, `Intl` recusa e não há hora aproximada que valha. Aí só os
+      // troféus de horário ficam de fora — o dia já foi contado acima.
+      if (local) {
+        if (local.hour >= 5 && local.hour < 9) {
+          marcarDia(earlyBirdDays, checkIn.userId, dia);
+        } else if (local.hour >= 0 && local.hour < 5) {
+          marcarDia(nightOwlDays, checkIn.userId, dia);
+        }
       }
     }
 
@@ -484,6 +495,28 @@ export class ChallengesService {
         nightOwl: superlative(nightOwlDays),
       },
     };
+  }
+
+  /**
+   * O dia local de um instante — **uma régua só**.
+   *
+   * Existiam duas. O ranking caía em UTC quando a pessoa não tinha fuso
+   * declarado (`?? 'UTC'`); a tela de detalhes desistia do check-in inteiro
+   * (`if (!local) continue`). O resultado, em 10/08: a mesma sala mostrando
+   * "6 dias" no ranking e "0 dias ativos" nos detalhes, sobre os mesmos posts.
+   *
+   * É o mesmo defeito que o comentário do ranking já descrevia sobre o perfil —
+   * "três réguas diferentes para 'dia estudado'" —, repetido dentro do mesmo
+   * arquivo. Uma função com o recuo embutido é o que impede a terceira.
+   *
+   * Sem fuso, UTC: é o padrão do resto do produto, e um dia aproximado vale
+   * infinitamente mais que dia nenhum.
+   */
+  private diaLocal(at: Date, timezone?: string | null): string {
+    return (
+      this.localDateAndHour(at, timezone ?? 'UTC')?.date ??
+      at.toISOString().slice(0, 10)
+    );
   }
 
   private localDateAndHour(at: Date, timezone: string) {
