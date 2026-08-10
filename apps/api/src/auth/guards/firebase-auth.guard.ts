@@ -3,6 +3,8 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { FirebaseService } from '../../firebase/firebase.service';
@@ -10,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
+  private readonly logger = new Logger(FirebaseAuthGuard.name);
   private knownProfiles = new Set<string>();
 
   constructor(
@@ -93,7 +96,35 @@ export class FirebaseAuthGuard implements CanActivate {
       // A suspensão não é falha de token — deixar cair no `catch` a
       // transformaria em "token inválido", e o app pediria login de novo.
       if (error instanceof ForbiddenException) throw error;
-      throw new UnauthorizedException('Invalid or expired Firebase token');
+
+      /*
+       Só o que veio do Firebase vira "token inválido".
+
+       Este `catch` cobre três coisas muito diferentes: o token de fato
+       inválido, o banco fora do ar, e a credencial do Firebase ausente no
+       ambiente. Tratar as três como "Invalid or expired Firebase token" faz o
+       app pedir login de novo — e o login **funciona**, porque o problema nunca
+       esteve no token. A pessoa entra, tenta de novo, toma 401 outra vez.
+
+       Custou uma rodada em 10/08, num serviço recém-criado: o painel dizia
+       "token inválido" com um token perfeitamente válido, e a mensagem apontava
+       para o único lugar onde o defeito não estava.
+
+       O código do `firebase-admin` sempre começa com `auth/`. O resto é nosso
+       problema, e merece 500 — que é o que faz o log registrar em vez de o
+       cliente sair procurando a própria conta.
+      */
+      const codigo = (error as { code?: string })?.code ?? '';
+      if (typeof codigo === 'string' && codigo.startsWith('auth/')) {
+        throw new UnauthorizedException('Invalid or expired Firebase token');
+      }
+
+      this.logger.error(
+        `Falha ao autenticar que não é do token: ${(error as Error)?.message ?? error}`,
+      );
+      throw new ServiceUnavailableException(
+        'Authentication is temporarily unavailable',
+      );
     }
   }
 }

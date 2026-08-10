@@ -80,7 +80,15 @@ describe('HealthController', () => {
     // de fora não havia como distinguir "CORS_ORIGINS não configurada" de
     // "configurada com um valor que não casa": as duas recusam tudo, caladas.
     expect(Object.keys(r).sort()).toEqual(
-      ['commit', 'corsOrigins', 'sessionActionsConfigured', 'startedAt', 'status', 'uptimeSeconds'].sort(),
+      [
+        'commit',
+        'corsOrigins',
+        'firebaseConfigured',
+        'sessionActionsConfigured',
+        'startedAt',
+        'status',
+        'uptimeSeconds',
+      ].sort(),
     );
   });
 

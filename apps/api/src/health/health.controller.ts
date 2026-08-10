@@ -89,6 +89,25 @@ export class HealthController {
        * Domínio permitido não é segredo. É o oposto: é o que a API anuncia a
        * qualquer navegador que pergunte, no cabeçalho da resposta.
        */
+      /**
+       * Se a API tem credencial para verificar token do Firebase.
+       *
+       * Sem ela, `verifyIdToken` falha em **toda** requisição e o cliente
+       * recebe "token inválido" — apontando para o único lugar onde o defeito
+       * não está. Quem recebe isso vai conferir o login, refazer o login, e
+       * tomar 401 de novo.
+       *
+       * Diz **se** existe, nunca o que é — mesma regra do
+       * `session_actions_configured`. Num serviço recém-criado, é a primeira
+       * coisa que falta e a última em que se pensa.
+       */
+      firebaseConfigured: Boolean(
+        this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON') ||
+          (this.configService.get<string>('FIREBASE_PROJECT_ID') &&
+            this.configService.get<string>('FIREBASE_CLIENT_EMAIL') &&
+            this.configService.get<string>('FIREBASE_PRIVATE_KEY')) ||
+          this.configService.get<string>('GOOGLE_APPLICATION_CREDENTIALS'),
+      ),
       corsOrigins: (this.configService.get<string>('CORS_ORIGINS') ?? '')
         .split(',')
         .map((o) => o.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
