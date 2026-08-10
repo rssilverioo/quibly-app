@@ -194,6 +194,17 @@ export interface AnalyticsEventProps {
     product_id: string;
     price: number;
     currency: string;
+    /**
+     * O país da vitrine da loja, como o SDK a vê — `'desconhecida'` quando ele
+     * não sabe.
+     *
+     * Anda junto de `currency` porque sozinha a moeda não separa as duas
+     * explicações do caso de 10/08: o aparelho recebeu `USD` para os produtos
+     * certos, com o preço já corrigido, e pagava em real na folha da Apple.
+     * Preço novo descarta cache defasado; produto certo descarta catálogo
+     * trocado. O que resta é o SDK estar noutra loja — e é isto que responde.
+     */
+    storefront: string;
     period: 'monthly' | 'yearly';
   };
   plan_selected: { selected_plan: 'monthly' | 'yearly' };

@@ -104,6 +104,35 @@ export async function getOfferings(): Promise<PurchasesOfferings | null> {
   }
 }
 
+/**
+ * A vitrine da App Store em que este aparelho está.
+ *
+ * **É a variável que faltava.** Em 10/08 o telemetria do build 62 mostrou o
+ * aparelho recebendo `9.99 USD` e `59.99 USD` para os produtos certos, com o
+ * preço já corrigido — enquanto a folha de compra da Apple, no mesmo aparelho,
+ * cobrava em real. Preço novo e produto certo descartam cache defasado e
+ * catálogo trocado; sobra a vitrine.
+ *
+ * `priceString` é formatado na moeda da vitrine que o StoreKit entregou ao
+ * SDK. Se ela diverge da vitrine que cobra, os dois números discordam e nenhum
+ * dos dois está "errado" — eles são de lojas diferentes. Sem registrar o país,
+ * a investigação fica escolhendo entre teorias que o dado não separa.
+ *
+ * `null` quando o SDK não sabe: no Android sem chave, antes de configurar, ou
+ * em plataforma sem loja. Não é erro — é ausência, e vai registrada como tal.
+ */
+export async function paisDaVitrine(): Promise<string | null> {
+  try {
+    const vitrine = await Purchases.getStorefront();
+    return vitrine?.countryCode ?? null;
+  } catch (err) {
+    // Diagnóstico não derruba tela. Se a vitrine não vier, o resto do
+    // carregamento de preços segue igual.
+    console.warn('[RevenueCat] getStorefront error:', err);
+    return null;
+  }
+}
+
 export async function purchase(
   pkg: PurchasesPackage,
 ): Promise<CustomerInfo> {

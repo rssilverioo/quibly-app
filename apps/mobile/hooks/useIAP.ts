@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import {
   getOfferings,
+  paisDaVitrine,
   purchase as purchasePackage,
   restorePurchases,
   type PurchasesPackage,
@@ -20,6 +21,18 @@ export function useIAP() {
     (async () => {
       try {
         const offerings = await getOfferings();
+        if (!mounted) return;
+
+        /*
+         Em que loja o SDK acha que está.
+
+         Sem isto, o registro de 10/08 empatou: produtos certos, preço novo, e
+         mesmo assim `USD` num aparelho que paga em real. Preço novo descarta
+         cache; produto certo descarta catálogo trocado. O país da vitrine é o
+         que separa "o SDK está noutra loja" de "a loja está certa e o problema
+         é outro" — e sem ele as duas teorias explicam o mesmo dado.
+        */
+        const vitrine = await paisDaVitrine();
         if (!mounted) return;
 
         const current = offerings?.current;
@@ -59,11 +72,13 @@ export function useIAP() {
               product_id: pkg.product.identifier,
               price: pkg.product.price,
               currency: pkg.product.currencyCode ?? 'desconhecida',
+              storefront: vitrine ?? 'desconhecida',
               period: periodo,
             });
           }
 
           console.log('[IAP] produtos carregados', {
+            vitrine,
             mensal: {
               id: current.monthly?.product.identifier,
               preco: current.monthly?.product.price,
