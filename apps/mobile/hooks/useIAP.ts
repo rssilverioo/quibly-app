@@ -6,6 +6,7 @@ import {
   restorePurchases,
   type PurchasesPackage,
 } from '../services/iap';
+import { track } from '../lib/analytics';
 
 export function useIAP() {
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
@@ -41,6 +42,27 @@ export function useIAP() {
            `priceString` sozinho não diz em que moeda o SDK acha que está, nem
            qual produto ele casou. `currencyCode` responde as duas coisas.
           */
+          /*
+           Vai para a análise, e não só para o console.
+           
+           Log de console em TestFlight exige o telefone plugado num Mac com o
+           Console aberto. O evento chega sozinho, e é o que permite responder
+           "que preço o aparelho recebeu?" sem depender de quem está com ele na
+           mão descrevendo o que vê.
+          */
+          for (const [periodo, pkg] of [
+            ['monthly', current.monthly],
+            ['yearly', current.annual],
+          ] as const) {
+            if (!pkg) continue;
+            track('paywall_prices_loaded', {
+              product_id: pkg.product.identifier,
+              price: pkg.product.price,
+              currency: pkg.product.currencyCode ?? 'desconhecida',
+              period: periodo,
+            });
+          }
+
           console.log('[IAP] produtos carregados', {
             mensal: {
               id: current.monthly?.product.identifier,

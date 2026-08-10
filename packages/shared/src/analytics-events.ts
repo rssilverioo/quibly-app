@@ -178,6 +178,24 @@ export interface AnalyticsEventProps {
 
   // ── Monetização (dormente) ──────────────────────────────────────────────
   paywall_viewed: { trigger: 'quota' | 'settings' | 'feature' };
+  /**
+   * O que o StoreKit devolveu para o aparelho — moeda, valor e id do produto.
+   *
+   * Existe porque este é o **único elo da cadeia de preço que não se enxerga de
+   * fora**. O RevenueCat só diz quais produtos entram na oferta; quem precifica
+   * é o StoreKit, dentro do aparelho. Quando a tela mostrou `$99.99` e a folha
+   * de compra da Apple cobrou `R$ 129,90`, não havia de onde olhar: nem o
+   * painel, nem a API, nem o código respondem o que o SDK recebeu.
+   *
+   * Sem isto, toda investigação de preço depende de alguém com o telefone na
+   * mão descrevendo o que vê.
+   */
+  paywall_prices_loaded: {
+    product_id: string;
+    price: number;
+    currency: string;
+    period: 'monthly' | 'yearly';
+  };
   plan_selected: { selected_plan: 'monthly' | 'yearly' };
   /** The user tapped "subscribe" — before the store sheet resolves. */
   purchase_started: { selected_plan: 'monthly' | 'yearly' };
@@ -253,6 +271,7 @@ export const EVENT_FUNNELS = {
   ],
   monetizacao: [
     'paywall_viewed',
+    'paywall_prices_loaded',
     'plan_selected',
     'purchase_started',
     'purchase_completed',
