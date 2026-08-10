@@ -227,12 +227,29 @@ function stopHeartbeat(): void {
 
 export const useSessionStore = create<SessionState>((set, get) => {
   /** Wire a heartbeat to a live session and start beating. */
-  function attachHeartbeat(sessionId: string): void {
+  function attachHeartbeat(sessionId: string, toleraSilencioAte?: string): void {
     stopHeartbeat();
     heartbeat = new HeartbeatController({
       sessionId,
+      /*
+       Quanto silêncio esta sessão aguenta — número do servidor.
+
+       Sem ele o app desiste aos cinco minutos enquanto o servidor mantém a
+       sessão de pé por todo o plano do pomodoro, e quem põe o telefone em modo
+       avião vê "desconectado" numa sessão que não morreu.
+
+       `undefined` mantém o comportamento antigo, que é o certo para um app novo
+       falando com um servidor velho.
+      */
+      toleraSilencioAte: toleraSilencioAte
+        ? Date.parse(toleraSilencioAte)
+        : undefined,
       send: async (id) => {
         const result = await sessionsService.heartbeat(id);
+        // O limite anda com o último batimento, então cada batida o renova.
+        if (result.silence_tolerated_until && heartbeat) {
+          heartbeat.renovarTolerancia(Date.parse(result.silence_tolerated_until));
+        }
         return {
           elapsedSeconds: result.elapsed_seconds,
           status: result.status,
@@ -369,7 +386,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
         leagueId: session.league_id,
         phase: 'work',
       });
-      attachHeartbeat(session.id);
+      attachHeartbeat(session.id, session.silence_tolerated_until);
 
       // Raise the lock-screen surface: the foreground service on Android (which
       // keeps the process, and therefore the heartbeat, alive) and the Live

@@ -57,7 +57,16 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      create: jest.fn().mockResolvedValue({ id: 'session-1' }),
+      // A linha que o Prisma devolve, não só o id: a resposta de `start` calcula
+      // a tolerância de silêncio a partir do plano gravado nela.
+      create: jest.fn().mockResolvedValue({
+        id: 'session-1',
+        startedAt: NOW,
+        lastHeartbeatAt: NOW,
+        timerMode: 'pomodoro',
+        workDuration: 25,
+        breakDuration: 5,
+      }),
       findUnique: jest.fn(),
       aggregate: jest.fn().mockResolvedValue({ _sum: { totalDurationMinutes: 0 } }),
     },
@@ -389,7 +398,17 @@ describe('SessionsService.startSession', () => {
   });
 
   it('stamps startedAt and seeds the first heartbeat itself', async () => {
-    prisma.studySession.findUnique.mockResolvedValue({ id: 'session-1', proofChecks: [] });
+    prisma.studySession.findUnique.mockResolvedValue({
+      id: 'session-1',
+      proofChecks: [],
+      // O Prisma devolve a linha inteira; sem estes campos a resposta de
+      // `start` não tem como dizer até quando tolera silêncio.
+      startedAt: NOW,
+      lastHeartbeatAt: NOW,
+      timerMode: 'pomodoro',
+      workDuration: 25,
+      breakDuration: 5,
+    });
 
     await service.startSession('user-1', dto);
 
@@ -405,7 +424,17 @@ describe('SessionsService.startSession', () => {
   });
 
   it('ignores work/break duration for a stopwatch session', async () => {
-    prisma.studySession.findUnique.mockResolvedValue({ id: 'session-1', proofChecks: [] });
+    prisma.studySession.findUnique.mockResolvedValue({
+      id: 'session-1',
+      proofChecks: [],
+      // O Prisma devolve a linha inteira; sem estes campos a resposta de
+      // `start` não tem como dizer até quando tolera silêncio.
+      startedAt: NOW,
+      lastHeartbeatAt: NOW,
+      timerMode: 'pomodoro',
+      workDuration: 25,
+      breakDuration: 5,
+    });
 
     await service.startSession('user-1', { ...dto, timer_mode: 'stopwatch' });
 
@@ -640,9 +669,20 @@ describe('SessionsService.sweepStaleSessions', () => {
   });
 
   it('keeps going when one session fails to sweep', async () => {
+    /*
+     Os instantes precisam ser antigos de verdade.
+
+     A fixture usava `lastHeartbeatAt: NOW` para linhas que só existem porque a
+     consulta filtra batimentos **mais velhos** que a janela — uma contradição
+     que passava despercebida porque a consulta é mockada. Desde que o varredor
+     confere cada linha contra o plano dela (`silencioToleradoAte`), uma sessão
+     que bateu agora é corretamente poupada, e o teste passava a medir o
+     contrário do que descreve.
+    */
+    const antigo = new Date(NOW.getTime() - 60 * 60_000);
     prisma.studySession.findMany.mockResolvedValue([
-      { id: 'bad', userId: 'user-1', startedAt: NOW, lastHeartbeatAt: NOW },
-      { id: 'good', userId: 'user-1', startedAt: NOW, lastHeartbeatAt: NOW },
+      { id: 'bad', userId: 'user-1', startedAt: antigo, lastHeartbeatAt: antigo },
+      { id: 'good', userId: 'user-1', startedAt: antigo, lastHeartbeatAt: antigo },
     ]);
     prisma.tx.studySession.findUnique
       .mockRejectedValueOnce(new Error('db down'))

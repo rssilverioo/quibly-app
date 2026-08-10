@@ -20,6 +20,7 @@ import {
   DEFAULT_DAILY_STUDY_MINUTES_CAP,
   endedEarly as isEndedEarly,
   HEARTBEAT_GRACE_SECONDS,
+  silencioToleradoAte,
   HEARTBEAT_INTERVAL_SECONDS,
   measuredSeconds,
   SessionAnomalyKind,
@@ -360,6 +361,22 @@ export class SessionsService {
         userId,
         process.env.SESSION_ACTION_SECRET,
       ),
+      /*
+       Até quando esta sessão pode ficar calada — decidido **aqui**.
+
+       O app precisa do número para não desistir antes do servidor: sem ele,
+       cinco minutos sem rede e a tela diz "desconectado" numa sessão que
+       continua de pé, e a pessoa em modo avião perde o que estudou.
+
+       Mandar o instante em vez de deixar o app recalcular é deliberado. Duas
+       cópias da mesma regra divergem — foi exatamente o defeito da contagem de
+       dias, corrigido em 10/08, onde dois caminhos calculavam "dia" e
+       discordavam. Aqui a regra mora num lugar só e o app obedece.
+      */
+      silence_tolerated_until: silencioToleradoAte(
+        session,
+        session.lastHeartbeatAt ?? null,
+      ).toISOString(),
     };
   }
 
@@ -373,7 +390,18 @@ export class SessionsService {
   async heartbeat(userId: string, sessionId: string) {
     const session = await this.prisma.studySession.findUnique({
       where: { id: sessionId },
-      select: { id: true, userId: true, status: true, startedAt: true, pausedAt: true },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        startedAt: true,
+        pausedAt: true,
+        // O plano entra na seleção porque `silencioToleradoAte` o usa para
+        // decidir quanto silêncio esta sessão pode ter.
+        timerMode: true,
+        workDuration: true,
+        breakDuration: true,
+      },
     });
 
     if (!session) throw new NotFoundException('Session not found');
@@ -404,6 +432,10 @@ export class SessionsService {
       server_time: now.toISOString(),
       elapsed_seconds: measuredSeconds(session.startedAt, now, pauses),
       next_heartbeat_in_seconds: HEARTBEAT_INTERVAL_SECONDS,
+      // Reafirmado a cada batida porque o limite anda junto com o último
+      // batimento: quem bate agora compra a janela curta de novo, por cima do
+      // que o plano já garantia.
+      silence_tolerated_until: silencioToleradoAte(session, now).toISOString(),
     };
   }
 
@@ -847,12 +879,29 @@ export class SessionsService {
   async sweepStaleSessions(now = new Date()): Promise<{ swept: number }> {
     const cutoff = new Date(now.getTime() - HEARTBEAT_GRACE_SECONDS * 1000);
 
+    /*
+     A consulta continua com a janela curta, e o filtro fino vem depois.
+
+     `silencioToleradoAte` depende do plano de cada linha, e não há como
+     exprimir isso num `where` do Prisma sem SQL cru. Pôr a janela curta aqui
+     mantém a consulta indexada e barata — ela é o **piso**: nada que ainda nem
+     passou de cinco minutos é candidato. Quem passou é conferido um a um contra
+     o próprio plano, em memória, sobre no máximo 200 linhas.
+    */
     const stale = await this.prisma.studySession.findMany({
       where: {
         status: { in: [...LIVE_STATUSES] },
         OR: [{ lastHeartbeatAt: { lt: cutoff } }, { lastHeartbeatAt: null }],
       },
-      select: { id: true, userId: true, startedAt: true, lastHeartbeatAt: true },
+      select: {
+        id: true,
+        userId: true,
+        startedAt: true,
+        lastHeartbeatAt: true,
+        timerMode: true,
+        workDuration: true,
+        breakDuration: true,
+      },
       // A backlog is drained over several ticks rather than in one long
       // transaction — this is a janitor, not a critical path.
       take: 200,
@@ -860,6 +909,17 @@ export class SessionsService {
 
     let swept = 0;
     for (const session of stale) {
+      /*
+       Modo avião não é sessão abandonada.
+
+       Enquanto a sessão está dentro do que ela mesma prometeu durar, ficar
+       calada é o esperado — quem desliga a internet para estudar é justamente
+       quem este produto quer. Passado o plano, é zumbi e vai embora.
+
+       Ver `silencioToleradoAte` para por que o plano é régua segura: ele é
+       declarado antes do offline, não depois.
+      */
+      if (now < silencioToleradoAte(session, session.lastHeartbeatAt)) continue;
       try {
         await this.sweepOne(session.id, session.userId, session.startedAt, session.lastHeartbeatAt);
         swept += 1;

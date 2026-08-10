@@ -202,3 +202,85 @@ export function sweepCreditInstant(
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
+
+/**
+ * Quanto tempo uma sessão pode ficar **calada** antes de ser varrida.
+ *
+ * ## O problema que isto resolve
+ *
+ * O dono do produto, em 10/08: "a pessoa pode pôr o telefone em modo avião".
+ * E deve poder — quem desliga a internet para estudar é exatamente a pessoa que
+ * este produto quer. Hoje ela perde a sessão em cinco minutos.
+ *
+ * ## Por que cinco minutos não podia ser simplesmente aumentado
+ *
+ * A varredura não é contagem, é controle de fraude. Ela credita só até
+ * `lastHeartbeatAt` (ver `sweepCreditInstant`), então deixar a sessão aberta
+ * por mais tempo **não credita nada a mais sozinho**. O risco é outro: uma
+ * sessão que continua aberta pode ser retomada depois, e aí o crédito final vai
+ * de `startedAt` até o fim — incluindo horas em que ninguém estudou.
+ *
+ * Uma janela fixa e generosa compraria offline ao preço de tempo ocioso
+ * creditável, para todo mundo, o tempo todo.
+ *
+ * ## A régua: o plano da própria sessão
+ *
+ * Um pomodoro declara quanto vai durar **antes de começar** — `workDuration` e
+ * `breakDuration` são escolhidos na tela de preparo, e ficam gravados na linha.
+ * Esse plano é a justificativa natural para o silêncio: enquanto a sessão está
+ * dentro do que ela mesma prometeu, ficar calada é esperado; passou disso, é
+ * zumbi.
+ *
+ * O ponto que torna isto seguro é a ordem. O plano é declarado antes do período
+ * offline, não depois — então não dá para, já desconectado, decidir que a
+ * sessão "ia durar" três horas.
+ *
+ * `CICLOS_PLANEJADOS` espelha `TOTAL_CYCLES` de `app/session/active.tsx`. Quatro
+ * ciclos é o pomodoro clássico, e é o que a tela roda.
+ *
+ * ## O cronômetro livre não tem plano
+ *
+ * `stopwatch` é aberto por definição: não há duração declarada para servir de
+ * régua, e conceder a janela longa a ele seria conceder a qualquer sessão, já
+ * que o modo é escolha de um toque. Fica com a janela curta.
+ *
+ * O custo é assumido: cronômetro livre em modo avião ainda perde a sessão. A
+ * alternativa seria o cliente provar continuidade com um registro de batimentos
+ * — o que é a evolução natural disto, e não cabia neste passo.
+ */
+export const CICLOS_PLANEJADOS = 4;
+
+/** Folga sobre o plano, para a sessão não morrer no minuto exato do fim. */
+const FOLGA_SOBRE_O_PLANO_SEGUNDOS = 5 * 60;
+
+export interface PlanoDaSessao {
+  timerMode: string;
+  workDuration: number;
+  breakDuration: number;
+  startedAt: Date;
+}
+
+/**
+ * O instante a partir do qual esta sessão pode ser varrida por silêncio.
+ *
+ * Devolve o **maior** entre a janela curta de sempre e o fim do plano — nunca
+ * encurta o que já existia.
+ */
+export function silencioToleradoAte(
+  sessao: PlanoDaSessao,
+  ultimoBatimento: Date | null,
+): Date {
+  const base = ultimoBatimento ?? sessao.startedAt;
+  const janelaCurta = new Date(base.getTime() + HEARTBEAT_GRACE_SECONDS * 1000);
+
+  if (sessao.timerMode !== 'pomodoro') return janelaCurta;
+
+  const planoSegundos =
+    CICLOS_PLANEJADOS * (sessao.workDuration + sessao.breakDuration) * 60;
+  const fimDoPlano = new Date(
+    sessao.startedAt.getTime() +
+      (planoSegundos + FOLGA_SOBRE_O_PLANO_SEGUNDOS) * 1000,
+  );
+
+  return fimDoPlano > janelaCurta ? fimDoPlano : janelaCurta;
+}

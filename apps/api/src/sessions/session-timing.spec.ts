@@ -5,6 +5,7 @@ import {
   measuredSeconds,
   pausedMillisWithin,
   sweepCreditInstant,
+  silencioToleradoAte,
 } from './session-timing';
 
 const T0 = new Date('2026-07-29T10:00:00.000Z');
@@ -165,5 +166,56 @@ describe('sweepCreditInstant', () => {
 
   it('ignores a heartbeat older than the start — clock skew must not subtract time', () => {
     expect(sweepCreditInstant(T0, at(-10))).toEqual(T0);
+  });
+});
+
+describe('silencioToleradoAte — o modo avião', () => {
+  const INICIO = new Date('2026-08-10T10:00:00.000Z');
+  const pomodoro = {
+    timerMode: 'pomodoro',
+    workDuration: 25,
+    breakDuration: 5,
+    startedAt: INICIO,
+  };
+  const minutos = (n: number) => new Date(INICIO.getTime() + n * 60_000);
+
+  it('um pomodoro calado aos 10 minutos ainda não é varrido', () => {
+    // O caso relatado: telefone em modo avião. O plano são 4x(25+5) = 120min,
+    // então aos 10 nada justifica declarar a sessão morta.
+    expect(silencioToleradoAte(pomodoro, minutos(5))).toEqual(minutos(125));
+  });
+
+  it('passado o plano, vira zumbi e vai embora', () => {
+    // 120 de plano + 5 de folga. Depois disso, silêncio é abandono.
+    const limite = silencioToleradoAte(pomodoro, minutos(5));
+    expect(minutos(126) > limite).toBe(true);
+  });
+
+  it('nunca encurta a janela que já existia', () => {
+    // Um batimento perto do fim do plano ainda garante os 5 minutos de sempre:
+    // a regra é o maior dos dois, nunca o menor.
+    expect(silencioToleradoAte(pomodoro, minutos(124))).toEqual(minutos(129));
+  });
+
+  it('o cronômetro livre fica na janela curta — ele não tem plano', () => {
+    /*
+     `stopwatch` é aberto por definição. Conceder-lhe a janela longa seria
+     concedê-la a qualquer sessão, já que o modo é escolha de um toque — e aí a
+     régua deixaria de ser o plano e passaria a ser nada.
+    */
+    const livre = { ...pomodoro, timerMode: 'stopwatch' };
+    expect(silencioToleradoAte(livre, minutos(5))).toEqual(minutos(10));
+  });
+
+  it('sem nenhum batimento, conta do início', () => {
+    expect(silencioToleradoAte(pomodoro, null)).toEqual(minutos(125));
+  });
+
+  it('o plano não pode ser esticado depois: ele vem da linha, não do pedido', () => {
+    // Blocos maiores dão janela maior, e é correto — mas `workDuration` é
+    // escolhido na tela de preparo, antes de qualquer offline. Quem já está
+    // desconectado não tem como mexer nele.
+    const longo = { ...pomodoro, workDuration: 50, breakDuration: 10 };
+    expect(silencioToleradoAte(longo, minutos(5))).toEqual(minutos(245));
   });
 });

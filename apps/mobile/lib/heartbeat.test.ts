@@ -270,3 +270,47 @@ describe('HeartbeatController', () => {
     controller.stop();
   });
 });
+
+describe('modo avião — o silêncio que o plano justifica', () => {
+  /*
+   O caso do dono do produto, 10/08: telefone em modo avião durante um pomodoro.
+
+   Antes, cinco minutos de falha e o cliente declarava a sessão perdida. O
+   servidor faz o mesmo cálculo do outro lado (`silencioToleradoAte`), e as duas
+   pontas precisam concordar — se o cliente desiste antes, a pessoa vê
+   "desconectado" numa sessão que continua de pé, perde o progresso na tela e
+   (até 10/08) ficava com os apps bloqueados.
+  */
+  const falhaDeRede = () => Promise.reject(new Error('offline'));
+
+  it('não declara a sessão perdida enquanto o plano a justifica', async () => {
+    const perdida = vi.fn();
+    const hb = new HeartbeatController({
+      sessionId: 's1',
+      send: falhaDeRede,
+      onGraceExpired: perdida,
+      graceMs: 1,                                   // janela curta já estourada
+      intervalMs: 10_000,
+      toleraSilencioAte: Date.now() + 60 * 60_000,  // mas o plano ainda cobre
+    });
+    hb.start();
+    await vi.waitFor(() => expect(perdida).not.toHaveBeenCalled());
+    expect(hb.isRunning).toBe(true);
+    hb.stop();
+  });
+
+  it('desiste quando o plano acaba', async () => {
+    const perdida = vi.fn();
+    const hb = new HeartbeatController({
+      sessionId: 's1',
+      send: falhaDeRede,
+      onGraceExpired: perdida,
+      graceMs: 1,
+      intervalMs: 10_000,
+      toleraSilencioAte: Date.now() - 1_000,        // plano já vencido
+    });
+    hb.start();
+    await vi.waitFor(() => expect(perdida).toHaveBeenCalledTimes(1));
+    hb.stop();
+  });
+});

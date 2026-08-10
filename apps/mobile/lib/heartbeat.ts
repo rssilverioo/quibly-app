@@ -52,6 +52,16 @@ export interface HeartbeatSnapshot {
 
 export interface HeartbeatOptions {
   sessionId: string;
+  /**
+   * Até quando o servidor tolera silêncio desta sessão, em epoch ms.
+   *
+   * Espelha `silencioToleradoAte` da API. Sem isto o cliente desiste aos cinco
+   * minutos enquanto o servidor mantém a sessão viva por todo o plano — e a
+   * pessoa em modo avião veria "desconectado" numa sessão que continua de pé.
+   *
+   * Ausente mantém o comportamento antigo: a janela curta.
+   */
+  toleraSilencioAte?: number;
   /** Injected so tests don't hit the network and the store can swap transports. */
   send: (sessionId: string) => Promise<HeartbeatSnapshot>;
   /** Called after every beat that lands. This is the reconciliation point. */
@@ -79,10 +89,13 @@ export class HeartbeatController {
 
   private readonly intervalMs: number;
   private readonly graceMs: number;
+  /** Renovado a cada batida — ver `renovarTolerancia`. */
+  private toleraSilencioAte?: number;
 
   constructor(private readonly opts: HeartbeatOptions) {
     this.intervalMs = opts.intervalMs ?? BEAT_INTERVAL_MS;
     this.graceMs = opts.graceMs ?? DEFAULT_GRACE_MS;
+    this.toleraSilencioAte = opts.toleraSilencioAte;
   }
 
   /**
@@ -126,6 +139,16 @@ export class HeartbeatController {
     await this.beat();
   }
 
+  /**
+   * O servidor reafirma o limite a cada batida, porque ele anda junto com o
+   * último batimento: quem bate agora compra a janela curta de novo, por cima
+   * do que o plano já garantia. Sem renovar, o app usaria para sempre o valor
+   * do início da sessão.
+   */
+  renovarTolerancia(epochMs: number): void {
+    if (Number.isFinite(epochMs)) this.toleraSilencioAte = epochMs;
+  }
+
   private schedule(delayMs: number): void {
     if (!this.running) return;
     this.timer = setTimeout(() => void this.beat(), delayMs);
@@ -161,7 +184,26 @@ export class HeartbeatController {
       return;
     }
 
-    const silentFor = Date.now() - this.lastSuccessAt;
+    const agora = Date.now();
+
+    /*
+     Modo avião não é sessão perdida.
+
+     Enquanto o servidor ainda tolera o silêncio desta sessão — porque o plano
+     dela justifica —, insistir é o certo: o crédito final sai de
+     `startedAt → agora` pelo relógio **do servidor**, então nada se perde por
+     ficar tentando, e desistir aqui é que jogaria o estudo fora.
+
+     A cadência cai para o intervalo normal em vez do backoff curto: bateria
+     importa quando não há rede, e a próxima tentativa que **importa** é a que
+     acontece quando a rede volta.
+    */
+    if (this.toleraSilencioAte && agora < this.toleraSilencioAte) {
+      this.schedule(this.intervalMs);
+      return;
+    }
+
+    const silentFor = agora - this.lastSuccessAt;
     if (silentFor >= this.graceMs) {
       // Past the window: the server has already swept, or is about to. Further
       // beats cannot save this session, so stop draining the battery.

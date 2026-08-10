@@ -26,6 +26,14 @@ export interface LiveSession extends StudySession {
   elapsed_seconds: number;
   heartbeat_interval_seconds: number;
   heartbeat_grace_seconds: number;
+  /**
+   * ISO. Até quando o servidor tolera esta sessão calada.
+   *
+   * Vem dele, e não de conta feita aqui: duas cópias da mesma regra divergem, e
+   * divergir aqui significa o app dizer "desconectado" numa sessão que o
+   * servidor mantém viva — quem estuda em modo avião perderia o progresso.
+   */
+  silence_tolerated_until?: string;
 }
 
 export interface HeartbeatResult {
@@ -34,6 +42,8 @@ export interface HeartbeatResult {
   server_time: string;
   elapsed_seconds: number;
   next_heartbeat_in_seconds: number;
+  /** Reafirmado a cada batida: o limite anda com o último batimento. */
+  silence_tolerated_until?: string;
 }
 
 /**
