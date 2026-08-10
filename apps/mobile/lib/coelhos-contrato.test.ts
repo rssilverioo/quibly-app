@@ -42,9 +42,17 @@ describe('as ilustrações do coelho', () => {
   });
 
   it('o mapa de estados só usa nomes que o índice conhece', () => {
+    /*
+     A tabela pode estar **vazia**, e está desde 10/08: a arte de origem não tem
+     resolução para as chamadas maiores, e o mascote vetorial voltou a atender
+     tudo. Exigir pelo menos uma entrada transformaria essa decisão de produto
+     num teste vermelho.
+
+     O que importa é o contrário: se houver entrada, ela tem que apontar para
+     arquivo que existe.
+    */
     const mapa = readFileSync(join(raiz, 'components/mascot/ilustracoes.ts'), 'utf8');
     const usados = [...mapa.matchAll(/COELHOS\.(\w+)/g)].map((m) => m[1]);
-    expect(usados.length).toBeGreaterThan(0);
     for (const nome of usados) expect(noIndice).toContain(nome);
   });
 

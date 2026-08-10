@@ -1,4 +1,5 @@
-import { COELHOS } from '../../assets/coelhos';
+// `COELHOS` (assets/coelhos) sai do import enquanto a tabela está vazia — os
+// arquivos continuam lá, e voltam junto com a primeira linha preenchida.
 import type { MascotState } from './Mascot';
 
 /**
@@ -33,14 +34,26 @@ import type { MascotState } from './Mascot';
  *
  * As poses que faltam desenhar, em ordem de uso real: `worried` (9), `wave`
  * (2), `idle` (2). Quando existirem, é aqui que entram.
+ *
+ * ## Por que a tabela está vazia agora
+ *
+ * Decisão do dono do produto em 10/08, e é de resolução, não de gosto.
+ *
+ * A folha de origem tem 1536x1024 para 16 coelhos — cerca de 300px cada. As
+ * ilustrações foram normalizadas para 512x512, o que já é ampliação. A home
+ * pede 150pt, e num aparelho 3x isso são 450px de fonte: ali amolece.
+ *
+ * Foram três tentativas de conseguir a arte melhor. Um SVG traçado pelo
+ * `imagetracer.js` (duas cores, um borrão) e dez SVG que embrulhavam a **mesma
+ * folha** em base64, com o raster idêntico pixel a pixel ao PNG original —
+ * conferido por hash. Não havia resolução escondida em lugar nenhum.
+ *
+ * Então o vetor volta a atender tudo: ele é nítido em qualquer tamanho,
+ * acompanha o tema e cobre os 30 estados. Os arquivos ficam em `assets/`, e a
+ * arquitetura fica de pé — esta tabela funciona igual com PNG ou com SVG. No
+ * dia em que a arte vier em resolução maior, volta a ser preencher linhas.
  */
 export const ILUSTRACAO: Partial<Record<MascotState, number>> = {
-  celebrate: COELHOS.comemorando,
-  cool: COELHOS.oculos_puff,
-  focused: COELHOS.estudando_fones,
-  love: COELHOS.abracando_coracao,
-  reading: COELHOS.lendo_livro,
-  sleepy: COELHOS.dormindo,
-  trophy: COELHOS.trofeu,
-  working: COELHOS.notebook,
+  // Vazio de propósito. Ver acima. Preencher aqui é o suficiente para a
+  // ilustração voltar a todas as telas que usam aquele estado.
 };
