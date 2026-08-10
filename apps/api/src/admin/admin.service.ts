@@ -9,19 +9,52 @@ export class AdminService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Os números da home do painel.
+   *
+   * ## O que mudou, e por quê
+   *
+   * Contava documentos, baralhos e quizzes — e mais nada. Era o retrato de uma
+   * versão anterior do produto: em 09/08 a captura de aula e a lista de
+   * baralhos saíram da tela de estudo do app justamente por **não serem mais o
+   * foco**, e o painel continuou medindo o que foi tirado.
+   *
+   * Um painel que mede o produto errado é pior que um painel vazio: ele dá a
+   * sensação de que se está acompanhando alguma coisa.
+   *
+   * Agora vem primeiro o que o Quibly é hoje — gente, salas, sessões e a fila
+   * de denúncias, que é a única com alguém esperando do outro lado. O conteúdo
+   * de IA continua, no fim, porque ainda existe e ainda custa dinheiro.
+   */
   async getStats() {
+    const hojeCedo = new Date();
+    hojeCedo.setHours(0, 0, 0, 0);
+
     const [
       totalUsers,
       proUsers,
       totalDocuments,
       totalFlashcardSets,
       totalQuizzes,
+      totalRooms,
+      activeRooms,
+      sessionsToday,
+      pendingReports,
+      bannedUsers,
     ] = await Promise.all([
       this.prisma.profile.count(),
       this.prisma.profile.count({ where: { plan: 'PRO' } }),
       this.prisma.document.count(),
       this.prisma.flashcardSet.count(),
       this.prisma.quiz.count(),
+      this.prisma.league.count(),
+      // "Ativa" é a sala com desafio em andamento — a que tem gente aparecendo
+      // hoje. Total de salas conta também as que morreram, e sala morta não
+      // diz nada sobre o produto estar vivo.
+      this.prisma.league.count({ where: { status: 'active' } }),
+      this.prisma.studySession.count({ where: { startedAt: { gte: hojeCedo } } }),
+      this.prisma.contentReport.count({ where: { status: 'PENDING' } }),
+      this.prisma.profile.count({ where: { bannedAt: { not: null } } }),
     ]);
 
     const today = new Date();
@@ -38,6 +71,11 @@ export class AdminService {
       total_documents: totalDocuments,
       total_flashcard_sets: totalFlashcardSets,
       total_quizzes: totalQuizzes,
+      total_rooms: totalRooms,
+      active_rooms: activeRooms,
+      sessions_today: sessionsToday,
+      pending_reports: pendingReports,
+      banned_users: bannedUsers,
       generations_today: {
         flashcard_sets: generationsToday._sum.flashcardSets ?? 0,
         quizzes: generationsToday._sum.quizzes ?? 0,
