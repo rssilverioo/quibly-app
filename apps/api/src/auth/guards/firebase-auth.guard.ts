@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -19,6 +20,88 @@ export class FirebaseAuthGuard implements CanActivate {
     private readonly firebaseService: FirebaseService,
     private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Cria o perfil na primeira requisição — sem deixar um nome repetido trancar
+   * a conta para sempre.
+   *
+   * ## O defeito
+   *
+   * `handle` e `email` são `@unique`, e o `handle` nascia do e-mail:
+   * `rodrigo.silverio@…` virava `rodrigo_silverio`. Quando esse nome já existia,
+   * o insert batia na restrição e **toda** requisição daquela conta falhava —
+   * não só o cadastro. A pessoa entrava normalmente no Firebase e o app
+   * respondia erro para sempre, sem nada dizendo por quê.
+   *
+   * Aconteceu em 10/08 e apareceu como "Authentication is temporarily
+   * unavailable": um `P2002` disfarçado de indisponibilidade.
+   *
+   * ## Como o nome é escolhido agora
+   *
+   * O primeiro candidato é o mesmo de antes, para quem chega primeiro continuar
+   * com o nome bonito. Se ele estiver ocupado, entra um sufixo tirado do
+   * próprio id — determinístico, então a mesma conta gera sempre o mesmo nome,
+   * e duas contas diferentes nunca convergem.
+   *
+   * ## E-mail repetido é outra história
+   *
+   * Não dá para contornar: dois usuários do Firebase apontando para o mesmo
+   * e-mail no nosso banco significa que uma conta foi recriada, e os dados
+   * antigos pertencem à antiga. Inventar um sufixo no e-mail corromperia o
+   * dado. Isso vira 409 com mensagem própria — um problema que precisa de
+   * decisão humana, não de contorno automático.
+   */
+  private async garantirPerfil(
+    userId: string,
+    email: string,
+    nome?: string,
+  ): Promise<void> {
+    const base = (nome || email.split('@')[0] || 'user')
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .slice(0, 30);
+
+    // O id é opaco e longo; os últimos caracteres bastam para separar duas
+    // pessoas com o mesmo nome, e mantêm o handle legível.
+    const sufixo = userId.slice(-6).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const candidatos = [base, `${base.slice(0, 23)}_${sufixo}`];
+
+    for (const handle of candidatos) {
+      try {
+        await this.prisma.profile.upsert({
+          where: { id: userId },
+          update: {},
+          create: {
+            id: userId,
+            email,
+            username: nome || email.split('@')[0] || 'user',
+            handle,
+          },
+        });
+        return;
+      } catch (erro) {
+        const codigo = (erro as { code?: string })?.code;
+        const campos = ((erro as { meta?: { target?: string[] } })?.meta?.target ?? []) as string[];
+        if (codigo !== 'P2002') throw erro;
+
+        if (campos.includes('email')) {
+          this.logger.error(
+            `E-mail já usado por outro perfil ao criar ${userId}: ${email}`,
+          );
+          throw new ConflictException(
+            'This email already belongs to another account',
+          );
+        }
+        // Handle ocupado: segue para o próximo candidato.
+      }
+    }
+
+    // Os dois candidatos ocupados. Improvável — exigiria colisão do sufixo do
+    // id —, e mesmo assim é melhor gritar do que criar um nome aleatório que
+    // ninguém reconhece depois.
+    this.logger.error(`Não achei handle livre para ${userId}`);
+    throw new ConflictException('Could not pick a unique handle');
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -72,19 +155,7 @@ export class FirebaseAuthGuard implements CanActivate {
 
       // Auto-create profile if it doesn't exist yet (cached to avoid DB hit on every request)
       if (!this.knownProfiles.has(userId)) {
-        await this.prisma.profile.upsert({
-          where: { id: userId },
-          update: {},
-          create: {
-            id: userId,
-            email,
-            username: decodedToken.name || email.split('@')[0] || 'user',
-            handle: (decodedToken.name || email.split('@')[0] || 'user')
-              .toLowerCase()
-              .replace(/[^a-z0-9_]/g, '_')
-              .slice(0, 30),
-          },
-        });
+        await this.garantirPerfil(userId, email, decodedToken.name);
         this.knownProfiles.add(userId);
       }
 
@@ -96,6 +167,8 @@ export class FirebaseAuthGuard implements CanActivate {
       // A suspensão não é falha de token — deixar cair no `catch` a
       // transformaria em "token inválido", e o app pediria login de novo.
       if (error instanceof ForbiddenException) throw error;
+      // Conflito de cadastro é decisão humana, não indisponibilidade.
+      if (error instanceof ConflictException) throw error;
 
       /*
        Só o que veio do Firebase vira "token inválido".
