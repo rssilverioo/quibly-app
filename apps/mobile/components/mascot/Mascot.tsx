@@ -1,5 +1,5 @@
 import { memo, useEffect, type ReactNode } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import Animated, {
   Easing,
@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useTheme, motion } from '../../theme';
+import { ILUSTRACAO } from './ilustracoes';
 import * as P from './parts';
 
 /**
@@ -159,6 +160,33 @@ function MascotView({
   }));
 
   const worn = v.worn?.({ accent });
+
+  /*
+   A ilustração, quando existe para este estado.
+
+   Fica **dentro** do mesmo `Animated.View`, e não no lugar dele: é o contêiner
+   que respira, pula e balança, então a imagem herda o movimento inteiro. Sem
+   isso a troca custaria a animação de 34 telas — era a objeção óbvia, e ela
+   não se sustenta.
+
+   `contain` porque as ilustrações não são quadradas (de 192x322 a 396x265) e o
+   mascote sempre foi pedido como um lado só. Esticar deformaria o personagem.
+  */
+  const ilustracao = ILUSTRACAO[state];
+  if (ilustracao) {
+    return (
+      <Animated.View style={[{ width: size, height: size }, animatedStyle, style]}>
+        <Image
+          source={ilustracao}
+          style={{ width: size, height: size }}
+          resizeMode="contain"
+          // O mascote é decoração: quem lê a tela por voz já recebe o texto ao
+          // lado, e anunciar "coelho" no meio dele só atrapalha.
+          accessible={false}
+        />
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View style={[{ width: size, height: size }, animatedStyle, style]}>
