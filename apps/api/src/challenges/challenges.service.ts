@@ -189,18 +189,14 @@ export class ChallengesService {
      * à noite no Brasil. Sem fuso declarado cai em UTC, que é o mesmo default do
      * resto do produto.
      */
-    const porFoto = (league.participationMode ?? 'photo') === 'photo';
-
-    const checkIns = porFoto
-      ? await this.prisma.feedPost.findMany({
+    const checkIns = await this.prisma.feedPost.findMany({
           where: {
             leagueId: challengeId,
             userId: { in: memberIds },
             createdAt: { gte: league.startDate, lt: league.endDate },
           },
-          select: { userId: true, createdAt: true },
-        })
-      : [];
+      select: { userId: true, createdAt: true },
+    });
 
     const fusoDe = new Map(
       league.members.map((m) => [m.userId, m.user.timezone ?? 'UTC']),
@@ -229,8 +225,25 @@ export class ChallengesService {
      * alguém. Num app de estudo, tempo medido é a presença mais forte que
      * existe — ignorá-la porque a pessoa não fotografou é indefensável.
      *
-     * A assimetria que sobra é a certa: no modo `study` a foto **não** ganha o
-     * dia, senão um desafio de tempo seria vencido fotografando.
+     * ## A assimetria caiu em 10/08, e o motivo é o mesmo
+     *
+     * Até aqui, no modo `study` a foto **não** ganhava o dia — para um desafio
+     * de tempo não ser vencido fotografando. O argumento valia enquanto o modo
+     * era uma escolha; deixou de valer quando ele deixou de existir.
+     *
+     * O seletor de modo saiu em 04/08 por decisão do dono do produto: *não
+     * existe sala de foto e sala de timer; existe uma sala, com duas portas*.
+     * Nenhuma tela define o modo desde então — mas as salas criadas antes
+     * carregam o valor antigo, e quem estava numa sala marcada `study`
+     * fotografava todo dia e via o ranking em zero.
+     *
+     * Foi exatamente o relato de 10/08: "postei em outro dia e só validou 1" —
+     * o 1 vinha de um dia com timer, e as fotos não contavam.
+     *
+     * Manter a assimetria significaria punir a pessoa por um campo que ela
+     * nunca escolheu, numa sala cuja tela de criação nem oferece a opção. A
+     * regra agora é simétrica e cabe numa frase: **aparecer conta, por
+     * qualquer das duas portas.**
      */
     const minutosPorDia = new Map<string, number>();
     for (const session of sessions) {
@@ -249,12 +262,10 @@ export class ChallengesService {
       marcar(usuario, dia);
     }
 
-    // A foto entra só no modo que a pede. O `Set` cuida do dia que teve as duas
-    // coisas: quem estudou e fotografou na terça apareceu uma vez.
-    if (porFoto) {
-      for (const checkIn of checkIns) {
-        marcar(checkIn.userId, diaLocal(checkIn.createdAt, checkIn.userId));
-      }
+    // A foto conta sempre, como o estudo. O `Set` cuida do dia que teve as
+    // duas coisas: quem estudou e fotografou na terça apareceu uma vez.
+    for (const checkIn of checkIns) {
+      marcar(checkIn.userId, diaLocal(checkIn.createdAt, checkIn.userId));
     }
 
     const ranked = league.members

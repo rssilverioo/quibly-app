@@ -294,12 +294,12 @@ describe('ChallengesService.leaderboard — modo estudo', () => {
         members: [membro('me'), membro('friend')],
       }),
     },
-    feedPost: { findMany: jest.fn() },
+    feedPost: { findMany: jest.fn().mockResolvedValue([]) },
     studySession: { findMany: jest.fn().mockResolvedValue(sessions) },
     $queryRaw: jest.fn().mockResolvedValue([]),
   });
 
-  it('conta o dia por 25 minutos de timer, e ignora o feed', async () => {
+  it('conta o dia por 25 minutos de timer', async () => {
     const prisma = prismaDoModoEstudo([
       // Eu: dois dias válidos.
       { userId: 'me', totalDurationMinutes: 30, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') },
@@ -314,8 +314,9 @@ describe('ChallengesService.leaderboard — modo estudo', () => {
       [1, 'me', 2],
       [2, 'friend', 1],
     ]);
-    // Modo estudo não pergunta ao feed.
-    expect(prisma.feedPost.findMany).not.toHaveBeenCalled();
+    // O feed é consultado sempre desde 10/08: o modo deixou de decidir quais
+    // portas contam. Aqui ele devolve vazio, então só o timer marca dia.
+    expect(prisma.feedPost.findMany).toHaveBeenCalled();
   });
 
   it('o piso é do DIA, não da sessão', async () => {
@@ -426,9 +427,19 @@ describe('ChallengesService.leaderboard — estudar conta como presença', () =>
     expect(r.entries[0].metricValue).toBe(0);
   });
 
-  it('no modo estudo a foto NÃO ganha o dia', async () => {
-    // A assimetria é de propósito: um desafio de tempo não pode ser vencido
-    // fotografando.
+  it('a foto ganha o dia mesmo em sala marcada `study`', async () => {
+    /*
+     Este teste travava a regra oposta, e a regra mudou em 10/08.
+
+     A assimetria — foto não vale em desafio de tempo — se sustentava enquanto o
+     modo era uma escolha de quem criava a sala. O seletor saiu em 04/08: "não
+     existe sala de foto e sala de timer; existe uma sala, com duas portas".
+
+     Só que as salas criadas antes carregam o valor antigo, e nelas fotografar
+     todo dia dava zero. O dono do produto fotografou em vários dias e viu 1 —
+     o 1 vinha de um dia com timer. Manter a assimetria seria puni-lo por um
+     campo que ele nunca escolheu, numa tela que nem oferece a opção.
+    */
     const prisma = prismaDoModoFoto([], [{ userId: 'fotografo', createdAt: new Date('2026-08-02T10:00:00Z') }]);
     prisma.league.findUnique = jest.fn().mockResolvedValue({
       id: 'c1', name: 'Room', description: 'Sprint', participationMode: 'study',
@@ -438,7 +449,7 @@ describe('ChallengesService.leaderboard — estudar conta como presença', () =>
 
     const r = await new ChallengesService(prisma as any).leaderboard('c1', 'fotografo', 1, 20);
 
-    expect(r.entries[0].metricValue).toBe(0);
-    expect(prisma.feedPost.findMany).not.toHaveBeenCalled();
+    expect(r.entries[0].metricValue).toBe(1);
+    expect(prisma.feedPost.findMany).toHaveBeenCalled();
   });
 });
