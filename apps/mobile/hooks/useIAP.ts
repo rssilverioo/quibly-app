@@ -25,6 +25,36 @@ export function useIAP() {
         if (current) {
           setMonthlyPackage(current.monthly ?? null);
           setYearlyPackage(current.annual ?? null);
+
+          /*
+           O que o SDK realmente entregou.
+
+           Em 09/08 a tela mostrou `$99.99/year` enquanto a folha de compra da
+           Apple, para a mesma conta e o mesmo pacote, dizia `R$ 129,90 per
+           year`. Como a tela usa `priceString` — o texto que o próprio StoreKit
+           formata —, os dois só divergem se o produto que o SDK tem em mãos não
+           for o que a Apple vai cobrar. O suspeito é o cache de ofertas do
+           RevenueCat, que segura produtos por até 24h e ficou defasado quando
+           mudamos os preços naquele dia.
+
+           Sem este registro, a próxima investigação recomeça do zero: o
+           `priceString` sozinho não diz em que moeda o SDK acha que está, nem
+           qual produto ele casou. `currencyCode` responde as duas coisas.
+          */
+          console.log('[IAP] produtos carregados', {
+            mensal: {
+              id: current.monthly?.product.identifier,
+              preco: current.monthly?.product.price,
+              texto: current.monthly?.product.priceString,
+              moeda: current.monthly?.product.currencyCode,
+            },
+            anual: {
+              id: current.annual?.product.identifier,
+              preco: current.annual?.product.price,
+              texto: current.annual?.product.priceString,
+              moeda: current.annual?.product.currencyCode,
+            },
+          });
         } else {
           console.warn('[useIAP] No current offering found');
         }
