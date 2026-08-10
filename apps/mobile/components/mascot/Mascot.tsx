@@ -169,8 +169,10 @@ function MascotView({
    isso a troca custaria a animação de 34 telas — era a objeção óbvia, e ela
    não se sustenta.
 
-   `contain` porque as ilustrações não são quadradas (de 192x322 a 396x265) e o
-   mascote sempre foi pedido como um lado só. Esticar deformaria o personagem.
+   `contain` porque as ilustrações são quadradas (512x512) e o mascote é pedido
+   como um lado só: com o quadro e a arte na mesma proporção, `contain` não
+   corta nem sobra — só garante que uma mudança futura na arte não deforme o
+   personagem.
   */
   const ilustracao = ILUSTRACAO[state];
   if (ilustracao) {

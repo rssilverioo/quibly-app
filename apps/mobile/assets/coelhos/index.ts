@@ -1,11 +1,19 @@
 /**
  * Os coelhos ilustrados, recortados da folha de 10/08/2026.
  *
- * São PNG com alfa, entre 190 e 400px de largura — tamanho de desenho, não de
- * ícone. Servem para os momentos em que o coelho **é** a tela: estado vazio,
- * boas-vindas, conquista. Para o que precisa animar, mudar com o tema ou
- * escolher a pose em tempo de execução, o mascote em SVG (`components/mascot`)
- * continua sendo o certo — ver o comentário lá.
+ * São PNG com alfa, todos **512x512**, e isso é deliberado nas duas coisas.
+ *
+ * Quadrados porque o recorte original ia de 192x322 a 396x265 — proporções de
+ * 0,60 a 1,49. Num quadro quadrado, com `contain`, cada um renderizava num
+ * tamanho visual diferente: o largo ficava baixinho, o estreito ficava magro.
+ * Era isso o "ficou tudo feio", e não o formato.
+ *
+ * 512 porque a maior chamada pede 150pt, o que num aparelho 3x são 450px.
+ * Menos que isso amolece.
+ *
+ * Dentro do quadro, cada pose foi escalada para ter a **mesma área opaca** —
+ * peso visual igual, que é o que o olho compara. Igualar pela altura faria o
+ * coelho deitado virar um bicho gigante deitado.
  *
  * O `require` precisa ser literal: o empacotador do Metro resolve os caminhos
  * em tempo de build, e um `require(variável)` não existe no bundle. Por isso
