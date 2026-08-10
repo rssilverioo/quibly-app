@@ -87,7 +87,7 @@
     "openRoom": "Abrir a sala",
     "post": "Post",
     "postError": "Não deu para publicar a foto",
-    "postPhoto": "Postar foto",
+    "postPhoto": "Postar uma foto",
     "postUnavailable": "Post indisponível",
     "publishPhoto": "Postar no feed",
     "publishing": "Postando…",
@@ -152,7 +152,10 @@
     "roomSizeHint": "Ninguém sai se você diminuir — a sala só para de aceitar gente nova.",
     "roomSizeInside_one": "{{count}} pessoa na sala agora",
     "roomSizeInside_other": "{{count}} pessoas na sala agora",
-    "roomSizeTooSmall": "A sala já tem {{count}} pessoas. Escolha um tamanho maior."
+    "roomSizeTooSmall": "A sala já tem {{count}} pessoas. Escolha um tamanho maior.",
+    "leaderDays": "dias · líder",
+    "yourDays": "dias · você",
+    "postPhotoWhere": "Em qual sala?"
   },
   "members": "Membros",
   "members_one": "{{count}} membro",

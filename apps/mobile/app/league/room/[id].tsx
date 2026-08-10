@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,6 +22,8 @@ import { getMyRooms, getRoomFeed, type RoomSummary } from '../../../services/roo
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import FolhaDeDenuncia from '../../../components/moderation/FolhaDeDenuncia';
 import { voltar } from '../../../lib/navegacao';
+import FaixaDeAnuncio from '../../../components/anuncio/FaixaDeAnuncio';
+import { ligarAnuncios } from '../../../lib/anuncios';
 
 /** Altura da barra da sala (`RoomTabBar`), para o FAB pousar 16pt acima dela. */
 const ROOM_TAB_BAR_HEIGHT = 66;
@@ -33,6 +35,20 @@ export default function RoomFeedScreen() {
   const { user, profile } = useAuth();
   /** Só a forma do avatar depende disto — ver `components/plano/MolduraPro`. */
   const ehPro = profile?.plan === 'PRO';
+
+  /**
+   * Pede o rastreamento aqui, e não na abertura do app.
+   *
+   * A recusa é irreversível — quem nega só muda nos Ajustes —, e pedir antes de
+   * a pessoa saber o que o app é seria a forma mais rápida de conseguir um
+   * "não" permanente. Esta é a primeira tela com faixa, então é aqui que a
+   * pergunta faz sentido.
+   *
+   * Quem assina nunca vê a folha: não há anúncio para justificar a pergunta.
+   */
+  useEffect(() => {
+    if (profile && !ehPro) void ligarAnuncios();
+  }, [profile, ehPro]);
   const { c } = useTheme();
   const { width: larguraDaJanela } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(c), [c]);
@@ -169,14 +185,22 @@ export default function RoomFeedScreen() {
         resizeMode="cover"
       />
 
+      {/* Os três números precisam da mesma unidade explícita.
+          "1 Líder / 1 você / 40 dias restantes" só dizia a unidade do terceiro,
+          e os dois primeiros eram lidos como contagem de fotos — foi
+          exatamente a leitura do dono do produto em 10/08, olhando cinco fotos
+          do mesmo dia e um "1" ao lado.
+          O desafio conta **dias distintos**: cinco fotos numa terça valem um
+          dia, e é isso que o produto mede. O número estava certo; faltava ele
+          dizer do que estava falando. */}
       <View style={styles.statsStrip}>
         <View style={styles.statColumn}>
           <Avatar uri={challenge.leader?.avatar_url ?? null} name={challenge.leader?.display_name ?? ''} size={28} pro={challenge.leader?.plan === 'PRO'} />
-          <View><Text style={styles.statValue}>{challenge.leader?.metric_value ?? 0}</Text><Text style={styles.statLabel}>{t('rooms.leader')}</Text></View>
+          <View><Text style={styles.statValue}>{challenge.leader?.metric_value ?? 0}</Text><Text style={styles.statLabel}>{t('rooms.leaderDays')}</Text></View>
         </View>
         <View style={styles.statColumn}>
           <Avatar uri={null} name={t('rooms.you')} size={28} pro={ehPro} />
-          <View><Text style={styles.statValue}>{challenge.me.metric_value}</Text><Text style={styles.statLabel}>{t('rooms.you')}</Text></View>
+          <View><Text style={styles.statValue}>{challenge.me.metric_value}</Text><Text style={styles.statLabel}>{t('rooms.yourDays')}</Text></View>
         </View>
         <View style={styles.statColumn}>
           <CalendarDays size={22} color={c.fgMuted} />
@@ -265,7 +289,18 @@ export default function RoomFeedScreen() {
         keyExtractor={(post) => post.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.fgMuted} />}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={<><Text style={styles.title}>{room.name}</Text>{hero}{liveStrip}</>}
+        /* A faixa fica entre os números da sala e o feed do dia — a dobra
+           entre "onde eu estou" e "o que aconteceu", escolhida pelo dono do
+           produto. Depois do `liveStrip` porque quem está estudando agora vem
+           antes de qualquer anúncio. */
+        ListHeaderComponent={
+          <>
+            <Text style={styles.title}>{room.name}</Text>
+            {hero}
+            {liveStrip}
+            <FaixaDeAnuncio />
+          </>
+        }
         renderItem={({ item, index }) => (
           <View>
             {startsNewFeedDay(posts, index) ? <Text style={styles.day}>{feedDayLabel(item.created_at, i18n.language)}</Text> : null}

@@ -1,0 +1,41 @@
+# app-ads.txt — quem tem direito de vender anúncio dentro do Quibly.
+#
+# ## Para que serve
+#
+# É o arquivo que a IAB definiu para o app provar quem revende o seu espaço
+# publicitário. Os compradores de mídia leem `tryquibly.com/app-ads.txt` — o
+# domínio que está na ficha da App Store — e só compram de quem estiver listado
+# aqui.
+#
+# Sem ele, o inventário é tratado como **não verificado**: continua vendendo,
+# por uma fração do preço, para os compradores que aceitam risco de fraude. É o
+# tipo de detalhe que não dá erro em lugar nenhum e some com a maior parte da
+# receita — e por isso quase sempre é descoberto tarde.
+#
+# ## Como preencher
+#
+# A linha certa é gerada pelo próprio AdMob, em Apps → app-ads.txt, depois de o
+# app estar listado na conta. Ela tem o **id do editor**, que é único e sai de
+# lá — não dá para adivinhar nem copiar de outro app.
+#
+# Ela se parece com:
+#
+#   google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+#
+# O `f08c47fec0942fa0` é o mesmo para todo mundo: identifica o Google como
+# sistema de certificação. Quem muda é o `pub-…`.
+#
+# ## Depois de preencher
+#
+# O AdMob leva algumas horas até um dia para reler o arquivo, e mostra o estado
+# em Apps → app-ads.txt. Até dizer "encontrado", a verificação não valeu.
+#
+# O que a linha significa, campo a campo:
+#
+#   google.com          o sistema que revende — aqui, o AdMob
+#   pub-…               o id do editor, único desta conta
+#   DIRECT              relação direta, sem intermediário revendendo por fora
+#   f08c47fec0942fa0    o id do Google no sistema de certificação da IAB,
+#                       igual para todo mundo
+
+google.com, pub-7106022757613059, DIRECT, f08c47fec0942fa0

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Modal, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, KeyRound, Plus } from 'lucide-react-native';
+import { Camera, ChevronRight, KeyRound, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { roomCoverThumbForId, ROOM_ROW_THUMB } from '../../assets/room-covers';
@@ -22,7 +22,7 @@ export default function RoomsScreen() {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [code, setCode] = useState('');
   /** Fechada, escolhendo entre as duas ações, ou digitando o código. */
-  const [sheet, setSheet] = useState<'closed' | 'choose' | 'code'>('closed');
+  const [sheet, setSheet] = useState<'closed' | 'choose' | 'code' | 'sala'>('closed');
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,12 +86,55 @@ export default function RoomsScreen() {
               <Text style={styles.sheetLabel}>{t('rooms.create')}</Text>
               <ChevronRight size={18} color={c.fgSubtle} />
             </Press>
+            {/* Postar a foto vive aqui porque não existia em lugar nenhum
+                fora de dentro da sala — e é a ação mais frequente do produto,
+                não a mais rara. Quem quer registrar o dia precisava lembrar em
+                que sala, entrar nela, e só então achar o botão.
+
+                Só aparece com sala: sem nenhuma, não há onde postar, e a linha
+                seria uma promessa vazia. */}
+            {rooms.length > 0 ? (
+              <Press
+                onPress={() => {
+                  // Uma sala só dispensa a pergunta. Perguntar "em qual?" com
+                  // uma resposta possível é burocracia.
+                  if (rooms.length === 1) {
+                    setSheet('closed');
+                    router.push(`/league/post/${rooms[0].id}`);
+                  } else {
+                    setSheet('sala');
+                  }
+                }}
+                style={styles.sheetRow}
+              >
+                <View style={[styles.sheetIcon, styles.sheetIconMuted]}><Camera size={20} color={c.fg} /></View>
+                <Text style={styles.sheetLabel}>{t('rooms.postPhoto')}</Text>
+                <ChevronRight size={18} color={c.fgSubtle} />
+              </Press>
+            ) : null}
+
             <Press onPress={() => setSheet('code')} style={styles.sheetRow}>
               <View style={[styles.sheetIcon, styles.sheetIconMuted]}><KeyRound size={20} color={c.fg} /></View>
               <Text style={styles.sheetLabel}>{t('rooms.joinWithCode')}</Text>
               <ChevronRight size={18} color={c.fgSubtle} />
             </Press>
           </>
+        ) : sheet === 'sala' ? (
+          <View style={{ gap: space.xs }}>
+            <Text style={[styles.sheetLabel, { color: c.fgMuted, marginBottom: space.xs }]}>
+              {t('rooms.postPhotoWhere')}
+            </Text>
+            {rooms.map((sala) => (
+              <Press
+                key={sala.id}
+                onPress={() => { setSheet('closed'); router.push(`/league/post/${sala.id}`); }}
+                style={styles.sheetRow}
+              >
+                <Text style={styles.sheetLabel} numberOfLines={1}>{sala.name}</Text>
+                <ChevronRight size={18} color={c.fgSubtle} />
+              </Press>
+            ))}
+          </View>
         ) : (
           <View style={styles.joinRow}>
             <TextInput

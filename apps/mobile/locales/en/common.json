@@ -87,7 +87,7 @@
     "openRoom": "Open the room",
     "post": "Post",
     "postError": "We couldn't post the photo",
-    "postPhoto": "Post photo",
+    "postPhoto": "Post a photo",
     "postUnavailable": "Post unavailable",
     "publishPhoto": "Post to feed",
     "publishing": "Posting…",
@@ -152,7 +152,10 @@
     "roomSizeHint": "Nobody is removed if you lower it — the room just stops taking new people.",
     "roomSizeInside_one": "{{count}} person in the room now",
     "roomSizeInside_other": "{{count}} people in the room now",
-    "roomSizeTooSmall": "The room already has {{count}} members. Pick a bigger size."
+    "roomSizeTooSmall": "The room already has {{count}} members. Pick a bigger size.",
+    "leaderDays": "days · leader",
+    "yourDays": "days · you",
+    "postPhotoWhere": "To which room?"
   },
   "members": "Members",
   "members_one": "{{count}} member",
