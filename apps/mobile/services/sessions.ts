@@ -18,6 +18,16 @@ export interface StartSessionData {
   work_duration?: number;
   break_duration?: number;
   proof_mode?: boolean;
+  /**
+   * A identidade que o aparelho deu à sessão antes de o servidor conhecê-la.
+   * Torna o registro tardio idempotente — ver `stores/session.store.ts`.
+   */
+  client_session_id?: string;
+  /**
+   * ISO. Quando o aparelho diz que a sessão começou. **Dica, não fato**: o
+   * servidor corta ao que o plano justifica. Só vai em sessão nascida offline.
+   */
+  started_at_hint?: string;
 }
 
 /** What the server tells us about a live session, on start and on resume. */

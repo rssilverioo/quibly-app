@@ -5,7 +5,10 @@ import { TIMER_PRESETS } from '@quibly/shared/constants';
 import * as sessionsService from '../services/sessions';
 import type { LiveSession } from '../services/sessions';
 import { HeartbeatController } from '../lib/heartbeat';
+import { ApiError } from '../lib/http-errors';
 import { pararFoco } from '../modules/foco-profundo/src';
+import { randomUUID } from 'expo-crypto';
+import * as cache from '../lib/sessao-em-cache';
 import {
   startLiveTimer,
   updateLiveTimer,
@@ -129,6 +132,11 @@ interface SessionState {
   setLeagueId: (id: string | null) => void;
   setUserId: (id: string) => void;
   setStreakDays: (days: number) => void;
+  /**
+   * Registra no servidor a sessão que nasceu offline. Sem efeito quando não há
+   * sessão local pendente, então chamar de novo é barato.
+   */
+  registrarSessaoOffline: () => Promise<void>;
   setIsFirstSession: (value: boolean) => void;
 
   startSession: () => Promise<void>;
@@ -245,6 +253,9 @@ export const useSessionStore = create<SessionState>((set, get) => {
         ? Date.parse(toleraSilencioAte)
         : undefined,
       send: async (id) => {
+        // A batida vai para o disco antes de ir para a rede: é ela que prova,
+        // depois, que o app esteve vivo enquanto o servidor não ouvia nada.
+        void cache.registrarBatida();
         const result = await sessionsService.heartbeat(id);
         // O limite anda com o último batimento, então cada batida o renova.
         if (result.silence_tolerated_until && heartbeat) {
@@ -337,19 +348,96 @@ export const useSessionStore = create<SessionState>((set, get) => {
         throw new Error('Subject and user must be set before starting.');
       }
 
-      const session = await sessionsService.startSession({
-        subject_id: state.subjectId,
-        league_id: state.leagueId ?? undefined,
-        timer_mode: state.timerMode,
-        work_duration: state.workDuration,
-        break_duration: state.breakDuration,
-      });
+      /*
+       A identidade nasce **aqui**, antes de qualquer rede.
 
-      get().adoptSession(session);
+       É ela que torna o registro tardio idempotente: se a chamada chegar ao
+       servidor mas a resposta se perder, o app repete com o mesmo id e recebe
+       de volta a mesma sessão, em vez de criar uma segunda para o mesmo estudo.
+      */
+      const idLocal = randomUUID();
+      const comecouEm = Date.now();
+      const local: cache.SessaoEmCache = {
+        id: null,
+        idLocal,
+        subjectId: state.subjectId,
+        leagueId: state.leagueId ?? null,
+        timerMode: state.timerMode,
+        workDuration: state.workDuration,
+        breakDuration: state.breakDuration,
+        comecouEm,
+        batidas: [],
+      };
+      // Guardado **antes** da chamada: se o app morrer entre o toque e a
+      // resposta, a sessão existe no aparelho e é registrada depois.
+      await cache.guardar(local);
+
+      try {
+        const session = await sessionsService.startSession({
+          subject_id: state.subjectId,
+          league_id: state.leagueId ?? undefined,
+          timer_mode: state.timerMode,
+          work_duration: state.workDuration,
+          break_duration: state.breakDuration,
+          client_session_id: idLocal,
+        });
+        await cache.guardar({ ...local, id: session.id });
+        get().adoptSession(session);
+      } catch (err) {
+        /*
+         Sem rede, a sessão começa mesmo assim.
+
+         Modo avião é o que a pessoa liga **antes** de sentar para estudar, e
+         até 10/08 era exatamente o caso que não funcionava: `startSession`
+         esperava a resposta e estourava.
+
+         Só falha de rede segue por aqui. Um 4xx é o servidor dizendo não — já
+         existe sessão viva, matéria apagada — e insistir localmente criaria uma
+         sessão que nunca vai ser aceita.
+        */
+        if (err instanceof ApiError && !err.isRetryable) {
+          await cache.limpar();
+          throw err;
+        }
+        set({
+          currentSession: null,
+          serverElapsedSeconds: 0,
+          serverSyncedAt: comecouEm,
+          phaseElapsedSeconds: 0,
+          isRunning: true,
+          isPaused: false,
+          isDisconnected: false,
+          phase: 'work',
+        });
+      }
 
       if (state.timerMode !== 'stopwatch') {
         schedulePhaseEndNotification(state.workDuration * 60, 'work').catch(() => {});
       }
+    },
+
+    /**
+     * Registra no servidor a sessão que nasceu offline.
+     *
+     * Chamada quando a rede volta. Manda o início declarado pelo aparelho —
+     * que o servidor **corta** ao que o plano justifica — e a identidade local,
+     * que torna a repetição inofensiva.
+     */
+    registrarSessaoOffline: async () => {
+      const local = await cache.ler();
+      if (!local || local.id) return;
+
+      const session = await sessionsService.startSession({
+        subject_id: local.subjectId,
+        league_id: local.leagueId ?? undefined,
+        timer_mode: local.timerMode as never,
+        work_duration: local.workDuration,
+        break_duration: local.breakDuration,
+        client_session_id: local.idLocal,
+        started_at_hint: new Date(local.comecouEm).toISOString(),
+      });
+      await cache.guardar({ ...local, id: session.id });
+      get().adoptSession(session);
     },
 
     adoptSession: (session: LiveSession) => {
@@ -419,6 +507,9 @@ export const useSessionStore = create<SessionState>((set, get) => {
       stopHeartbeat();
       clearLiveActionContext();
       void stopLiveTimer();
+      // A sessão acabou: o registro local não serve mais, e deixá-lo faria a
+      // próxima abertura do app tentar retomar algo que já foi encerrado.
+      void cache.limpar();
 
       const state = get();
       if (!state.currentSession) {
