@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme, type Palette, radius, space } from '../../theme';
 
 /**
  * A faixa de anúncio de quem não assina.
@@ -58,6 +59,22 @@ function unidadeDoAmbiente(): string | null {
 
 export default function FaixaDeAnuncio() {
   const { profile } = useAuth();
+  const { c } = useTheme();
+  const { width: larguraDaTela } = useWindowDimensions();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
+  /**
+   * A largura de dentro do card, e não a da tela.
+   *
+   * O banner *adaptive* se dimensiona pela tela e ignora o recuo da lista — o
+   * resultado era a única coisa da página encostando nas duas bordas, no meio
+   * de cards que recuam 16pt de cada lado. Foi o que o dono do produto reparou
+   * de imediato.
+   *
+   * `space.lg` de cada lado é o recuo da lista; 1pt de cada lado é a borda
+   * deste card. O que sobra é o espaço útil, e é o que se pede ao anúncio.
+   */
+  const larguraUtil = Math.floor(larguraDaTela - space.lg * 2 - 2);
   const [pronto, setPronto] = useState(false);
   const [falhou, setFalhou] = useState(false);
 
@@ -94,7 +111,20 @@ export default function FaixaDeAnuncio() {
         if (!vivo) return;
         setBanner({
           BannerAd: modulo.BannerAd as never,
-          tamanho: modulo.BannerAdSize.ANCHORED_ADAPTIVE_BANNER,
+          /*
+           Tamanho pedido pela largura do card, e não `ANCHORED_ADAPTIVE_BANNER`.
+
+           O adaptive ancorado sempre ocupa a tela inteira — é para isso que ele
+           existe. Pedir uma medida própria custa alcance: há menos anúncio
+           desenhado para tamanhos fora dos padrões, e a taxa de preenchimento
+           cai. É a troca que o dono do produto escolheu, e ela é defensável:
+           uma faixa que rompe o alinhamento de toda a tela chama atenção pelo
+           motivo errado.
+
+           50pt é a altura do banner padrão — a mesma do `320x50`, que é o
+           formato com mais inventário no mundo.
+          */
+          tamanho: `${larguraUtil}x50`,
           unidade: unidadeDoAmbiente() ?? modulo.TestIds.ADAPTIVE_BANNER,
         });
         setPronto(true);
@@ -122,8 +152,29 @@ export default function FaixaDeAnuncio() {
   );
 }
 
-const styles = StyleSheet.create({
-  // Sem fundo e sem borda: a faixa não é um card do app, e emoldurá-la a faria
-  // parecer conteúdo nosso.
-  faixa: { alignItems: 'center', marginTop: 12, marginBottom: 4 },
-});
+/**
+ * A moldura.
+ *
+ * A primeira versão era sem borda e sem fundo, com o argumento de que emoldurar
+ * o anúncio o faria parecer conteúdo nosso. O argumento estava mal aplicado: o
+ * que a política de anúncio proíbe é **disfarçar** — colocar a faixa onde a
+ * pessoa espera um botão, ou tirar dela a identificação. Aqui o banner traz o
+ * próprio selo do Google, e alinhar a largura é higiene de layout, não disfarce.
+ *
+ * O fundo fica em `surface`, o mesmo dos cards, porque um anúncio flutuando sem
+ * fundo sobre o cinza da tela é o que de fato parecia erro de renderização.
+ */
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    faixa: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      backgroundColor: c.surface,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: c.border,
+      marginTop: space.md,
+      marginBottom: space.md,
+    },
+  });
