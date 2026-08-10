@@ -10,9 +10,11 @@ import { useTheme, space } from '../../theme';
  *
  * A previous version drew the bar in JS and put glass views on top of it. That
  * cannot reach what iOS 26 does: the system glass refracts what scrolls behind
- * it, and the bar shrinks to a pill as you scroll down, with physics. Neither
- * is reproducible from JS — and the JS bar also swallowed taps, because a
- * floating absolute view is not where UIKit expects a tab bar to be.
+ * it, with physics — not reproducible from JS. The JS bar also swallowed taps,
+ * because a floating absolute view is not where UIKit expects a tab bar to be.
+ *
+ * (O encolhimento ao rolar, que vinha junto, foi desligado depois — ver
+ * `minimizeBehavior` abaixo.)
  *
  * Handing the bar back to the system gets both effects for free, plus the
  * platform's own hit-testing, accessibility and scroll-to-top behaviour.
@@ -24,10 +26,24 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs
-      // Shrinks the bar into a floating pill on scroll-down and restores it on
-      // scroll-up — the Instagram/WhatsApp behaviour. iOS 26 only; older
-      // versions ignore it and keep a normal bar.
-      minimizeBehavior="onScrollDown"
+      /*
+       A barra não encolhe ao rolar — decisão do dono do produto em 10/08.
+
+       Estava em `onScrollDown`, o comportamento nativo do iOS 26 que vira a
+       barra numa pílula flutuante enquanto a pessoa desce a tela. Foi ligado
+       porque é o que Instagram e WhatsApp fazem, e porque sai de graça ao
+       devolver a barra para o sistema.
+
+       Copiar o gesto de outro app não é razão suficiente. Encolher a navegação
+       serve a produtos onde a tela é o conteúdo e a barra atrapalha — feed
+       infinito, vídeo. Aqui a barra tem **três destinos** e a rolagem mais
+       comum é o feed de uma sala, curto: a pílula aparece e some o tempo todo,
+       e o alvo do dedo muda de tamanho no meio do gesto.
+
+       "Não faz sentido" foi a leitura de quem usa, e é a leitura certa:
+       movimento que não informa nada é ruído.
+      */
+      minimizeBehavior="never"
       tintColor={c.accent}
       iconColor={{ default: c.fgSubtle, selected: c.accent }}
       // Given as a pair rather than one style: a flat `color` would apply to
