@@ -78,6 +78,23 @@ export class HealthController {
       startedAt: this.subiuEm.toISOString(),
       uptimeSeconds: Math.floor((Date.now() - this.subiuEm.getTime()) / 1000),
       /**
+       * As origens de navegador que a API aceita.
+       *
+       * Mesma razão do booleano abaixo: de fora não havia como distinguir
+       * "`CORS_ORIGINS` não foi configurada" de "foi configurada com um valor
+       * que não casa" — os dois recusam toda origem, calados. Em 10/08 isso
+       * custou uma rodada: a variável estava lá, o serviço tinha reiniciado, e
+       * o painel continuava sem conseguir falar com a API.
+       *
+       * Domínio permitido não é segredo. É o oposto: é o que a API anuncia a
+       * qualquer navegador que pergunte, no cabeçalho da resposta.
+       */
+      corsOrigins: this.configService
+        .get<string>('CORS_ORIGINS', '')
+        .split(',')
+        .map((o) => o.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
+        .filter(Boolean),
+      /**
        * Se os botões da Live Activity têm como funcionar.
        *
        * Sem `SESSION_ACTION_SECRET`, `cunharTokenDeAcao` devolve `null` de

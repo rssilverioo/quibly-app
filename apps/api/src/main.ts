@@ -35,8 +35,30 @@ async function bootstrap() {
   const corsOrigins = configService
     .get<string>('CORS_ORIGINS', '')
     .split(',')
-    .map((origin) => origin.trim())
+    /*
+     Normalizar antes de comparar.
+
+     O navegador manda `Origin: https://tryquibly.com` — sem barra final e sem
+     aspas. Um valor colado com barra (`https://tryquibly.com/`) ou com aspas
+     (`"https://tryquibly.com"`) nunca casa, e o sintoma é o pior possível:
+     a variável **está** configurada, o serviço **reiniciou**, e mesmo assim
+     toda origem é recusada — sem nada em lugar nenhum dizendo por quê.
+     Aconteceu em 10/08 e custou uma rodada inteira de investigação.
+
+     Corrigir aqui é mais barato que documentar o formato: ninguém lê a
+     documentação de uma variável de ambiente na hora de colar um domínio.
+    */
+    .map((origin) => origin.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
     .filter(Boolean);
+
+  // Registrado no boot porque é a única forma de descobrir, de fora, se a
+  // variável chegou como se esperava. Domínio permitido não é segredo — é o
+  // oposto: é o que a API anuncia a qualquer navegador que pergunte.
+  new Logger('Bootstrap').log(
+    corsOrigins.length > 0
+      ? `CORS liberado para: ${corsOrigins.join(', ')}`
+      : 'CORS_ORIGINS vazio — nenhuma origem de navegador será aceita',
+  );
 
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : false,
