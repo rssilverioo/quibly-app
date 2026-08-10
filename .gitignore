@@ -34,3 +34,8 @@ coverage/
 # Estado do Maestri (papéis de agente) — ferramenta, não produto.
 .maestri/
 apps/web/tsconfig.tsbuildinfo
+
+# Artefatos de build local do EAS (`eas build --local --output ./build/...`).
+# O .ipa tem ~32MB e nasce fora de qualquer padrão já listado aqui — sem esta
+# linha, um `git add -A apps/mobile` o commita inteiro sem avisar.
+apps/mobile/build/
