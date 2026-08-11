@@ -35,6 +35,11 @@ export default function PrivacyPolicyPage() {
                 notification tokens for delivering notifications.
               </li>
               <li>
+                <strong>Advertising identifier:</strong> on the free plan, and only after you allow
+                it, your device&apos;s Advertising Identifier (IDFA) is used to show advertising.
+                See section 4.
+              </li>
+              <li>
                 <strong>Usage data:</strong> how you interact with the App, including features used
                 and time spent studying.
               </li>
@@ -70,11 +75,61 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Cloud storage providers:</strong> for storing uploaded files and avatars.
               </li>
+              <li>
+                <strong>Google AdMob:</strong> for serving advertising to people on the free plan.
+                See section 4 for what this involves and how to control it.
+              </li>
+              <li>
+                <strong>PostHog:</strong> for product analytics — which screens are opened and which
+                features are used, so we know what to improve.
+              </li>
+              <li>
+                <strong>Sentry:</strong> for crash and performance diagnostics, so we can find and
+                fix errors you run into.
+              </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">4. Data Storage &amp; Security</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">4. Advertising</h2>
+            <p className="mb-2">
+              Quibly is free to use, and the free plan shows advertising. Ads are served by Google
+              AdMob. We do not sell your personal data to advertisers.
+            </p>
+            <ul className="list-disc list-inside space-y-2">
+              <li>
+                <strong>What AdMob may access:</strong> your device&apos;s Advertising Identifier
+                (IDFA) and information about the ads you are shown and interact with.
+              </li>
+              <li>
+                <strong>We ask first.</strong> On iOS, before the ads SDK is initialised, we show
+                Apple&apos;s App Tracking Transparency prompt. Your answer is respected: if you
+                decline, you still see ads, but they are not personalised.
+              </li>
+              <li>
+                <strong>You can change your mind at any time</strong> in iOS Settings → Privacy
+                &amp; Security → Tracking.
+              </li>
+              <li>
+                <strong>You can remove ads entirely.</strong> Quibly Pro has no advertising.
+              </li>
+              <li>
+                <strong>Google&apos;s own terms</strong> govern how AdMob handles this data:{' '}
+                <a
+                  href="https://policies.google.com/technologies/ads"
+                  className="underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  policies.google.com/technologies/ads
+                </a>
+                .
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-2">5. Data Storage &amp; Security</h2>
             <p>
               Your data is stored on secure servers. We use industry-standard security measures
               including encrypted connections (HTTPS/TLS), secure authentication via Firebase, and
@@ -84,7 +139,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">5. Data Retention</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">6. Data Retention</h2>
             <p>
               We retain your data for as long as your account is active. When you delete your account,
               we delete your profile, study data, documents, and associated files. Financial
@@ -94,7 +149,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">6. Your Rights</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">7. Your Rights</h2>
             <p className="mb-2">You have the right to:</p>
             <ul className="list-disc list-inside space-y-2">
               <li>Access your personal data through the App.</li>
@@ -111,7 +166,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">7. Children&apos;s Privacy</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">8. Children&apos;s Privacy</h2>
             <p>
               Quibly is not intended for children under 13 years of age. We do not knowingly collect
               personal information from children under 13. If we learn that we have collected data
@@ -120,7 +175,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">8. Changes to This Policy</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">9. Changes to This Policy</h2>
             <p>
               We may update this Privacy Policy from time to time. We will notify you of significant
               changes through the App or by email. Continued use of the App after changes constitutes
@@ -129,7 +184,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-2">9. Contact Us</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">10. Contact Us</h2>
             <p>
               If you have questions about this Privacy Policy or your data, contact us at{' '}
               <a href="mailto:support@tryquibly.com" className="text-blue-400 underline">
