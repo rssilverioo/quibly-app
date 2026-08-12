@@ -69,7 +69,6 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       {/* Reachable via "see all" from Estudar — one tab less to scan. */}
-      <NativeTabs.Trigger name="library" hidden />
     </NativeTabs>
   );
 }

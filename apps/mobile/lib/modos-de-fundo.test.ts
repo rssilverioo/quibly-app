@@ -30,6 +30,20 @@ import { describe, expect, it } from 'vitest';
 const raiz = join(__dirname, '..');
 const ler = (caminho: string) => readFileSync(join(raiz, caminho), 'utf8');
 
+describe('permissões declaradas', () => {
+  /*
+   Declarar permissão que não se usa é a mesma falha da 2.5.4, e a Apple é
+   igualmente chata com isso. O microfone saiu em 12/08 junto com a captura de
+   aula — sem ela, nada no app grava som.
+  */
+  it('o microfone não é mais pedido', () => {
+    expect(ler('app.json')).not.toContain('NSMicrophoneUsageDescription');
+    expect(ler('ios/Quibly/Info.plist')).not.toContain(
+      'NSMicrophoneUsageDescription',
+    );
+  });
+});
+
 describe('UIBackgroundModes', () => {
   it('não é declarado no app.json', () => {
     expect(ler('app.json')).not.toContain('UIBackgroundModes');
@@ -39,14 +53,31 @@ describe('UIBackgroundModes', () => {
     expect(ler('ios/Quibly/Info.plist')).not.toContain('UIBackgroundModes');
   });
 
-  it('nada no app pede áudio em segundo plano', () => {
+  it('nada no app usa áudio', () => {
     /*
-     A guarda que importa de verdade: se alguém ligar
-     `staysActiveInBackground`, o modo passa a ser necessário — e aí o teste
-     acima vira mentira, porque o recurso existiria sem a declaração que o
-     sustenta. Melhor quebrar aqui do que descobrir no aparelho de alguém.
+     A captura de aula era o único uso de áudio, e saiu em 12/08 junto com
+     flashcards e quizzes. Se o áudio voltar, o modo de segundo plano volta a
+     ser conversa — e é melhor quebrar aqui do que descobrir na revisão.
     */
-    const captura = ler('app/lesson/capture.tsx');
-    expect(captura).not.toContain('staysActiveInBackground');
+    const fontes = ['app', 'components', 'services', 'lib', 'modules']
+      .flatMap((dir) => arquivosDe(join(raiz, dir)))
+      .filter((f) => /\.tsx?$/.test(f) && !f.endsWith('.test.ts'));
+    const comAudio = fontes.filter((f) =>
+      /from '(expo-audio|expo-av)'/.test(readFileSync(f, 'utf8')),
+    );
+    expect(comAudio).toEqual([]);
   });
 });
+
+/** Lista recursiva, sem dependência externa. */
+function arquivosDe(dir: string): string[] {
+  const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+  try {
+    return readdirSync(dir).flatMap((nome) => {
+      const caminho = join(dir, nome);
+      return statSync(caminho).isDirectory() ? arquivosDe(caminho) : [caminho];
+    });
+  } catch {
+    return [];
+  }
+}

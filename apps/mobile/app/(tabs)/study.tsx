@@ -273,7 +273,7 @@ export default function StudyScreen() {
               dois — **não é mais o foco**. Esta aba trata de aparecer hoje, e
               nem capturar aula nem revisar o que já foi estudado ajudam alguém
               a começar agora. Os baralhos continuam inteiros na Biblioteca, e a
-              captura na rota `/lesson/capture`; nada foi apagado, só deixou de
+              captura de aula; o recurso saiu do app em 12/08 e não
               disputar a tela de começar. */}
 
           {/* The native tab bar floats over the content — leave room for it. */}

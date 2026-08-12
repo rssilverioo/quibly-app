@@ -25,10 +25,9 @@
         "applinks:tryquibly.com"
       ],
       "infoPlist": {
-        "NSCameraUsageDescription": "Quibly uses the camera to photograph your notes and turn them into study material.",
-        "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to pick a profile picture and import class material.",
+        "NSCameraUsageDescription": "Quibly uses the camera for your study check-in photos and your profile picture.",
+        "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to pick your check-in photo, profile picture, and room cover.",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "Quibly needs the microphone to record your class and turn it into notes.",
         "NSSupportsLiveActivities": true
       },
       "entitlements": {

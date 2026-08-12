@@ -60,11 +60,9 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Allow Quibly to photograph your notes and turn them into study material.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Quibly needs the microphone to record your class and turn it into notes.</string>
+    <string>Quibly uses the camera for your study check-in photos and your profile picture.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Quibly needs photo library access to pick a profile picture and import class material.</string>
+    <string>Quibly needs photo library access to pick your check-in photo, profile picture, and room cover.</string>
     <key>NSSupportsLiveActivities</key>
     <true/>
     <key>NSUserActivityTypes</key>

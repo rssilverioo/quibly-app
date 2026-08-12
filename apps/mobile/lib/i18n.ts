@@ -12,13 +12,10 @@ import enLeagues from '../locales/en/leagues.json';
 import enSession from '../locales/en/session.json';
 import enFeed from '../locales/en/feed.json';
 import enNotifications from '../locales/en/notifications.json';
-import enFlashcards from '../locales/en/flashcards.json';
-import enQuizzes from '../locales/en/quizzes.json';
 import enDocuments from '../locales/en/documents.json';
 import enPricing from '../locales/en/pricing.json';
 import enLibrary from '../locales/en/library.json';
 import enAudio from '../locales/en/audio.json';
-import enLessons from '../locales/en/lessons.json';
 import enOnboarding from '../locales/en/onboarding.json';
 
 // Português (BR)
@@ -30,13 +27,10 @@ import ptLeagues from '../locales/pt-BR/leagues.json';
 import ptSession from '../locales/pt-BR/session.json';
 import ptFeed from '../locales/pt-BR/feed.json';
 import ptNotifications from '../locales/pt-BR/notifications.json';
-import ptFlashcards from '../locales/pt-BR/flashcards.json';
-import ptQuizzes from '../locales/pt-BR/quizzes.json';
 import ptDocuments from '../locales/pt-BR/documents.json';
 import ptPricing from '../locales/pt-BR/pricing.json';
 import ptLibrary from '../locales/pt-BR/library.json';
 import ptAudio from '../locales/pt-BR/audio.json';
-import ptLessons from '../locales/pt-BR/lessons.json';
 import ptOnboarding from '../locales/pt-BR/onboarding.json';
 
 const LANGUAGE_KEY = '@quibly/language';
@@ -82,13 +76,10 @@ i18n
         session: enSession,
         feed: enFeed,
         notifications: enNotifications,
-        flashcards: enFlashcards,
-        quizzes: enQuizzes,
         documents: enDocuments,
         pricing: enPricing,
         library: enLibrary,
         audio: enAudio,
-        lessons: enLessons,
         onboarding: enOnboarding,
       },
       'pt-BR': {
@@ -100,13 +91,10 @@ i18n
         session: ptSession,
         feed: ptFeed,
         notifications: ptNotifications,
-        flashcards: ptFlashcards,
-        quizzes: ptQuizzes,
         documents: ptDocuments,
         pricing: ptPricing,
         library: ptLibrary,
         audio: ptAudio,
-        lessons: ptLessons,
         onboarding: ptOnboarding,
       },
     },
