@@ -75,10 +75,6 @@
     <string>Usamos isto para mostrar anúncios mais relevantes para você. Assine o Pro para não ver anúncio nenhum.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
-    <key>UIBackgroundModes</key>
-    <array>
-      <string>audio</string>
-    </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

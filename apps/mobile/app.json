@@ -29,9 +29,6 @@
         "NSPhotoLibraryUsageDescription": "Quibly needs photo library access to pick a profile picture and import class material.",
         "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "Quibly needs the microphone to record your class and turn it into notes.",
-        "UIBackgroundModes": [
-          "audio"
-        ],
         "NSSupportsLiveActivities": true
       },
       "entitlements": {
