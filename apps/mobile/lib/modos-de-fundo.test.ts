@@ -30,6 +30,29 @@ import { describe, expect, it } from 'vitest';
 const raiz = join(__dirname, '..');
 const ler = (caminho: string) => readFileSync(join(raiz, caminho), 'utf8');
 
+describe('permissões do Android', () => {
+  const manifest = ler('android/app/src/main/AndroidManifest.xml');
+
+  it('declara a permissão de faturamento', () => {
+    /*
+     Sem `com.android.vending.BILLING` a Play Console **não deixa criar
+     assinatura** — a tela de assinaturas troca o botão "Criar" por "Faça upload
+     de um novo APK", e não explica por quê. Foi onde o Android travou em 14/08.
+
+     A permissão não vem da biblioteca: `react-native-purchases` não a declara no
+     manifest dela, então o merge do Gradle não a acrescenta. Tem que ser nossa.
+    */
+    expect(manifest).toContain('com.android.vending.BILLING');
+  });
+
+  it('não pede áudio, que saiu com a captura de aula', () => {
+    // Mesma limpeza do iOS, do outro lado: o recurso saiu em 12/08 e as
+    // permissões ficaram. O Google sinaliza permissão sensível sem uso.
+    expect(manifest).not.toContain('RECORD_AUDIO');
+    expect(manifest).not.toContain('MODIFY_AUDIO_SETTINGS');
+  });
+});
+
 describe('permissões declaradas', () => {
   /*
    Declarar permissão que não se usa é a mesma falha da 2.5.4, e a Apple é
