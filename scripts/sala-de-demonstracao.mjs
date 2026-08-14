@@ -39,18 +39,46 @@
  * ## Uso
  *
  *   node scripts/sala-de-demonstracao.mjs --convite ABC123 --confirmo-sala-privada
- *   node scripts/sala-de-demonstracao.mjs --convite ABC123 --confirmo-sala-privada --limpar
+ *
+ * Numa segunda rodada, reaproveite as contas passando a senha da primeira:
+ *
+ *   node scripts/sala-de-demonstracao.mjs --convite ABC123 --confirmo-sala-privada \
+ *     --senha demo-1cc4a6094257
  *
  * A senha das contas é gerada na hora e impressa uma vez, para você conseguir
  * entrar nelas pelo app se quiser gravar de outro ângulo.
  */
 
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const AQUI = dirname(fileURLToPath(import.meta.url));
 
 const API = process.env.QUIBLY_API ?? 'https://rabbit.tryquibly.com';
-const FIREBASE_KEY =
-  process.env.QUIBLY_FIREBASE_KEY ??
-  'AIzaSyBTHv'; /* preenchido pelo eas.json — ver README abaixo */
+
+/**
+ * A chave sai do `eas.json`, não da mão de quem roda.
+ *
+ * Ela é **pública** por definição — o prefixo `EXPO_PUBLIC_` significa que vai
+ * embutida em todo build e qualquer pessoa com o app a extrai. Não há segredo
+ * a proteger aqui; o que havia era atrito: pedir que alguém a copiasse à mão
+ * garantia que uma hora o texto de exemplo seria colado no lugar dela.
+ */
+function chaveDoRepo() {
+  if (process.env.QUIBLY_FIREBASE_KEY) return process.env.QUIBLY_FIREBASE_KEY;
+  const eas = JSON.parse(
+    readFileSync(join(AQUI, '../apps/mobile/eas.json'), 'utf8'),
+  );
+  for (const perfil of Object.values(eas.build ?? {})) {
+    const k = perfil?.env?.EXPO_PUBLIC_FIREBASE_API_KEY;
+    if (k) return k;
+  }
+  return '';
+}
+
+const FIREBASE_KEY = chaveDoRepo();
 
 const IDENTITY = 'https://identitytoolkit.googleapis.com/v1';
 
@@ -93,7 +121,14 @@ async function json(url, { metodo = 'POST', token, corpo } = {}) {
   return dado;
 }
 
-/** Cria a conta no Firebase e devolve o token. Reaproveita se já existir. */
+/**
+ * Cria a conta no Firebase e devolve o token. Reaproveita se já existir.
+ *
+ * A senha é gerada por execução, então uma segunda rodada não consegue entrar
+ * nas contas da primeira. Isso aconteceu de verdade: um teste interrompido
+ * deixou uma conta para trás, e a rodada seguinte morreu num
+ * `INVALID_LOGIN_CREDENTIALS` que não dizia o que fazer. Agora diz.
+ */
 async function conta(email, senha) {
   try {
     const r = await json(`${IDENTITY}/accounts:signUp?key=${FIREBASE_KEY}`, {
@@ -102,11 +137,22 @@ async function conta(email, senha) {
     return { token: r.idToken, nova: true };
   } catch (err) {
     if (!String(err.message).includes('EMAIL_EXISTS')) throw err;
-    const r = await json(
-      `${IDENTITY}/accounts:signInWithPassword?key=${FIREBASE_KEY}`,
-      { corpo: { email, password: senha, returnSecureToken: true } },
-    );
-    return { token: r.idToken, nova: false };
+    try {
+      const r = await json(
+        `${IDENTITY}/accounts:signInWithPassword?key=${FIREBASE_KEY}`,
+        { corpo: { email, password: senha, returnSecureToken: true } },
+      );
+      return { token: r.idToken, nova: false };
+    } catch (e2) {
+      if (!/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD/.test(e2.message)) throw e2;
+      throw new Error(
+        `A conta ${email} já existe com outra senha.\n\n` +
+          '  Rode de novo passando a senha da primeira vez:\n' +
+          '    --senha demo-xxxxxxxxxxxx\n\n' +
+          '  Ou apague as contas antigas pelo app (Ajustes → Delete Account)\n' +
+          '  e comece limpo.',
+      );
+    }
   }
 }
 
@@ -126,13 +172,18 @@ async function main() {
   }
   if (!FIREBASE_KEY.startsWith('AIzaSy') || FIREBASE_KEY.length < 30) {
     console.error(
-      'Defina QUIBLY_FIREBASE_KEY com a chave pública do Firebase\n' +
-        '(a mesma de EXPO_PUBLIC_FIREBASE_API_KEY no eas.json).',
+      'Não achei a chave pública do Firebase em apps/mobile/eas.json\n' +
+        '(EXPO_PUBLIC_FIREBASE_API_KEY). Defina QUIBLY_FIREBASE_KEY se ela\n' +
+        'estiver noutro lugar.',
     );
     process.exit(1);
   }
 
-  const senha = `demo-${randomBytes(6).toString('hex')}`;
+  /* `--senha` reaproveita as contas de uma rodada anterior. Ver `conta()`. */
+  const senha =
+    typeof arg('senha') === 'string'
+      ? arg('senha')
+      : `demo-${randomBytes(6).toString('hex')}`;
   console.log(`API: ${API}`);
   console.log(`Senha das contas (anote, aparece uma vez): ${senha}\n`);
 
