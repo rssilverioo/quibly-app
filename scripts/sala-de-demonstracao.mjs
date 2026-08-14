@@ -82,18 +82,31 @@ const FIREBASE_KEY = chaveDoRepo();
 
 const IDENTITY = 'https://identitytoolkit.googleapis.com/v1';
 
-/** As seis. Nomes comuns, sem piada interna — o vídeo é público. */
+/**
+ * O elenco do vídeo. Nomes em inglês porque a peça é para a ficha em inglês.
+ *
+ * A Sophie lidera de propósito — o roteiro do anúncio se apoia nisso.
+ */
 const ELENCO = [
-  { nome: 'Marina Alves', handle: 'marina', materia: 'Cálculo II', estuda: true },
-  { nome: 'Pedro Henrique', handle: 'pedroh', materia: 'Física', estuda: true },
-  { nome: 'Júlia Costa', handle: 'juliac', materia: 'Anatomia', estuda: true },
-  { nome: 'Rafael Lima', handle: 'rafalima', materia: 'Direito Penal', estuda: true },
-  { nome: 'Bea Fernandes', handle: 'beaf', materia: 'Química', estuda: false },
-  { nome: 'Caio Menezes', handle: 'caiom', materia: 'História', estuda: false },
+  { nome: 'Sophie', handle: 'sophie', materia: 'Organic Chemistry', minutos: 131, estuda: true },
+  { nome: 'Mia', handle: 'miaq', materia: 'Anatomy', minutos: 97, estuda: true },
+  { nome: 'Emma', handle: 'emmaq', materia: 'Calculus', minutos: 84, estuda: true },
+  { nome: 'Jake', handle: 'jakeq', materia: 'Physics', minutos: 48, estuda: false },
+  { nome: 'Noah', handle: 'noahq', materia: 'History', minutos: 32, estuda: true },
 ];
 
-/** Minutos que cada uma "já estudou" hoje. Números irregulares parecem reais. */
-const MINUTOS_DE_HOJE = [222, 135, 118, 97, 64, 41];
+/**
+ * Quanto cada uma **já concluiu**, em minutos, vindo do elenco.
+ *
+ * Sessão só conta quando encerra: enquanto corre, aparece como "estudando
+ * agora" e fica fora do total. Por isso o script fecha estes blocos antes de
+ * ligar as sessões ao vivo — assim o número no ranking é exatamente o pedido, e
+ * o cronômetro ao lado ainda está correndo.
+ *
+ * Cada bloco é cortado no servidor pelo plano da sessão, então valores acima de
+ * ~10h precisariam de mais de um bloco. Nenhum aqui chega perto.
+ */
+const AO_VIVO_MINUTOS = 12;
 
 const arg = (nome) => {
   const i = process.argv.indexOf(`--${nome}`);
@@ -208,36 +221,67 @@ async function main() {
       if (!/already|409/i.test(e.message)) throw e;
     });
 
-    const materia = await json(`${API}/subjects`, {
-      token,
-      corpo: { name: pessoa.materia, color: '#0043BA' },
-    }).catch(() => null);
+    /*
+     Criar a matéria falha na segunda rodada — ela já existe, e o `@@unique`
+     por usuário devolve conflito. A primeira versão engolia o erro e seguia com
+     `null`, o que fazia o script pular a pessoa inteira em silêncio: rodar de
+     novo não criava sessão nenhuma e a mensagem dizia "ninguém estudando".
+     Buscar a existente é o caminho certo, e deixa o script repetível.
+    */
+    const materia =
+      (await json(`${API}/subjects`, {
+        token,
+        corpo: { name: pessoa.materia, color: '#0043BA' },
+      }).catch(() => null)) ??
+      (await json(`${API}/subjects`, { token, metodo: 'GET' })
+        .then((lista) => lista?.find?.((m) => m.name === pessoa.materia) ?? null)
+        .catch(() => null));
 
     console.log(
       `  ${nova ? 'criada ' : 'reusada'}  ${pessoa.nome.padEnd(16)} @${pessoa.handle}`,
     );
 
-    if (!pessoa.estuda || !materia?.id) continue;
+    if (!materia?.id) continue;
 
+    const abrir = async (minutos) =>
+      json(`${API}/sessions/start`, {
+        token,
+        corpo: {
+          subject_id: materia.id,
+          timer_mode: 'pomodoro',
+          work_duration: 120,
+          break_duration: 30,
+          proof_mode: false,
+          client_session_id: crypto.randomUUID(),
+          // O servidor corta este início ao que o plano justifica. É o teto do
+          // que dá para mostrar sem esperar o tempo passar de verdade.
+          started_at_hint: new Date(Date.now() - minutos * 60_000).toISOString(),
+        },
+      });
+
+    // Primeiro os blocos concluídos: abre retroagido e fecha na hora, o que
+    // credita o tempo e faz a pessoa aparecer no ranking e no total.
     /*
-     A sessão retroagida: o servidor corta o início ao que o plano justifica.
-     Um pomodoro de 50/10 permite ~4h, que é o teto do que dá para mostrar.
+     `--somente-ao-vivo` religa os cronômetros sem somar horas de novo.
+
+     Sem ele, uma segunda rodada acrescenta outro bloco concluído a cada pessoa
+     e os totais deixam de ser os pedidos — foi o que quase aconteceu ao religar
+     as sessões para a gravação.
     */
-    const minutos = Math.min(MINUTOS_DE_HOJE[i] ?? 60, 240);
-    const sessao = await json(`${API}/sessions/start`, {
-      token,
-      corpo: {
-        subject_id: materia.id,
-        timer_mode: 'pomodoro',
-        work_duration: 50,
-        break_duration: 10,
-        proof_mode: false,
-        client_session_id: crypto.randomUUID(),
-        started_at_hint: new Date(Date.now() - minutos * 60_000).toISOString(),
-      },
-    });
+    if (!arg('somente-ao-vivo')) {
+      const s1 = await abrir(pessoa.minutos);
+      await json(`${API}/sessions/${s1.id}/end`, { token, corpo: {} });
+      const h = Math.floor(pessoa.minutos / 60);
+      console.log(
+        `            concluiu ${h ? `${h}h ` : ''}${pessoa.minutos % 60}m`,
+      );
+    }
+
+    if (!pessoa.estuda) continue;
+
+    const sessao = await abrir(AO_VIVO_MINUTOS);
     vivas.push({ pessoa, token, id: sessao.id });
-    console.log(`            estudando há ~${minutos} min`);
+    console.log(`            e está estudando agora`);
   }
 
   if (vivas.length === 0) {
