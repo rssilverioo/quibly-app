@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera, Trash2, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { comprimirImagem } from '../../../../lib/comprimir-imagem';
 import { useTranslation } from 'react-i18next';
 
 import Press from '../../../../components/ui/Press';
@@ -96,7 +97,7 @@ export default function EditRoomScreen() {
 
     const asset = escolha.assets[0];
     const arquivo: PostPhotoFile = {
-      uri: asset.uri,
+      uri: await comprimirImagem(asset.uri, 'capa'),
       name: asset.fileName || 'capa.jpg',
       type: asset.mimeType || 'image/jpeg',
     };

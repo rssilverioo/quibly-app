@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
+import { comprimirImagem } from '../../lib/comprimir-imagem';
 import {
   Clock, Flame, LogOut, ChevronRight, Camera, Trophy, BookOpen, Crown, Users,
   Award, GraduationCap, Skull, Shield, ShieldCheck, Target, Zap, Star, Lock,
@@ -97,7 +98,10 @@ export default function ProfileScreen() {
       try {
         // Uma chamada só: o upload já grava e devolve o perfil. Ver a nota em
         // `uploadAvatar` sobre o `PATCH` que existia aqui e dava 400.
-        setProfile(await uploadAvatar(user.uid, result.assets[0].uri));
+        // 512px de lado: o avatar aparece entre 28 e 96pt, e subia com o
+        // tamanho original — 807 KB medidos no CDN em 14/08.
+        const uri = await comprimirImagem(result.assets[0].uri, 'avatar');
+        setProfile(await uploadAvatar(user.uid, uri));
       } catch (err) {
         // A mensagem do servidor, quando há. O `catch` vazio que estava aqui
         // descartava a causa: um 400 de validação, um 413 de arquivo grande e

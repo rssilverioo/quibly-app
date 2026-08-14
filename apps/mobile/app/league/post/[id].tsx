@@ -18,6 +18,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, Clock, Minus, Pencil, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
+import { comprimirImagem } from '../../../lib/comprimir-imagem';
 
 import Avatar from '../../../components/ui/Avatar';
 import Press from '../../../components/ui/Press';
@@ -126,9 +127,17 @@ export default function RoomPhotoPostScreen() {
   const desafio = sala?.active_challenge ?? null;
   const pontua = desafio ? (desafio.participation_mode ?? 'photo') === 'photo' : null;
 
-  const adopt = (asset: ImagePicker.ImagePickerAsset) => {
+  const adopt = async (asset: ImagePicker.ImagePickerAsset) => {
+    /*
+     Encolhe antes de guardar no estado, e portanto antes de subir.
+
+     A foto sai da câmera em resolução cheia — uns 4000x3000 —, e era assim que
+     ela atravessava a rede e ficava guardada para sempre. Quem espera é a
+     pessoa, com o dedo na tela.
+    */
+    const uri = await comprimirImagem(asset.uri, 'checkin');
     setPhoto({
-      uri: asset.uri,
+      uri,
       name: asset.fileName || 'estudo.jpg',
       type: asset.mimeType || 'image/jpeg',
     });
@@ -142,14 +151,14 @@ export default function RoomPhotoPostScreen() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) return;
     const result = await ImagePicker.launchCameraAsync({ quality: 0.82 });
-    if (!result.canceled && result.assets[0]) adopt(result.assets[0]);
+    if (!result.canceled && result.assets[0]) await adopt(result.assets[0]);
   };
 
   const choosePhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return;
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.82 });
-    if (!result.canceled && result.assets[0]) adopt(result.assets[0]);
+    if (!result.canceled && result.assets[0]) await adopt(result.assets[0]);
   };
 
   const publish = async () => {

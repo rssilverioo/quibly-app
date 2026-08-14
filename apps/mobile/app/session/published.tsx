@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { comprimirImagem } from '../../lib/comprimir-imagem';
 import * as ImagePicker from 'expo-image-picker';
 
 import PostCard, { type FirebaseFeedPost } from '../../components/feed/PostCard';
@@ -241,10 +242,12 @@ export default function SessionPublishedScreen() {
     if (escolha.canceled || !escolha.assets[0]) return;
 
     const asset = escolha.assets[0];
+    // Mesma redução do check-in: é a mesma foto, pelo outro caminho.
+    const uri = await comprimirImagem(asset.uri, 'checkin');
     setPhotoFailed(false);
     try {
       const { photo_url } = await anexarFotoAoPost(primary.post.id, {
-        uri: asset.uri,
+        uri,
         name: asset.fileName ?? 'foto.jpg',
         type: asset.mimeType ?? 'image/jpeg',
       });
