@@ -84,8 +84,7 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "NOTIFICATIONS",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ],
       "intentFilters": [
         {
@@ -116,7 +115,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Quibly to photograph your notes and turn them into study material."
+          "cameraPermission": "Allow Quibly to take your study check-in photos and your profile picture."
         }
       ],
       "expo-font",
@@ -136,7 +135,6 @@
           "iosUrlScheme": "com.googleusercontent.apps.419383312629-hl004370ib4ea9ni56daf3vu1k3g5ns2"
         }
       ],
-      "expo-audio",
       "./plugins/withFirebaseModularHeaders",
       "@bacons/apple-targets",
       "./plugins/withResourceBundleSigning",
