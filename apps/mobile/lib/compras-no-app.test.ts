@@ -48,14 +48,22 @@ describe('compra no app', () => {
   });
 
   /**
-   * Enquanto esta linha for verdade, ligar a compra não liga o Android — só
-   * para de escondê-la no iOS, onde ela funciona. O teste existe para que a
-   * troca da chave seja uma decisão, e não uma descoberta no dia do
-   * lançamento.
+   * Este teste era o inverso até 14/08: ele exigia que a chave **fosse** o
+   * placeholder, para que a troca fosse uma decisão e não uma descoberta no dia
+   * do lançamento. A decisão foi tomada — a chave real entrou —, e agora ele
+   * guarda o outro lado.
+   *
+   * Chave de placeholder num perfil de produção significa tela de planos vazia
+   * no Android, que é indistinguível de "carregando" para quem está com o
+   * dedo na tela e o cartão na mão.
    */
-  it('o Android ainda está com placeholder, e isso está registrado', () => {
-    expect(easJson).toContain('goog_YOUR_REVENUECAT_ANDROID_KEY');
-    expect(iap).toContain('O Android continua sem chave');
+  it('as duas plataformas têm chave de verdade nos três perfis', () => {
+    expect(easJson).not.toContain('YOUR_REVENUECAT');
+    for (const [, chave] of easJson.matchAll(
+      /"EXPO_PUBLIC_REVENUECAT_API_KEY_(?:IOS|ANDROID)":\s*"([^"]*)"/g,
+    )) {
+      expect(chave).toMatch(/^(appl|goog)_[A-Za-z0-9]{10,}$/);
+    }
   });
 
   it('a porta do plano existe nos ajustes', () => {

@@ -27,12 +27,20 @@ export type { PurchasesPackage, PurchasesOfferings };
  * `$rc_annual` — que é exatamente o que `useIAP` procura. A tela carrega preço
  * real, não vazio.
  *
- * **O Android continua sem chave.** `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID`
- * ainda é `goog_YOUR_REVENUECAT_ANDROID_KEY` em todos os perfis, e é por isso
- * que `revenueCatConfigError` abaixo não foi tocado: ele detecta o placeholder
- * e faz a tela dizer o que houve, em vez de mostrar o vazio que mente. Ligar
- * aqui não liga a compra no Android — só para de escondê-la no iOS, onde ela
- * funciona.
+ * ~~"O Android continua sem chave."~~ Deixou de ser verdade em 14/08: o app da
+ * Play Store foi criado no RevenueCat, com a service account
+ * `revenuecat-play@quibly-70e89` validada, e a chave `goog_` entrou nos três
+ * perfis.
+ *
+ * `revenueCatConfigError` fica de pé mesmo assim. Ele não existia por causa do
+ * Android — existe porque **build sem chave é indistinguível de build sem
+ * rede** na tela de planos, e vazio mente: parece carregando. Vale para
+ * qualquer plataforma, hoje e depois.
+ *
+ * O que ainda falta no Android não é chave, é catálogo: as assinaturas precisam
+ * existir na Play Console e ser anexadas aos pacotes `$rc_monthly` e
+ * `$rc_annual` da offering `default`. Sem isso a oferta chega vazia, com a
+ * configuração toda correta.
  */
 export const COMPRAS_NO_APP_ATIVAS = true;
 
