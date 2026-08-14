@@ -20,32 +20,6 @@ allprojects {
     maven { url 'https://www.jitpack.io' }
   }
 
-  /*
-   O SDK de anúncios do Google, preso numa versão que o nosso Kotlin entende.
-
-   `react-native-google-mobile-ads` 16.4.0 fixa `play-services-ads:25.4.0` no
-   package.json dela, sem deixar configurar. Essa versão foi compilada com
-   Kotlin 2.3, e o projeto usa 2.1.20 — o que vem do Expo SDK 54, não de
-   escolha nossa. O compilador recusa metadados mais novos que os dele:
-
-     e: play-services-ads-25.4.0-api.jar
-        Module was compiled with an incompatible version of Kotlin.
-        The binary version of its metadata is 2.3.0, expected version is 2.1.0.
-
-   Conferi a versão de metadados de cada release baixando os `.aar` e lendo o
-   cabeçalho dos `.kotlin_module`: a 24.8.0 é a **última** com 2.1.0. Da 24.9.0
-   em diante o Google passou para 2.2, e na 25.4.0 para 2.3.
-
-   A alternativa seria subir o Kotlin do projeto, mexendo em toda a árvore de
-   módulos nativos por causa de uma biblioteca. Prender uma dependência é o
-   corte menor, e sai sozinho quando o Expo subir o Kotlin — aí basta apagar
-   este bloco e conferir se o build passa.
-  */
-  configurations.configureEach {
-    resolutionStrategy {
-      force 'com.google.android.gms:play-services-ads:24.8.0'
-    }
-  }
 }
 
 apply plugin: "expo-root-project"
