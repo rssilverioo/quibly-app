@@ -164,5 +164,9 @@
     },
     "owner": "rodrigosilverio",
     "runtimeVersion": "1.2.0"
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-7106022757613059~2061824574",
+    "ios_app_id": "ca-app-pub-7106022757613059~7466871837"
   }
 }

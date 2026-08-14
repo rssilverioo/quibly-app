@@ -48,28 +48,34 @@ describe('AdMob no Android', () => {
     expect(androidAppId).toMatch(/^ca-app-pub-/);
   });
 
-  it('quando o id for real, o manifest precisa carregá-lo', () => {
-    /*
-     Enquanto for o de teste, o manifest pode estar vazio — o app não serve
-     anúncio no Android de qualquer forma. Quando alguém puser o id de verdade,
-     este teste cobra a outra metade, que é a que o build lê.
-    */
-    if (androidAppId.includes(TESTE)) return;
-
-    expect(
-      manifest,
-      'o androidAppId saiu do modo de teste, mas o AndroidManifest.xml não tem\n' +
-        'com.google.android.gms.ads.APPLICATION_ID — o SDK falha calado e a\n' +
-        'faixa nunca aparece. Ver o cabeçalho deste arquivo.',
-    ).toContain('com.google.android.gms.ads.APPLICATION_ID');
-    expect(manifest).toContain(androidAppId);
+  /**
+   * O id chega ao manifest pela **biblioteca**, não por nós.
+   *
+   * `react-native-google-mobile-ads` já declara
+   * `com.google.android.gms.ads.APPLICATION_ID` no manifest dela, com o
+   * placeholder `${appJSONGoogleMobileAdsAppID}`, que o Gradle preenche lendo a
+   * chave `react-native-google-mobile-ads` do **topo** do `app.json` — fora de
+   * `expo`, que é onde o plugin do Expo vive.
+   *
+   * Em 14/08 eu adicionei a entrada à mão no nosso manifest e o build quebrou:
+   * duas declarações da mesma `meta-data` fazem o merger do Gradle falhar, e o
+   * erro chega ao EAS como "unknown gradle error", sem dizer o que houve.
+   *
+   * Por isso o teste agora exige o **contrário** do que exigia: a chave no
+   * `app.json` precisa existir, e o nosso manifest precisa ficar **sem** a
+   * entrada. A do Expo (`plugins`) continua servindo o iOS.
+   */
+  it('a chave que o Gradle lê existe, no topo do app.json', () => {
+    const raiz = JSON.parse(appJson)['react-native-google-mobile-ads'];
+    expect(raiz?.android_app_id).toBe(androidAppId);
+    expect(raiz?.android_app_id).not.toContain(TESTE);
   });
 
-  it('o manifest não pode carregar um id diferente do declarado', () => {
-    const noManifest = /android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID"\s+android:value="([^"]+)"/.exec(
+  it('o nosso manifest não declara o APPLICATION_ID — a biblioteca declara', () => {
+    expect(
       manifest,
-    )?.[1];
-    if (!noManifest) return;
-    expect(noManifest).toBe(androidAppId);
+      'duas declarações da mesma meta-data quebram o merger do Gradle, e o EAS\n' +
+        'só reporta "unknown gradle error". Ver o cabeçalho deste arquivo.',
+    ).not.toContain('com.google.android.gms.ads.APPLICATION_ID');
   });
 });
