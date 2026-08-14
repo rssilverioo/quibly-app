@@ -23,7 +23,7 @@
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_mPumkcYjW3cfpwCsnMizqBS8Po3x7UEraYPb52Xefiam",
         "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
         "EXPO_PUBLIC_ADMOB_BANNER_IOS": "ca-app-pub-7106022757613059/1065115011",
-        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "COLE_AQUI_O_BLOCO_DE_BANNER_ANDROID"
+        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "ca-app-pub-7106022757613059/3979159441"
       }
     },
     "dev-device": {
@@ -71,7 +71,7 @@
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_mPumkcYjW3cfpwCsnMizqBS8Po3x7UEraYPb52Xefiam",
         "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
         "EXPO_PUBLIC_ADMOB_BANNER_IOS": "ca-app-pub-7106022757613059/1065115011",
-        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "COLE_AQUI_O_BLOCO_DE_BANNER_ANDROID"
+        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "ca-app-pub-7106022757613059/3979159441"
       }
     },
     "production": {
@@ -95,7 +95,7 @@
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_mPumkcYjW3cfpwCsnMizqBS8Po3x7UEraYPb52Xefiam",
         "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
         "EXPO_PUBLIC_ADMOB_BANNER_IOS": "ca-app-pub-7106022757613059/1065115011",
-        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "COLE_AQUI_O_BLOCO_DE_BANNER_ANDROID"
+        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "ca-app-pub-7106022757613059/3979159441"
       }
     }
   },

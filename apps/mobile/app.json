@@ -143,7 +143,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "androidAppId": "ca-app-pub-7106022757613059~2061824574",
           "iosAppId": "ca-app-pub-7106022757613059~7466871837",
           "userTrackingUsageDescription": "Usamos isto para mostrar anúncios mais relevantes para você. Assine o Pro para não ver anúncio nenhum."
         }
