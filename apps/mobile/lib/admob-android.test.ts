@@ -81,53 +81,58 @@ describe('AdMob no Android', () => {
 });
 
 /**
- * O par biblioteca ⇄ SDK, que precisa andar junto com o Kotlin do Expo.
+ * O par biblioteca ⇄ SDK ⇄ Kotlin, que precisa andar junto.
  *
- * ## O que se descobriu em 14/08, depois de quatro builds falhados
+ * ## O que se descobriu em 14/08, depois de cinco builds falhados
  *
  * `react-native-google-mobile-ads` fixa a versão do `play-services-ads` no
  * `package.json` dela, sem ponto de configuração. E o Google passou a compilar
- * esse SDK com Kotlin mais novo que o do Expo SDK 54, que é **2.1.20**:
+ * esse SDK com Kotlin mais novo que o do Expo SDK 54, que traz **2.1.20**:
  *
  *   | play-services-ads | metadata Kotlin |
  *   |-------------------|-----------------|
- *   | até 24.8.0        | 2.1.0  ✅        |
+ *   | até 24.8.0        | 2.1.0           |
  *   | 24.9.0 – 25.3.0   | 2.2.0           |
  *   | 25.4.0            | 2.3.0           |
  *
  * (Números lidos do cabeçalho dos `.kotlin_module` dentro de cada `.aar`, não
- * estimados.) Acima de 2.1 o compilador recusa a dependência inteira:
+ * estimados.) Acima do teto o compilador recusa a dependência inteira:
  *
  *   e: Module was compiled with an incompatible version of Kotlin.
  *      The binary version of its metadata is 2.3.0, expected version is 2.1.0.
  *
  * ## Por que a saída não é prender o SDK
  *
- * Foi a primeira coisa que tentei — `resolutionStrategy.force` em 24.8.0 — e o
+ * Foi a primeira coisa tentada — `resolutionStrategy.force` em 24.8.0 — e o
  * build quebrou **pior**, porque a lib 16.4.0 chama uma API que só existe na
  * 25.4.0:
  *
  *   e: Unresolved reference 'AgeRestrictedTreatment'
  *
- * Os dois lados são amarrados. Descer só o SDK tira o chão da biblioteca; a
- * versão da biblioteca é que tem de descer junto. A 16.0.2 é a **última** que
- * fixa um SDK ≤ 24.8.0 (ela fixa 24.6.0), e usa só API estável — conferi que
- * `BannerAd`, `TestIds.ADAPTIVE_BANNER` e `mobileAds().initialize()`, que é
- * tudo o que consumimos, estão presentes nela.
+ * Os dois lados são amarrados. Descer só o SDK tira o chão da biblioteca.
+ *
+ * ## O arranjo atual
+ *
+ * Em vez de recuar a biblioteca até onde o Kotlin antigo alcança, subimos o
+ * Kotlin: `android.kotlinVersion=2.2.20` no `gradle.properties`, que é o teto
+ * suportado pelo Expo (a tabela `KSPLookup` do plugin termina aí, e não existe
+ * KSP publicado para 2.3.x no formato que ele espera). Com 2.2.20 o teto de
+ * metadata passa a ser **2.2.0**, e a lib pode ser a 16.3.4 — uma versão menor
+ * abaixo da atual, em vez das dezesseis que o recuo custaria.
  *
  * ## O que este teste protege
  *
- * Um `npm update` distraído sobe a lib, o SDK vem junto, e o build quebra com
- * "unknown gradle error" — sem uma palavra sobre Kotlin. Foi meia hora e quatro
- * builds para descobrir isso da primeira vez. Aqui custa um teste vermelho.
+ * Um `npm update` distraído sobe a lib, o SDK vem junto, e o build morre com
+ * "unknown gradle error" — sem uma palavra sobre Kotlin. Foram cinco builds
+ * para descobrir isso da primeira vez. Aqui custa um teste vermelho.
  *
- * Quando o Expo subir o Kotlin do projeto, este teto sobe junto: basta conferir
- * qual metadata o Kotlin novo aceita e ajustar `TETO` — aí dá para voltar para
- * a versão atual da biblioteca.
+ * Os dois números andam juntos: se um dia o Expo suportar Kotlin 2.3, sobem o
+ * `android.kotlinVersion` e o `TETO` na mesma mudança, e aí a 16.4.0 volta.
  */
 
-/** A maior `play-services-ads` com metadata Kotlin 2.1, que é o que o Expo 54 lê. */
-const TETO = [24, 8, 0];
+/** A maior `play-services-ads` com metadata Kotlin 2.2, que é o que 2.2.20 lê. */
+const TETO = [25, 3, 0];
+
 
 describe('AdMob: a biblioteca e o Kotlin do projeto', () => {
   it('a versão fixada do play-services-ads compila com o nosso Kotlin', () => {
@@ -146,9 +151,25 @@ describe('AdMob: a biblioteca e o Kotlin do projeto', () => {
     expect(
       ordem <= 0,
       `react-native-google-mobile-ads ${lib.version} fixa play-services-ads ${fixada},\n` +
-        `acima do teto ${TETO.join('.')} que o Kotlin 2.1.20 do Expo 54 consegue ler.\n` +
+        `acima do teto ${TETO.join('.')} que o Kotlin 2.2.20 do projeto consegue ler.\n` +
         'O build vai falhar em :react-native-google-mobile-ads:compileReleaseKotlin,\n' +
         'e o EAS só vai dizer "unknown gradle error". Ver o cabeçalho deste bloco.',
     ).toBe(true);
+  });
+
+  /**
+   * O teto acima só vale enquanto o Kotlin do projeto for o que dizemos.
+   *
+   * `TETO = 25.3.0` é uma afirmação sobre o compilador: 2.2.20 lê metadata
+   * 2.2.0. Se alguém remover a linha do `gradle.properties`, o Expo volta a
+   * 2.1.20 sozinho, o teto vira mentira, e o teste acima passa enquanto o build
+   * quebra — o pior tipo de teste. Por isso os dois são conferidos juntos.
+   */
+  it('o Kotlin declarado é o que sustenta o teto', () => {
+    expect(
+      ler('android/gradle.properties'),
+      'sem `android.kotlinVersion` o Expo usa 2.1.20, que só lê metadata 2.1 —\n' +
+        `e aí o teto ${TETO.join('.')} deste arquivo passa a mentir.`,
+    ).toContain('android.kotlinVersion=2.2.20');
   });
 });
