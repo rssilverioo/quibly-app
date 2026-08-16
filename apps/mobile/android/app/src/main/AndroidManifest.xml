@@ -1,4 +1,44 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+  <!--
+   Serviço em primeiro plano: a permissão sai, porque não usamos nenhum.
+
+   O WorkManager vem de carona com o Firebase Messaging e o `expo-notifications`,
+   e declara `SystemForegroundService` com `foregroundServiceType="dataSync"`.
+   Nosso código não cria serviço em primeiro plano — conferi lendo o manifest de
+   dentro do próprio `.aab` publicado, e o único que existe é o da biblioteca.
+
+   Sem isto, a Play recusa o envio:
+
+     Google Api Error: Invalid request - You must let us know whether your app
+     uses any Foreground Service permissions.
+
+   E a declaração exigida pede descrição e vídeo demonstrando o uso — que não
+   teríamos como gravar, porque o recurso não existe. Remover é a resposta
+   verdadeira ao formulário, não um atalho para escapar dele.
+
+   O que se perde: se um dia agendarmos trabalho longo que precise rodar em
+   primeiro plano, ele falha por falta de permissão. Hoje nada nosso agenda —
+   notificação por push chega pelo `FirebaseMessagingService`, e as locais pelo
+   agendador do sistema. No dia em que precisar, tira-se este bloco e aí sim
+   preenche-se a declaração, com um recurso real para mostrar no vídeo.
+  -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove"/>
+  <!--
+   Microfone: sai também, pelo mesmo motivo de não usarmos.
+
+   `expo-camera` declara `RECORD_AUDIO` porque sabe gravar vídeo. Nós só
+   tiramos foto — não há uma chamada a `recordAsync` no app inteiro. A
+   permissão vinha de carona e aparecia na ficha da Play como "microfone",
+   pedindo a quem instala uma confiança que não precisamos gastar.
+
+   É a mesma limpeza que a Apple nos obrigou a fazer quando recusou o build por
+   `UIBackgroundModes: [audio]` sem uso (diretriz 2.5.4). Lá foi rejeição; aqui
+   é só higiene, mas a razão é idêntica: não pedir o que não se usa.
+
+   Se um dia o check-in virar vídeo, esta linha sai antes do recurso entrar.
+  -->
+  <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="com.android.vending.BILLING"/>
   <uses-permission android:name="android.permission.INTERNET"/>
