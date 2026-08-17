@@ -46,10 +46,28 @@ describe('permissões do Android', () => {
   });
 
   it('não pede áudio, que saiu com a captura de aula', () => {
-    // Mesma limpeza do iOS, do outro lado: o recurso saiu em 12/08 e as
-    // permissões ficaram. O Google sinaliza permissão sensível sem uso.
-    expect(manifest).not.toContain('RECORD_AUDIO');
-    expect(manifest).not.toContain('MODIFY_AUDIO_SETTINGS');
+    /*
+     Mesma limpeza do iOS, do outro lado: o recurso saiu em 12/08 e as
+     permissões ficaram. O Google sinaliza permissão sensível sem uso.
+
+     Em 16/08 este teste passou a exigir a coisa errada. Ele conferia que a
+     string `RECORD_AUDIO` não aparecia — e aparecer virou o **jeito certo**,
+     porque descobrimos que o `expo-camera` declara a permissão no manifest
+     dele e o merge a trazia para o binário. A remoção precisa ser explícita:
+
+       <uses-permission android:name="...RECORD_AUDIO" tools:node="remove"/>
+
+     Ausência não bastava; era ausência só no nosso arquivo, com a permissão
+     entrando pela biblioteca. Então o teste agora exige o que sempre quis
+     dizer — que o app não **peça** áudio — e aceita a linha que garante isso.
+
+     O detalhe de cada permissão removida está em [[permissoes-android]].
+    */
+    const pede = (permissao: string) =>
+      new RegExp(`<uses-permission(?![^>]*tools:node="remove")[^>]*${permissao}`).test(manifest);
+
+    expect(pede('RECORD_AUDIO'), 'o app voltou a pedir microfone').toBe(false);
+    expect(pede('MODIFY_AUDIO_SETTINGS')).toBe(false);
   });
 });
 
