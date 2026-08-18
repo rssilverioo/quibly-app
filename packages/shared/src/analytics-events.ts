@@ -206,16 +206,75 @@ export interface AnalyticsEventProps {
      */
     storefront: string;
     period: 'monthly' | 'yearly';
+    /**
+     * Dias de teste grátis que o produto trouxe — `0` quando nenhum.
+     *
+     * Mesma classe de cego que `storefront`: a oferta introdutória pode estar
+     * criada e aprovada na loja e **não chegar** ao aparelho — por cache de
+     * ofertas do RevenueCat, por não estar anexada ao pacote da offering, ou
+     * por o plano base não estar publicado na Play. De fora, "tela sem teste" e
+     * "loja sem oferta" são o mesmo dado, e este campo é o que os separa.
+     */
+    trial_days: number;
   };
   plan_selected: { selected_plan: 'monthly' | 'yearly' };
-  /** The user tapped "subscribe" — before the store sheet resolves. */
-  purchase_started: { selected_plan: 'monthly' | 'yearly' };
+  /**
+   * The user tapped the CTA — before the store sheet resolves.
+   *
+   * `trial_days` (`0` quando não há teste) é o que separa "assinou" de "começou
+   * o teste" no topo do funil. Sem ele, a conversão paga cair depois de ligar o
+   * teste fica sem explicação — e a explicação costuma ser que a cobrança mudou
+   * de dia, não que sumiu.
+   */
+  purchase_started: { selected_plan: 'monthly' | 'yearly'; trial_days: number };
   /** [SERVER] Fired from the RevenueCat webhook (`INITIAL_PURCHASE`), which
-   *  is the only authoritative signal that money actually moved. */
+   *  is the only authoritative signal that money actually moved.
+   *
+   *  **Não dispara quando a compra começa por teste grátis** — ali ninguém
+   *  pagou nada, e contar isso como receita infla a conversão em cima de um
+   *  dinheiro que ainda pode nunca entrar. Esse caso vira `trial_started`, e o
+   *  `purchase_completed` correspondente sai dias depois, quando a primeira
+   *  cobrança de verdade acontece. */
   purchase_completed: { selected_plan: 'monthly' | 'yearly' | 'unknown'; store: 'apple' | 'google' | 'unknown' };
   /** Client-only: the store can reject/cancel a purchase without ever
    *  telling the API, so there is no server-side signal to pair with this. */
   purchase_failed: { selected_plan: 'monthly' | 'yearly'; reason: string };
+
+  // ── Teste grátis ─────────────────────────────────────────────────────────
+  /**
+   * [SERVER] A pessoa entrou no teste grátis (`INITIAL_PURCHASE` com
+   * `period_type: TRIAL`). **Zero receita** — é o denominador de
+   * `trial_converted`, e nada além disso.
+   */
+  trial_started: {
+    selected_plan: 'monthly' | 'yearly' | 'unknown';
+    store: 'apple' | 'google' | 'unknown';
+  };
+  /**
+   * [SERVER] O teste virou assinatura paga: a primeira cobrança passou
+   * (`RENEWAL` com `period_type: NORMAL` em quem estava em `trialing`).
+   *
+   * É **a** métrica que decide se o teste valeu a pena. `trial_started` sem
+   * este número ao lado não diz nada: um teste que converte 8% pode estar
+   * substituindo compras diretas que aconteciam a 100%.
+   */
+  trial_converted: {
+    selected_plan: 'monthly' | 'yearly' | 'unknown';
+    store: 'apple' | 'google' | 'unknown';
+  };
+  /**
+   * [SERVER] O teste acabou sem virar assinatura — cancelado durante o período
+   * ou expirado sem cobrança.
+   *
+   * `reason` separa os dois: `canceled` é decisão explícita dentro do teste,
+   * `expired` é o fim do prazo. Um teste que cancela no primeiro dia é problema
+   * de expectativa na tela de preços; um que expira no sétimo é problema de
+   * valor entregue no meio.
+   */
+  trial_ended: {
+    reason: 'canceled' | 'expired';
+    store: 'apple' | 'google' | 'unknown';
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventProps;
@@ -238,6 +297,9 @@ export const SERVER_SOURCED_EVENTS = [
   'lesson_ready',
   'lesson_processing_failed',
   'purchase_completed',
+  'trial_started',
+  'trial_converted',
+  'trial_ended',
 ] as const satisfies readonly AnalyticsEventName[];
 
 export type ServerSourcedEvent = (typeof SERVER_SOURCED_EVENTS)[number];
@@ -287,5 +349,8 @@ export const EVENT_FUNNELS = {
     'purchase_started',
     'purchase_completed',
     'purchase_failed',
+    'trial_started',
+    'trial_converted',
+    'trial_ended',
   ],
 } as const satisfies Record<string, readonly AnalyticsEventName[]>;

@@ -4,6 +4,14 @@ import Purchases, {
   type CustomerInfo,
 } from 'react-native-purchases';
 import { captureException } from '../lib/sentry';
+import {
+  diasDeTesteGratis,
+  elegibilidadeDoStatus,
+  podePrometerTeste,
+  type Elegibilidade,
+} from '../lib/teste-gratis';
+
+export { diasDeTesteGratis, podePrometerTeste, type Elegibilidade };
 
 const REVENUECAT_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '';
 const REVENUECAT_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID ?? '';
@@ -99,16 +107,86 @@ export async function initRevenueCat(userId: string): Promise<void> {
   }
 
   Purchases.configure({ apiKey: chaveDaPlataforma().chave, appUserID: userId });
+
+  /*
+   Aquece a oferta agora, sem esperar por ela.
+
+   É o que faz `diasDeTesteEmCache()` ter resposta quando a folha do Pro abrir —
+   e ela abre no meio de criar uma sala, sem aviso. O SDK já guarda as ofertas
+   por conta própria, então isto é uma ida à rede só na primeira vez por sessão.
+
+   Sem `await` e sem `catch` de verdade: se falhar, a folha usa a cópia neutra e
+   a tela de preços tenta de novo por conta própria. `getOfferings` já reporta.
+  */
+  void getOfferings();
 }
 
 export async function getOfferings(): Promise<PurchasesOfferings | null> {
   try {
     const offerings = await Purchases.getOfferings();
+    lembrarDoTeste(offerings);
     return offerings;
   } catch (err) {
     console.warn('[RevenueCat] getOfferings error:', err);
     captureException(err, { where: 'RevenueCat.getOfferings' });
     return null;
+  }
+}
+
+/**
+ * Quantos dias de teste a última oferta carregada tinha, ou `null` enquanto
+ * nada foi carregado.
+ *
+ * Existe para a **folha do Pro** poder dizer "comece 7 dias grátis" no botão.
+ * Ela abre no instante em que a pessoa bate no limite de salas — o momento de
+ * maior intenção do app inteiro — e não tem como esperar uma ida à rede ali sem
+ * o botão piscar de texto na mão de quem já está lendo.
+ *
+ * `null` enquanto não se sabe, e a folha então usa a cópia neutra. **Nunca
+ * promete por otimismo**: o dia em que a oferta perder o teste, quem não
+ * carregou nada lê o texto que continua verdadeiro.
+ */
+let testeConhecido: number | null = null;
+
+/** @see testeConhecido */
+export function diasDeTesteEmCache(): number | null {
+  return testeConhecido;
+}
+
+function lembrarDoTeste(offerings: PurchasesOfferings | null): void {
+  const atual = offerings?.current;
+  if (!atual) return;
+  // O mensal é a referência: é o pacote que a tela abre selecionado, e as duas
+  // ofertas carregam o mesmo teste na prática. Se um dia divergirem, quem
+  // decide é a tela de preços, que lê o produto de cada pacote.
+  testeConhecido =
+    diasDeTesteGratis(atual.monthly?.product) ?? diasDeTesteGratis(atual.annual?.product);
+}
+
+/**
+ * Se esta conta ainda tem direito ao teste grátis de cada produto.
+ *
+ * **Só o iOS responde.** No Android a API devolve UNKNOWN sempre, e é por isso
+ * que `podePrometerTeste` trata dúvida de maneira diferente em cada loja — o
+ * porquê está lá, em `lib/teste-gratis.ts`.
+ *
+ * Falha para `'desconhecida'` em vez de estourar: no iOS isso fecha a promessa
+ * do teste e a tela mostra o preço cheio, que é o lado seguro de errar. Uma
+ * exceção aqui derrubaria o carregamento de preços inteiro por causa de um
+ * dado que só decide uma linha de texto.
+ */
+export async function elegibilidadeDeTeste(
+  productIds: string[],
+): Promise<Record<string, Elegibilidade>> {
+  if (productIds.length === 0) return {};
+  try {
+    const mapa = await Purchases.checkTrialOrIntroductoryPriceEligibility(productIds);
+    return Object.fromEntries(
+      productIds.map((id) => [id, elegibilidadeDoStatus(mapa[id]?.status)]),
+    );
+  } catch (err) {
+    console.warn('[RevenueCat] checkTrialOrIntroductoryPriceEligibility error:', err);
+    return Object.fromEntries(productIds.map((id) => [id, 'desconhecida' as const]));
   }
 }
 

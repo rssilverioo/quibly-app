@@ -80,3 +80,51 @@ describe('compra no app', () => {
     expect(iap).toContain("const ENTITLEMENT_ID = 'pro';");
   });
 });
+
+/**
+ * O teste grátis, ligado em 18/08/2026.
+ *
+ * Quem define a duração é a **loja** — oferta introdutória no App Store Connect,
+ * oferta do plano base na Play Console. Estes testes guardam a única coisa que
+ * o código não pode fazer sozinho: inventar a promessa.
+ *
+ * A regra por trás de cada um está em `lib/teste-gratis.ts`, e o comportamento
+ * delas está coberto em `lib/teste-gratis.test.ts`. Aqui é o fio: a tela lê o
+ * produto, e não uma constante.
+ */
+describe('teste grátis', () => {
+  const useIap = ler('../hooks/useIAP.ts');
+  const traducoes = JSON.parse(ler('../locales/pt-BR/pricing.json'));
+
+  it('a duração vem do produto, não do código', () => {
+    // Um `7` escrito aqui é a mesma promessa quebrada que o `17%` de desconto
+    // fixo era: no dia em que alguém mexer na oferta, a tela mente e nada
+    // deixa de compilar.
+    expect(precos).toContain('diasDeTeste(billing)');
+    expect(useIap).toContain('diasDeTesteGratis(pkg.product)');
+    for (const chave of ['trialHeadline', 'startTrial', 'trialDisclosure'] as const) {
+      expect(traducoes[chave]).toContain('{{days}}');
+      expect(traducoes[chave]).not.toMatch(/\b\d+\s*(dias?|days?)\b/);
+    }
+  });
+
+  /**
+   * O erro que cobra na hora: quem já usou os 7 dias lê "7 dias grátis", toca
+   * o botão, e a Apple debita. A tela só promete quando a elegibilidade desta
+   * conta confirma.
+   */
+  it('a promessa passa pela elegibilidade', () => {
+    expect(useIap).toContain('podePrometerTeste');
+    expect(useIap).toContain('elegibilidadeDeTeste');
+  });
+
+  /**
+   * A Apple (3.1.2) exige duração, preço depois e renovação automática juntos,
+   * onde a compra acontece. O texto sem teste diria que a cobrança é hoje.
+   */
+  it('a divulgação muda quando há teste', () => {
+    expect(precos).toContain("t('trialDisclosure'");
+    expect(traducoes.trialDisclosure).toMatch(/renova/i);
+    expect(traducoes.trialDisclosure).toContain('{{price}}');
+  });
+});

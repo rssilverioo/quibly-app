@@ -6,7 +6,7 @@ import { Check } from 'lucide-react-native';
 
 import { Mascot } from '../mascot';
 import Press from '../ui/Press';
-import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
+import { COMPRAS_NO_APP_ATIVAS, diasDeTesteEmCache } from '../../services/iap';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 /**
@@ -57,6 +57,20 @@ export default function FolhaDoPro({
     t('pro.benefitSupport'),
   ];
 
+  /**
+   * O teste, se a oferta já foi carregada nesta sessão.
+   *
+   * Lido do cache e não de uma ida à rede: esta folha aparece no meio de criar
+   * uma sala, e um botão que troca de texto na mão de quem já está lendo é
+   * pior que um botão com a cópia neutra.
+   *
+   * `null` — antes de a oferta chegar, ou se ela não tiver teste — mantém
+   * "Conhecer o Quibly Pro", que continua verdadeiro em qualquer estado. A
+   * folha **nunca** promete grátis por otimismo; a tela de preços é quem
+   * confirma, com a elegibilidade desta conta em mãos.
+   */
+  const diasDeTeste = COMPRAS_NO_APP_ATIVAS ? diasDeTesteEmCache() : null;
+
   return (
     <Modal visible={visivel} transparent animationType="slide" onRequestClose={aoFechar}>
       {/* Fundo que fecha ao toque: folha sem saída óbvia é armadilha. */}
@@ -101,7 +115,9 @@ export default function FolhaDoPro({
               onPress={() => { aoFechar(); router.push('/pricing?trigger=quota'); }}
               style={styles.botao}
             >
-              <Text style={styles.botaoTexto}>{t('pro.cta')}</Text>
+              <Text style={styles.botaoTexto}>
+                {diasDeTeste ? t('pro.ctaTeste', { dias: diasDeTeste }) : t('pro.cta')}
+              </Text>
             </Press>
           ) : (
             <View style={styles.emBreve}>

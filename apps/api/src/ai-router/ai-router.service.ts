@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { Plan, Prisma } from '@prisma/client';
 import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { planoEfetivo, SELECAO_DE_PLANO } from '../common/plano-efetivo';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { GeminiService, GeneratedFlashcard, GeneratedQuestion } from '../gemini/gemini.service';
 import { AiProvider, AiTask, MODEL_PRICING, TASK_MODEL } from './ai-router.constants';
@@ -71,9 +72,9 @@ export class AiRouterService {
   private async planFor(userId: string): Promise<Plan> {
     const profile = await this.prisma.profile.findUnique({
       where: { id: userId },
-      select: { plan: true },
+      select: SELECAO_DE_PLANO,
     });
-    return profile?.plan ?? 'FREE';
+    return planoEfetivo(profile);
   }
 
   // ─── Cost estimation ───

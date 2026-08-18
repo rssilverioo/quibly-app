@@ -25,9 +25,20 @@ interface RevenueData {
   }>;
 }
 
+/**
+ * A cor de cada estado de assinatura.
+ *
+ * `canceled` deixou de ser vermelho em 18/08/2026, quando o cancelamento parou
+ * de derrubar o acesso na hora: quem está aí **ainda é assinante**, com a
+ * renovação desligada e o prazo correndo. Pintar isso de erro faz o painel
+ * contar como perda alguém que ainda pode voltar atrás — e voltar atrás é um
+ * toque, do lado da loja.
+ *
+ * Vermelho fica para os estados em que o acesso já acabou ou está travado.
+ */
 function getStatusVariant(status: string | null): 'success' | 'error' | 'warning' {
-  if (status === 'active') return 'success';
-  if (status === 'canceled' || status === 'past_due') return 'error';
+  if (status === 'active' || status === 'trialing') return 'success';
+  if (status === 'expired' || status === 'past_due') return 'error';
   return 'warning';
 }
 

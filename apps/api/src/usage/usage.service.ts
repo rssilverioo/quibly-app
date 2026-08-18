@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { planoEfetivo, SELECAO_DE_PLANO } from '../common/plano-efetivo';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 
 @Injectable()
@@ -15,10 +16,12 @@ export class UsageService {
   ): Promise<{ allowed: boolean; used: number; limit: number }> {
     const profile = await this.prisma.profile.findUnique({
       where: { id: userId },
-      select: { plan: true },
+      select: SELECAO_DE_PLANO,
     });
 
-    const plan = profile?.plan || 'FREE';
+    // Ver common/plano-efetivo.ts: a coluna sozinha não sabe que o período
+    // acabou quando o webhook de expiração se perde.
+    const plan = planoEfetivo(profile);
     const limit = await this.entitlements.getLimit(plan, type);
 
     const today = new Date();
@@ -63,10 +66,12 @@ export class UsageService {
   async getUsage(userId: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { id: userId },
-      select: { plan: true },
+      select: SELECAO_DE_PLANO,
     });
 
-    const plan = profile?.plan || 'FREE';
+    // Ver common/plano-efetivo.ts: a coluna sozinha não sabe que o período
+    // acabou quando o webhook de expiração se perde.
+    const plan = planoEfetivo(profile);
     const limits = await this.entitlements.getLimits(plan);
 
     const today = new Date();

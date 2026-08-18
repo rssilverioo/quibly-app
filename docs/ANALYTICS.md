@@ -34,7 +34,8 @@ mostra uma única coorte, `unknown` × `unknown`. Isso é esperado, não é bug 
 `SERVER_SOURCED_EVENTS` (em `analytics-events.ts`) lista os eventos que só a
 API pode emitir: `session_completed`, `session_abandoned`,
 `streak_extended`, `streak_broken`, `lesson_ready`,
-`lesson_processing_failed`, `purchase_completed`. O tipo `ClientSourcedEvent`
+`lesson_processing_failed`, `purchase_completed`, `trial_started`,
+`trial_converted`, `trial_ended`. O tipo `ClientSourcedEvent`
 exclui esses nomes do `track()` do mobile — passar `session_completed` para
 `track()` no app é erro de compilação, não um bug de produção.
 

@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import {
+  diasDeTesteGratis,
+  elegibilidadeDeTeste,
   getOfferings,
   paisDaVitrine,
+  podePrometerTeste,
   purchase as purchasePackage,
   restorePurchases,
+  type Elegibilidade,
   type PurchasesPackage,
 } from '../services/iap';
 import { track } from '../lib/analytics';
@@ -14,6 +18,15 @@ export function useIAP() {
   const [yearlyPackage, setYearlyPackage] = useState<PurchasesPackage | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  /**
+   * Quem ainda tem direito ao teste, por id de produto.
+   *
+   * Começa vazio, e `podePrometerTeste` lê isso como `'desconhecida'` — que no
+   * iOS significa **não prometer**. Ou seja: enquanto a resposta não chega, a
+   * tela mostra o preço cheio e depois acrescenta o teste. O contrário
+   * (prometer e retirar) seria oferecer grátis para quem vai ser cobrado.
+   */
+  const [elegibilidade, setElegibilidade] = useState<Record<string, Elegibilidade>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -74,6 +87,16 @@ export function useIAP() {
               currency: pkg.product.currencyCode ?? 'desconhecida',
               storefront: vitrine ?? 'desconhecida',
               period: periodo,
+              /*
+               Quantos dias de teste o produto trouxe — `0` quando nenhum.
+
+               É a mesma classe de cego que motivou `storefront`: a oferta pode
+               estar criada e aprovada na loja e **não chegar** ao aparelho, por
+               cache do RevenueCat, por não estar anexada ao pacote da offering,
+               ou por a Play não ter o plano base publicado. De fora, tela sem
+               teste e loja sem oferta são indistinguíveis.
+              */
+              trial_days: diasDeTesteGratis(pkg.product) ?? 0,
             });
           }
 
@@ -91,7 +114,23 @@ export function useIAP() {
               texto: current.annual?.product.priceString,
               moeda: current.annual?.product.currencyCode,
             },
+            testeMensal: diasDeTesteGratis(current.monthly?.product),
+            testeAnual: diasDeTesteGratis(current.annual?.product),
           });
+
+          /*
+           Quem já usou o teste antes.
+
+           Por último, e sem segurar nada do que veio acima: os preços e o
+           registro deles não dependem desta resposta. O que ela decide é uma
+           linha de texto e o rótulo do botão, e até chegar a tela mostra o
+           preço cheio — o lado seguro de errar.
+          */
+          const ids = [current.monthly?.product.identifier, current.annual?.product.identifier]
+            .filter((id): id is string => !!id);
+          const mapa = await elegibilidadeDeTeste(ids);
+          if (!mounted) return;
+          setElegibilidade(mapa);
         } else {
           console.warn('[useIAP] No current offering found');
         }
@@ -165,6 +204,32 @@ export function useIAP() {
     [monthlyPackage, yearlyPackage],
   );
 
+  /**
+   * Dias de teste grátis que a tela **pode prometer** para este ciclo, ou
+   * `null`.
+   *
+   * Duas perguntas em uma, e as duas precisam de sim: a oferta existe no
+   * produto que a loja entregou, e esta conta ainda tem direito a ela. Faltando
+   * qualquer uma, a resposta é `null` e a tela mostra o preço cheio.
+   *
+   * A duração vem do produto, nunca do código — mudar 7 para 14 dias é uma
+   * edição no App Store Connect, e a tela acompanha sozinha.
+   */
+  const diasDeTeste = useCallback(
+    (type: 'monthly' | 'yearly'): number | null => {
+      const pkg = type === 'monthly' ? monthlyPackage : yearlyPackage;
+      if (!pkg) return null;
+      const dias = diasDeTesteGratis(pkg.product);
+      const podeProver = podePrometerTeste({
+        dias,
+        elegibilidade: elegibilidade[pkg.product.identifier] ?? 'desconhecida',
+        plataforma: Platform.OS,
+      });
+      return podeProver ? dias : null;
+    },
+    [monthlyPackage, yearlyPackage, elegibilidade],
+  );
+
   const getManageSubscriptionUrl = useCallback((): string => {
     if (Platform.OS === 'ios') {
       return 'https://apps.apple.com/account/subscriptions';
@@ -180,6 +245,7 @@ export function useIAP() {
     purchase,
     restore,
     getPrice,
+    diasDeTeste,
     economiaAnual,
     getManageSubscriptionUrl,
   };

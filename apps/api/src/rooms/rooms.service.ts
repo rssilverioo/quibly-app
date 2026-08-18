@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { planoEfetivo, SELECAO_DE_PLANO } from '../common/plano-efetivo';
 import { LeaguesService } from '../leagues/leagues.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -43,10 +44,12 @@ export class RoomsService {
   private async exigirCotaDeSala(userId: string) {
     const perfil = await this.prisma.profile.findUnique({
       where: { id: userId },
-      select: { plan: true },
+      select: SELECAO_DE_PLANO,
     });
 
-    const limite = await this.entitlements.getLimit(perfil?.plan || 'FREE', 'rooms');
+    // `planoEfetivo` e não `perfil.plan`: quem cancelou continua PRO gravado
+    // até o `EXPIRATION` chegar, e ele pode não chegar. Ver common/plano-efetivo.ts.
+    const limite = await this.entitlements.getLimit(planoEfetivo(perfil), 'rooms');
     if (limite === Infinity) return;
 
     const minhas = await this.prisma.league.count({ where: { ownerId: userId } });

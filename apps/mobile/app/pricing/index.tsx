@@ -25,7 +25,7 @@ export default function PricingScreen() {
   const router = useRouter();
   const { t } = useTranslation('pricing');
   const { usage, refresh: refreshUsage } = useUsage();
-  const { monthlyPackage, yearlyPackage, purchasing, purchase, restore, getPrice, economiaAnual, getManageSubscriptionUrl } = useIAP();
+  const { monthlyPackage, yearlyPackage, purchasing, purchase, restore, getPrice, diasDeTeste, economiaAnual, getManageSubscriptionUrl } = useIAP();
   const [billing, setBilling] = useState<Billing>('monthly');
   const [restoring, setRestoring] = useState(false);
 
@@ -73,12 +73,27 @@ export default function PricingScreen() {
     yearly: yearlyPrice ?? '...',
   };
 
+  const periodLabel = billing === 'monthly' ? t('perMonth') : t('perYear');
+
+  /**
+   * Os dias de teste desta pessoa, neste ciclo — `null` quando não há o que
+   * prometer.
+   *
+   * Vem do hook, que só devolve número quando a oferta existe no produto **e**
+   * a conta ainda tem direito a ela. Quem já usou os 7 dias vê o preço cheio,
+   * que é exatamente o que a Apple vai cobrar dela.
+   */
+  const diasDeTesteAtual = diasDeTeste(billing);
+
   const handleSubscribe = async () => {
     if (!selectedPackage) {
       Alert.alert(t('common:error'), t('packageNotAvailable'));
       return;
     }
-    track('purchase_started', { selected_plan: billing });
+    // `trial_days` aqui é o que separa "assinou" de "começou o teste" no funil.
+    // Sem ele, a queda de conversão paga logo depois de ligar o teste ficaria
+    // sem explicação — e a explicação é que a cobrança mudou de dia, não sumiu.
+    track('purchase_started', { selected_plan: billing, trial_days: diasDeTesteAtual ?? 0 });
     try {
       await purchase(selectedPackage);
       // purchase_completed is server-sourced — it fires from the RevenueCat
@@ -215,10 +230,27 @@ export default function PricingScreen() {
             <Crown size={20} color={COLORS.gold} />
             <Text style={[styles.planName, { color: COLORS.gold, marginLeft: 8 }]}>{t('proPlan')}</Text>
           </View>
-          <Text style={styles.planPrice}>
-            {priceLabels[billing]}
-            <Text style={styles.planPeriod}>{billing === 'monthly' ? t('perMonth') : t('perYear')}</Text>
-          </Text>
+          {/*
+            Com teste, o preço não é a manchete — o teste é.
+
+            A ordem importa: quem lê "R$ 19,90/mês" primeiro já decidiu antes de
+            chegar na linha de baixo. E o preço não some, vem logo embaixo com o
+            "depois", porque esconder quanto custa depois do grátis é a
+            reclamação que vira estorno.
+          */}
+          {diasDeTesteAtual ? (
+            <>
+              <Text style={styles.planPrice}>{t('trialHeadline', { days: diasDeTesteAtual })}</Text>
+              <Text style={styles.trialThen}>
+                {t('trialThen', { price: priceLabels[billing], period: periodLabel })}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.planPrice}>
+              {priceLabels[billing]}
+              <Text style={styles.planPeriod}>{periodLabel}</Text>
+            </Text>
+          )}
           {isPro && (
             <View style={[styles.currentBadge, { backgroundColor: COLORS.gold + '22', borderColor: COLORS.gold }]}>
               <Text style={[styles.currentBadgeText, { color: COLORS.gold }]}>{t('currentPlan')}</Text>
@@ -236,11 +268,24 @@ export default function PricingScreen() {
               <Text style={styles.subscriptionName}>
                 {selectedPackage.product.title || (billing === 'monthly' ? 'Quibly Pro (Monthly)' : 'Quibly Pro (Yearly)')}
               </Text>
+              {/*
+                A divulgação muda quando há teste, e não é preciosismo de
+                redação: a regra da Apple (3.1.2) exige que a duração do teste,
+                o preço depois dele e a renovação automática apareçam **juntos**
+                onde a compra acontece. O texto sem teste diria que a cobrança é
+                hoje, e ela não é.
+              */}
               <Text style={styles.subscriptionDetail}>
-                {t('subscriptionDisclosure', {
-                  price: priceLabels[billing],
-                  period: billing === 'monthly' ? t('monthly').toLowerCase() : t('yearly').toLowerCase(),
-                })}
+                {diasDeTesteAtual
+                  ? t('trialDisclosure', {
+                      days: diasDeTesteAtual,
+                      price: priceLabels[billing],
+                      period: billing === 'monthly' ? t('monthly').toLowerCase() : t('yearly').toLowerCase(),
+                    })
+                  : t('subscriptionDisclosure', {
+                      price: priceLabels[billing],
+                      period: billing === 'monthly' ? t('monthly').toLowerCase() : t('yearly').toLowerCase(),
+                    })}
               </Text>
             </View>
           )}
@@ -263,18 +308,28 @@ export default function PricingScreen() {
           </View>
 
           {!isPro ? (
-            <TouchableOpacity
-              style={[styles.subscribeButton, (purchasing || !pricesLoaded) && { opacity: 0.6 }]}
-              activeOpacity={0.8}
-              onPress={handleSubscribe}
-              disabled={purchasing || !pricesLoaded}
-            >
-              {purchasing ? (
-                <ActivityIndicator color={COLORS.background} />
-              ) : (
-                <Text style={styles.subscribeButtonText}>{t('subscribe')}</Text>
-              )}
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.subscribeButton, (purchasing || !pricesLoaded) && { opacity: 0.6 }]}
+                activeOpacity={0.8}
+                onPress={handleSubscribe}
+                disabled={purchasing || !pricesLoaded}
+              >
+                {purchasing ? (
+                  <ActivityIndicator color={COLORS.background} />
+                ) : (
+                  <Text style={styles.subscribeButtonText}>
+                    {diasDeTesteAtual ? t('startTrial', { days: diasDeTesteAtual }) : t('subscribe')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              {/* As duas frases que respondem o que trava o dedo em cima do
+                  botão: "vou ser cobrado agora?" e "consigo sair?". Elas estão
+                  no texto legal logo acima, e ninguém lê texto legal. */}
+              {diasDeTesteAtual ? (
+                <Text style={styles.trialReassurance}>{t('trialNoCharge')}</Text>
+              ) : null}
+            </>
           ) : (
             <TouchableOpacity style={styles.manageButton} activeOpacity={0.8} onPress={handleManageSubscription}>
               <Text style={styles.manageButtonText}>{t('manageSubscription')}</Text>
@@ -329,6 +384,10 @@ const styles = StyleSheet.create({
   planName: { fontSize: 22, fontFamily: FONTS.bold, color: COLORS.text, marginBottom: 4 },
   planPrice: { fontSize: 32, fontFamily: FONTS.bold, color: COLORS.text, marginBottom: 12 },
   planPeriod: { fontSize: 14, fontFamily: FONTS.medium, color: COLORS.textMuted },
+  // O preço depois do teste: menor que a manchete, e ainda assim legível — é o
+  // número que a pessoa vai ser cobrada, não uma nota de rodapé.
+  trialThen: { fontSize: 15, fontFamily: FONTS.medium, color: COLORS.textSecondary, marginTop: -6, marginBottom: 12 },
+  trialReassurance: { fontSize: 12, fontFamily: FONTS.medium, color: COLORS.textMuted, textAlign: 'center', marginTop: 8 },
   currentBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: COLORS.primary + '22', borderWidth: 1, borderColor: COLORS.primary, marginBottom: 12 },
   currentBadgeText: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.primary, textTransform: 'uppercase' },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },

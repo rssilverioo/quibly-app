@@ -36,6 +36,7 @@ Cubra no mínimo:
 | Social | `room_viewed`, `room_joined`, `room_created`, `invite_shared`, `invite_opened` |
 | IA | `lesson_captured`, `lesson_ready`, `quiz_started`, `quiz_completed`, `flashcards_reviewed` |
 | Monetização (dormente) | `paywall_viewed`, `plan_selected`, `purchase_started`, `purchase_completed`, `purchase_failed` |
+| Teste grátis | `trial_started`, `trial_converted`, `trial_ended` — os três da API, pelo webhook (ver `docs/LOJAS.md` §5) |
 
 Propriedades obrigatórias em todo evento: `country_code`, `exam_track`,
 `plan`, `app_version`, `platform`.

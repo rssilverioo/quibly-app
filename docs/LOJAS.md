@@ -192,3 +192,122 @@ sim — e a Apple vai exigir, pelo Guideline 1.2, que exista um jeito de
 > disso no código. Vale conferir antes de submeter: app com feed e chat sem
 > denúncia nem bloqueio é reprovação por 1.2, e é uma reprovação que custa dias
 > de ida e volta.
+
+---
+
+## 5. O teste grátis de 7 dias
+
+Escrito em 18/08/2026, quando o app passou a saber mostrar teste grátis. **O
+código está pronto e a oferta ainda não existe em nenhuma das duas lojas** — até
+ela existir, a tela mostra preço cheio, que é o comportamento correto e não um
+defeito.
+
+### Por que a duração não está no código
+
+O app **não sabe** que o teste é de 7 dias. Ele lê o período do produto que a
+loja entrega (`lib/teste-gratis.ts`) e escreve na tela o número que veio. Mudar
+de 7 para 14 dias é uma edição no App Store Connect — sem build, sem revisão,
+sem deploy.
+
+O contrário — um `7` escrito no app — é a mesma promessa quebrada que o desconto
+anual fixo de `17%` era antes de `economiaAnual`: no dia em que alguém mexe na
+oferta, a tela onde a pessoa decide pagar passa a mentir, e nada deixa de
+compilar.
+
+### App Store Connect
+
+Para **cada** um dos dois produtos — `com.quibly.app.pro.monthly` e
+`com.quibly.app.pro.yearly`:
+
+1. **Assinaturas** → o produto → **Ofertas introdutórias** → **Criar**.
+2. País: **todos os territórios**. Uma oferta só no Brasil faz a tela prometer
+   grátis para quem está no Brasil e preço cheio para o resto — que é o correto,
+   mas raramente é o que se quis dizer.
+3. Tipo: **Gratuito** (*Free*), não "Pago antecipadamente" nem "Pagamento por
+   uso". Os três chegam ao app pelo mesmo campo, e o app só chama de grátis o
+   que tem preço zero — meia entrada aparece como preço, não como teste.
+4. Duração: **1 semana**. A Apple não oferece "7 dias"; `P1W` é a mesma coisa, e
+   o app converte para "7 dias" na tela.
+5. Início: imediato. Fim: sem data.
+
+> Elegibilidade é da Apple, por **grupo de assinatura**: quem usou o teste no
+> mensal **não** ganha outro no anual. O app pergunta isso ao SDK antes de
+> prometer qualquer coisa (`checkTrialOrIntroductoryPriceEligibility`), e quem
+> já usou vê o preço cheio — que é exatamente o que vai ser cobrado.
+
+### Play Console
+
+O Google não tem "oferta introdutória" separada: o teste é uma **oferta do plano
+base**.
+
+1. **Monetizar** → **Assinaturas** → a assinatura → o plano base → **Criar
+   oferta**.
+2. Fase: **Teste gratuito**, 7 dias.
+3. Elegibilidade: **novos assinantes** (`Nunca teve uma assinatura deste app`).
+4. **Ativar** a oferta — oferta criada e não ativada não chega ao aparelho, e do
+   lado de cá é indistinguível de não existir.
+
+> No Android o SDK **sempre** responde "elegibilidade desconhecida" — é limitação
+> da API, não erro nosso. Por isso a regra do app é assimétrica
+> (`podePrometerTeste`): lá o Play só entrega as ofertas para as quais a conta é
+> elegível, então a fase gratuita existir já **é** a resposta.
+
+### RevenueCat
+
+Nada a criar. As ofertas viajam junto do produto que já está nos pacotes
+`$rc_monthly` e `$rc_annual` da offering `default`.
+
+O que **precisa** estar ligado é o webhook — ele já está, e agora distingue três
+coisas que antes eram uma só:
+
+| Evento da loja | O que o servidor faz |
+|---|---|
+| `INITIAL_PURCHASE` com `period_type: TRIAL` | PRO com `subscriptionStatus: trialing` · evento `trial_started` |
+| `RENEWAL` em cima de quem estava em `trialing` | PRO `active` · `trial_converted` **e** `purchase_completed` |
+| `CANCELLATION` no teste | renovação desligada, **acesso mantido** até o fim do prazo · `trial_ended` (`canceled`) |
+| `EXPIRATION` | volta a FREE · `trial_ended` (`expired`) se o teste não tinha sido cancelado antes |
+
+A receita entra no funil na **conversão**, não no começo do teste: contar teste
+como compra infla o número que decide as próximas decisões com um dinheiro que
+ainda pode nunca entrar.
+
+### Como saber se chegou ao aparelho
+
+`paywall_prices_loaded` carrega `trial_days`. `0` com a oferta criada na loja
+significa uma de três coisas, e todas já aconteceram com alguém: cache de
+ofertas do RevenueCat (até 24h), oferta não anexada ao produto do pacote, ou —
+no Android — plano base sem oferta ativa.
+
+Sem esse campo, "tela sem teste" e "loja sem oferta" são o mesmo dado visto de
+fora.
+
+### Cancelar não é perder o acesso
+
+Corrigido em 18/08/2026, junto com o teste. `CANCELLATION` e `EXPIRATION`
+dividiam o mesmo `case` e derrubavam o Pro na hora — quem cancelasse no dia 20
+de um mês pago até o dia 30 perdia dez dias já comprados, enquanto a Apple
+seguia contando esses dez dias normalmente. O app e a loja discordavam sobre o
+que a pessoa tinha.
+
+O que `CANCELLATION` diz é que a **renovação** foi desligada. Quem encerra o
+acesso é o `EXPIRATION`. A única exceção é reembolso (`cancel_reason:
+CUSTOMER_SUPPORT`): o dinheiro voltou, o acesso volta junto.
+
+| Estado | Significa |
+|---|---|
+| `active` | pagando, renova |
+| `trialing` | no teste grátis, vira cobrança no fim |
+| `canceled` | renovação desligada, **ainda tem acesso** até `currentPeriodEnd` |
+| `trialing_canceled` | cancelou dentro do teste, usa até o prazo acabar |
+| `billing_issue` | cobrança falhou, a loja ainda está tentando |
+| `expired` | sem acesso |
+
+> **A rede de segurança.** `revenuecat.controller.ts` responde `200` mesmo
+> quando o processamento estoura — de propósito, para a loja não repetir evento
+> que nunca vai passar. O efeito colateral é que um erro de banco na hora errada
+> consome o único aviso de que a assinatura acabou, e antes disto o resultado
+> seria Pro vitalício de graça, silencioso. Por isso os pontos que decidem
+> acesso passaram a usar `planoEfetivo` (`src/common/plano-efetivo.ts`), que
+> compara `currentPeriodEnd` com o relógio em vez de confiar só na coluna — e só
+> para quem já não tem renovação a caminho, porque cortar o acesso de quem
+> acabou de pagar por causa de um webhook atrasado é o erro mais caro dos dois.
