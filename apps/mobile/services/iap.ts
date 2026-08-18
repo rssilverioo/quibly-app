@@ -45,10 +45,16 @@ export type { PurchasesPackage, PurchasesOfferings };
  * rede** na tela de planos, e vazio mente: parece carregando. Vale para
  * qualquer plataforma, hoje e depois.
  *
- * O que ainda falta no Android não é chave, é catálogo: as assinaturas precisam
- * existir na Play Console e ser anexadas aos pacotes `$rc_monthly` e
- * `$rc_annual` da offering `default`. Sem isso a oferta chega vazia, com a
- * configuração toda correta.
+ * ~~"O que ainda falta no Android não é chave, é catálogo: as assinaturas
+ * precisam existir na Play Console."~~ Elas existem — verificado no painel em
+ * 18/08/2026: `com.quibly.app.pro.monthly` e `com.quibly.app.pro.yearly`, cada
+ * uma com um plano básico ativo em 174 países.
+ *
+ * O que continua **não verificado** é o outro elo: se esses produtos estão
+ * anexados aos pacotes `$rc_monthly` e `$rc_annual` da offering `default` no
+ * RevenueCat. Sem isso a oferta chega vazia com a configuração toda correta dos
+ * dois lados — e é o mesmo modo de falha silencioso de sempre, porque a tela
+ * não sabe distinguir "não anexado" de "sem rede".
  */
 export const COMPRAS_NO_APP_ATIVAS = true;
 

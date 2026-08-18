@@ -237,6 +237,16 @@ Para **cada** um dos dois produtos — `com.quibly.app.pro.monthly` e
 
 ### Play Console
 
+> **Estado em 18/08/2026, verificado no painel:** as duas assinaturas existem
+> (`com.quibly.app.pro.monthly` e `com.quibly.app.pro.yearly`), cada uma com um
+> plano básico ativo em 174 países — o catálogo do Android **não** está mais
+> faltando. O que falta é só a oferta de teste abaixo.
+>
+> A conta de desenvolvedor é a **Inovit Digital**, sob a conta Google
+> `digo.silverio1@gmail.com` — e não sob a conta do App Store Connect. Quem
+> abrir a Play Console logado na outra cai na tela de *criar* conta, que parece
+> "não existe" e não é.
+
 O Google não tem "oferta introdutória" separada: o teste é uma **oferta do plano
 base**.
 
