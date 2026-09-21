@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#015FFD"
+      "backgroundColor": "#F7F7F9"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -79,7 +79,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#015FFD"
+        "backgroundColor": "#F7F7F9"
       },
       "package": "com.quibly.app",
       "googleServicesFile": "./google-services.json",

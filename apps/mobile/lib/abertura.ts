@@ -1,85 +1,30 @@
-import type { ImageSourcePropType } from 'react-native';
+/**
+ * A cor que fica atrás de tudo na abertura.
+ *
+ * É o `bg` do tema claro (`theme/colors.ts`) copiado como literal, e precisa
+ * ser literal: o splash nativo lê esta cor de três lugares fora do JS
+ * (`app.json`, o colorset do iOS e o `colors.xml` do Android), e o teste em
+ * `lib/abertura.test.ts` confere que os quatro concordam. Uma diferença de um
+ * tom aparece como um piscar no quadro em que o nativo dá lugar ao JS.
+ *
+ * ## Por que claro, e não mais o azul
+ *
+ * Até 21/09/2026 a abertura era azul `#015FFD` com uma fotografia de cidade
+ * americana e o coelho colado por cima, e o login era um painel de vidro
+ * escuro sobre a mesma foto. Eram três estilos em três segundos — chapado,
+ * fotográfico, e então o app claro do GymRats. A abertura prometia uma coisa
+ * e o app entregava outra. Agora o primeiro quadro já é o app.
+ */
+export const COR_DA_ABERTURA = '#F7F7F9';
+
+/** O azul do coelho e do wordmark na abertura: o `accent` do tema claro. */
+export const AZUL_DA_MARCA = '#0043BA';
 
 /**
- * O azul que fica **atrás** da fotografia.
- *
- * Continua sendo o mesmo do splash nativo (`SplashScreenBackground` no iOS,
- * `colors.xml` no Android) porque ele ainda é o primeiro quadro: enquanto o
- * JPEG não decodifica, é esta cor que a tela mostra. Ela deixou de ser o fundo
- * das ilustrações — que agora são fotográficas e cobrem tudo — e passou a ser
- * só o piso, mas justamente por isso não pode mudar.
+ * A arte do splash nativo — o coelho correndo, branco com contorno azul,
+ * num quadrado de 1284px. A tela de abertura em JS mostra **a mesma imagem**
+ * na **mesma posição** em que o nativo a deixou, então a passagem de um para
+ * o outro não é uma troca: é a interface aparecendo em volta de um coelho
+ * que já estava lá.
  */
-export const AZUL_ABERTURA = '#015FFD';
-
-/**
- * As cidades. `require` estático de propósito: o Metro resolve o caminho em
- * tempo de build, então nada de montar o nome do arquivo por interpolação.
- */
-const CIDADES: ImageSourcePropType[] = [
-  require('../assets/splash-cities/los-angeles.jpg'),
-  require('../assets/splash-cities/new-york.jpg'),
-  require('../assets/splash-cities/san-francisco.jpg'),
-];
-
-/**
- * A cidade da vez — sorteada **uma vez por abertura do app**.
- *
- * ## Por que módulo, e não `useMemo` dentro do componente
- *
- * A escolha antes vivia num `useMemo(..., [])` do `CitySplash`. Isso bastava
- * enquanto só o splash mostrava a foto. Agora o login mostra a mesma imagem, e
- * as duas telas são componentes diferentes: cada `useMemo` sortearia por conta
- * própria, e o app abriria em Nova York para trocar para São Francisco no
- * instante em que a autenticação terminasse de carregar.
- *
- * No escopo do módulo, o sorteio acontece uma vez no ciclo de vida do bundle e
- * as duas telas leem o mesmo valor. É o menor lugar onde a decisão pode viver
- * e ainda ser compartilhada.
- */
-export const cidadeDaAbertura: ImageSourcePropType =
-  CIDADES[Math.floor(Math.random() * CIDADES.length)];
-
-/**
- * Quando o bundle subiu — o zero da aproximação.
- *
- * ## O problema que este relógio resolve
- *
- * A câmera se aproxima da cidade devagar, e essa aproximação atravessa **duas
- * telas**: começa no `CitySplash` e continua no login. Só que o splash
- * desmonta e o login monta — se cada um animasse de `1` até `1.14` por conta
- * própria, a imagem daria um salto para trás no exato quadro da troca, que é
- * o defeito mais visível que uma transição pode ter.
- *
- * Com um instante de referência fixo, a escala não é um estado da tela: é uma
- * função do tempo decorrido. Quem monta depois entra no meio da curva, no
- * ponto exato em que o anterior parou. A troca de tela deixa de existir para
- * quem olha.
- *
- * É o mesmo raciocínio de `StudyTimerAttributes`: quando duas superfícies
- * precisam concordar sobre um valor que anda com o relógio, o que se
- * compartilha é o carimbo de tempo, não o valor.
- */
-export const INICIO_DA_ABERTURA = Date.now();
-
-/** Onde a câmera começa. Acima de 1 para não deixar borda em nenhuma razão. */
-export const ZOOM_INICIAL = 1.02;
-/** Onde ela para. Mais que isso e a foto começa a perder definição. */
-export const ZOOM_FINAL = 1.16;
-/** Lenta de propósito: aproximação percebida, não movimento notado. */
-export const ZOOM_DURACAO_MS = 16000;
-
-/** Quanto da aproximação já passou, de 0 a 1. */
-export function progressoDaAproximacao(): number {
-  const decorrido = Date.now() - INICIO_DA_ABERTURA;
-  return Math.min(1, Math.max(0, decorrido / ZOOM_DURACAO_MS));
-}
-
-/** A escala da imagem neste instante, para quem estiver montando agora. */
-export function escalaDaAproximacao(): number {
-  return ZOOM_INICIAL + (ZOOM_FINAL - ZOOM_INICIAL) * progressoDaAproximacao();
-}
-
-/** Quanto falta de aproximação, para o `withTiming` de quem monta no meio. */
-export function restanteDaAproximacaoMs(): number {
-  return Math.max(0, ZOOM_DURACAO_MS * (1 - progressoDaAproximacao()));
-}
+export const COELHO_DA_ABERTURA = require('../assets/splash.png');

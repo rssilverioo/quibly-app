@@ -14,7 +14,7 @@ import {
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { firebaseConfigError } from '../lib/firebase';
 import { useSessionStore } from '../stores/session.store';
-import CitySplash from '../components/CitySplash';
+import Abertura from '../components/Abertura';
 import { useTheme, hydrateTheme } from '../theme';
 import {
   configureNotifications,
@@ -98,13 +98,13 @@ function acaoDaLiveActivity(url: string | null): 'pause' | 'resume' | 'end' | nu
 }
 
 /**
- * Quanto a fotografia fica antes de dar lugar ao app.
+ * Quanto a abertura fica antes de dar lugar ao app.
  *
  * Curto o bastante para não atrasar quem quer usar o produto, longo o bastante
- * para a cidade ser vista e a câmera andar um pouco nela. A saída de ~0.6s
- * acontece depois disto, sobre o app já montado.
+ * para o wordmark aparecer sob o coelho e ser lido. A saída de ~0.5s acontece
+ * depois disto, sobre o app já montado.
  */
-const ABERTURA_MINIMA_MS = 2200;
+const ABERTURA_MINIMA_MS = 1600;
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading, user, profile } = useAuth();
@@ -114,7 +114,7 @@ function RootLayoutNav() {
    *
    * Sem isto ela dura o que a autenticação durar, que para quem já está logado
    * são milissegundos — e a fotografia nunca aparece. Ver a nota longa abaixo,
-   * onde a `CitySplash` é montada.
+   * onde a `Abertura` é montada.
    *
    * Dois estados e não um: `cumpriuOMinimo` diz que ela **pode** sair,
    * `aberturaViva` diz que ela ainda está na tela. Entre os dois cabe a saída
@@ -337,11 +337,10 @@ function RootLayoutNav() {
    *
    * ## Por que ela não some junto com `isLoading`
    *
-   * Era o que fazia antes, e a consequência foi a fotografia **não aparecer**.
+   * Era o que fazia antes, e a consequência foi a abertura **não aparecer**.
    * Resolver a sessão de quem já está logado leva milissegundos: o coelho do
-   * splash nativo dava lugar à lista de salas, e as três cidades só existiam
-   * para quem estava deslogado. `ABERTURA_MINIMA_MS` é o que faz a tela
-   * existir para todo mundo.
+   * splash nativo dava lugar à lista de salas sem o wordmark chegar a
+   * aparecer. `ABERTURA_MINIMA_MS` é o que faz a tela existir para todo mundo.
    *
    * ## Por que ela vira sobreposição depois
    *
@@ -350,11 +349,10 @@ function RootLayoutNav() {
    * abertura sai por opacidade, revelando o app já pronto. Sem isso a troca
    * seria um corte seco para uma tela ainda montando.
    *
-   * A `CitySplash` desmonta e remonta nessa passagem, e não se vê: cidade e
-   * escala vêm de `lib/abertura`, que as deriva do relógio e não do ciclo de
-   * vida de ninguém.
+   * A `Abertura` desmonta e remonta nessa passagem, e não se vê: ela é
+   * estática — o mesmo coelho do splash nativo, na mesma posição.
    */
-  if (isLoading) return <CitySplash />;
+  if (isLoading) return <Abertura />;
 
   return (
     <>
@@ -381,7 +379,7 @@ function RootLayoutNav() {
       <Stack.Screen name="settings" options={{ headerShown: false }} />
     </Stack>
     {aberturaViva ? (
-      <CitySplash encerrando={aberturaCumpriuOMinimo} aoSair={() => setAberturaViva(false)} />
+      <Abertura encerrando={aberturaCumpriuOMinimo} aoSair={() => setAberturaViva(false)} />
     ) : null}
     </>
   );
