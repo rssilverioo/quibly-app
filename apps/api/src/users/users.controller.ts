@@ -32,6 +32,12 @@ export class UsersController {
     return this.usersService.getStats(user.userId);
   }
 
+  /** Estatísticas do histórico (Pro). 403 `PRO_REQUIRED` no grátis. */
+  @Get('me/insights')
+  getMyInsights(@CurrentUser() user: { userId: string; email: string }) {
+    return this.usersService.getInsights(user.userId);
+  }
+
   @Delete('me')
   deleteMyAccount(@CurrentUser() user: { userId: string; email: string }) {
     return this.usersService.deleteUser(user.userId);

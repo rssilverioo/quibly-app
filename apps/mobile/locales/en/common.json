@@ -216,12 +216,23 @@
     "name": "Quibly Pro",
     "limitTitle": "{{limit}} rooms is the free plan",
     "limitSubtitle": "You filled every room the free plan gives you — that usually means people are studying with you.",
-    "benefitRooms": "Create as many rooms as you want",
-    "benefitSupport": "Support a small team building this",
+    "benefitRooms": "Unlimited rooms of your own",
     "cta": "See Quibly Pro",
     "comingSoon": "The plan is coming soon",
     "dismiss": "Not now",
-    "joinIsFree": "Joining other people's rooms is always unlimited."
+    "joinIsFree": "Joining other people's rooms is always unlimited.",
+    "challengesTitle": "Creating challenges is Pro",
+    "challengesSubtitle": "Joining your rooms' challenges stays free. Creating your own, with a name and a deadline, is part of Quibly Pro.",
+    "focusTitle": "Deep Focus is Pro",
+    "focusSubtitle": "Blocking other apps while you study is the one thing no other app does. It comes with Quibly Pro.",
+    "insightsTitle": "Your history in numbers",
+    "insightsSubtitle": "Hours per week, per subject, and your best time of day. Everything you've studied, read three ways.",
+    "benefitFocus": "Deep Focus: block other apps (iPhone)",
+    "benefitShield": "Streak shield: one missed day doesn't reset",
+    "benefitInsights": "Your study history in numbers",
+    "benefitChallenges": "Create challenges for your rooms",
+    "benefitHours": "Up to 16 hours of study a day",
+    "benefitNoAds": "No ads"
   },
   "close": "Close"
 }

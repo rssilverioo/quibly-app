@@ -33,7 +33,8 @@
     "allowedAppsNone": "Nada — bloqueia tudo",
     "allowedAppsOne": "1 app fica aberto",
     "allowedAppsMany": "{{count}} apps ficam abertos",
-    "allowedAppsHint": "A música não para de um jeito ou de outro — o bloqueio esconde o app, não o som. Libere para conseguir trocar de faixa."
+    "allowedAppsHint": "A música não para de um jeito ou de outro — o bloqueio esconde o app, não o som. Libere para conseguir trocar de faixa.",
+    "deepFocusPro": "Parte do Quibly Pro"
   },
   "active": {
     "work": "TRABALHO",

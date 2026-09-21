@@ -1,5 +1,8 @@
 import { ChallengesService } from './challenges.service';
 
+/** Entitlements que deixam tudo passar: estes testes não são do gate. */
+const entitlementsLiberado = { getLimit: jest.fn().mockResolvedValue(Infinity) };
+
 describe('ChallengesService.leaderboard', () => {
   it('ranqueia por DIAS de presença, e os minutos viram o desempate', async () => {
     const prisma = {
@@ -37,7 +40,7 @@ describe('ChallengesService.leaderboard', () => {
       ]),
     };
 
-    const result = await new ChallengesService(prisma as any).leaderboard(
+    const result = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard(
       'challenge-1',
       'me',
       1,
@@ -72,6 +75,7 @@ describe('ChallengesService.create', () => {
         findUnique: jest.fn().mockResolvedValue({ role: 'owner' }),
         count: jest.fn().mockResolvedValue(6),
       },
+      profile: { findUnique: jest.fn().mockResolvedValue({ plan: 'PRO' }) },
       league: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'room-1',
@@ -81,7 +85,7 @@ describe('ChallengesService.create', () => {
         update: jest.fn().mockImplementation(({ data }) => ({ id: 'room-1', ...data })),
       },
     };
-    const service = new ChallengesService(prisma as any);
+    const service = new ChallengesService(prisma as any, entitlementsLiberado as any);
 
     const challenge = await service.create('room-1', 'owner', {
       title: 'Semana da prova',
@@ -109,7 +113,7 @@ describe('ChallengesService.details', () => {
     };
 
     await expect(
-      new ChallengesService(prisma as any).details('challenge-1', 'outsider'),
+      new ChallengesService(prisma as any, entitlementsLiberado as any).details('challenge-1', 'outsider'),
     ).rejects.toMatchObject({ status: 403 });
     expect(prisma.league.findUnique).not.toHaveBeenCalled();
   });
@@ -167,7 +171,7 @@ describe('ChallengesService.details', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
 
-    const result = await new ChallengesService(prisma as any).details(
+    const result = await new ChallengesService(prisma as any, entitlementsLiberado as any).details(
       'challenge-1',
       'a-user',
     );
@@ -246,7 +250,7 @@ describe('ChallengesService.details', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
 
-    const result = await new ChallengesService(prisma as any).details(
+    const result = await new ChallengesService(prisma as any, entitlementsLiberado as any).details(
       'challenge-1',
       'a-user',
     );
@@ -308,7 +312,7 @@ describe('ChallengesService.leaderboard — modo estudo', () => {
       { userId: 'friend', totalDurationMinutes: 300, isVerified: false, endedAt: new Date('2026-08-02T10:00:00Z') },
     ]);
 
-    const result = await new ChallengesService(prisma as any).leaderboard('c1', 'me', 1, 20);
+    const result = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'me', 1, 20);
 
     expect(result.entries.map((e) => [e.rank, e.userId, e.metricValue])).toEqual([
       [1, 'me', 2],
@@ -328,7 +332,7 @@ describe('ChallengesService.leaderboard — modo estudo', () => {
       { userId: 'friend', totalDurationMinutes: 10, isVerified: false, endedAt: new Date('2026-08-02T08:00:00Z') },
     ]);
 
-    const result = await new ChallengesService(prisma as any).leaderboard('c1', 'me', 1, 20);
+    const result = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'me', 1, 20);
 
     expect(result.entries.map((e) => [e.userId, e.metricValue])).toEqual([
       ['me', 1],
@@ -349,7 +353,7 @@ describe('ChallengesService.leaderboard — modo estudo', () => {
       members: [membro('me', 'America/Sao_Paulo')],
     });
 
-    const result = await new ChallengesService(prisma as any).leaderboard('c1', 'me', 1, 20);
+    const result = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'me', 1, 20);
 
     expect(result.entries[0].metricValue).toBe(1);
   });
@@ -397,7 +401,7 @@ describe('ChallengesService.leaderboard — estudar conta como presença', () =>
       [{ userId: 'fotografo', createdAt: new Date('2026-08-02T10:00:00Z') }],
     );
 
-    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'estudioso', 1, 20);
+    const r = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'estudioso', 1, 20);
 
     expect(r.entries.map((e) => [e.userId, e.metricValue])).toEqual([
       ['estudioso', 3],
@@ -411,7 +415,7 @@ describe('ChallengesService.leaderboard — estudar conta como presença', () =>
       [{ userId: 'estudioso', createdAt: new Date('2026-08-02T18:00:00Z') }],
     );
 
-    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'estudioso', 1, 20);
+    const r = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'estudioso', 1, 20);
 
     expect(r.entries[0].metricValue).toBe(1);
   });
@@ -422,7 +426,7 @@ describe('ChallengesService.leaderboard — estudar conta como presença', () =>
       [],
     );
 
-    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'estudioso', 1, 20);
+    const r = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'estudioso', 1, 20);
 
     expect(r.entries[0].metricValue).toBe(0);
   });
@@ -447,7 +451,7 @@ describe('ChallengesService.leaderboard — estudar conta como presença', () =>
       members: [membro('fotografo')],
     });
 
-    const r = await new ChallengesService(prisma as any).leaderboard('c1', 'fotografo', 1, 20);
+    const r = await new ChallengesService(prisma as any, entitlementsLiberado as any).leaderboard('c1', 'fotografo', 1, 20);
 
     expect(r.entries[0].metricValue).toBe(1);
     expect(prisma.feedPost.findMany).toHaveBeenCalled();

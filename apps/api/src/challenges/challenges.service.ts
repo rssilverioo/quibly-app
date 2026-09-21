@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { Prisma } from '@prisma/client';
 // O mesmo piso que a sequência usa para ganhar um dia. Duas constantes
@@ -15,7 +16,33 @@ import { AUTOR_COM_ID } from '../common/autor.select';
 
 @Injectable()
 export class ChallengesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
+
+  /**
+   * Criar desafio é do Pro; participar nunca foi e nunca será.
+   *
+   * O gate vem **depois** de conferir que a pessoa é admin da sala: quem não
+   * é admin recebe o 403 de permissão, não o paywall — oferecer assinatura a
+   * quem não poderia criar de qualquer jeito é propaganda no lugar de erro.
+   *
+   * `code` pelo mesmo motivo do `ROOM_LIMIT_REACHED` em `rooms.service`: o
+   * app abre a folha do Pro olhando o código, não a mensagem.
+   */
+  private async exigirCriacaoDeDesafio(userId: string) {
+    const perfil = await this.prisma.profile.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    });
+    const limite = await this.entitlements.getLimit(perfil?.plan || 'FREE', 'create_challenges');
+    if (limite > 0) return;
+    throw new ForbiddenException({
+      code: 'CHALLENGE_CREATION_PRO',
+      message: 'Creating challenges is part of Quibly Pro.',
+    });
+  }
 
   async create(roomId: string, userId: string, dto: CreateChallengeDto) {
     const membership = await this.prisma.leagueMember.findUnique({
@@ -24,6 +51,8 @@ export class ChallengesService {
     if (!membership || !['owner', 'admin'].includes(membership.role)) {
       throw new ForbiddenException('Only room admins can create a challenge');
     }
+
+    await this.exigirCriacaoDeDesafio(userId);
 
     const room = await this.prisma.league.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Room not found');

@@ -1,5 +1,5 @@
 import { EntitlementsService } from './entitlements.service';
-import { ENTITLEMENT_KEYS, FREE_ROOMS } from './entitlements.constants';
+import { ENTITLEMENT_KEYS, FREE_DAILY_STUDY_MINUTES_CAP, FREE_ROOMS } from './entitlements.constants';
 import { DEFAULT_DAILY_STUDY_MINUTES_CAP } from '../sessions/session-timing';
 
 function makePrismaMock() {
@@ -109,10 +109,13 @@ describe('EntitlementsService', () => {
         // Not Infinity, and deliberately so: this key is the antifraud ceiling
         // on credited study minutes, not a monetization lever. See
         // DEFAULT_ENTITLEMENTS.
-        daily_study_minutes_cap: DEFAULT_DAILY_STUDY_MINUTES_CAP,
-        // The one key that *is* a monetization lever, and the only finite
-        // limit FREE carries on purpose.
+        // Desde 21/09/2026 o grátis tem 8h/dia; as 16h de antifraude são o Pro.
+        daily_study_minutes_cap: FREE_DAILY_STUDY_MINUTES_CAP,
         rooms: FREE_ROOMS,
+        // O pacote do Pro: interruptores em 0 e escudo de 0 dias.
+        create_challenges: 0,
+        streak_shield_days: 0,
+        insights: 0,
       });
     });
   });

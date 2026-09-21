@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, ChevronRight, Plus, Minus } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Crown, Plus, Minus } from 'lucide-react-native';
 import type { Subject, TimerMode } from '@quibly/shared';
 import { TIMER_PRESETS } from '@quibly/shared/constants';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import { getSubjects, createSubject as createSubjectService } from '../../servic
 import { SessionAlreadyLiveError } from '../../services/sessions';
 import { getBatteryWarning, openBatterySettings } from '../../services/study-timer';
 import Press from '../../components/ui/Press';
+import FolhaDoPro from '../../components/plano/FolhaDoPro';
 import { useTheme, text as t, space, radius, SUBJECT_COLORS } from '../../theme';
 import { track } from '../../lib/analytics';
 import { voltar } from '../../lib/navegacao';
@@ -45,6 +46,8 @@ export default function SessionSetupScreen() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [bloquear, setBloquear] = useState(false);
+  const [folhaDoPro, setFolhaDoPro] = useState(false);
+  const ehPro = profile?.plan === 'PRO';
   const [liberados, setLiberados] = useState(() => quantosAppsLiberados());
   const [showNewSubject, setShowNewSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -171,6 +174,9 @@ export default function SessionSetupScreen() {
    */
   const alternarFoco = async () => {
     if (bloquear) { setBloquear(false); return; }
+    // Foco Profundo é do Pro. O cartão continua visível para quem não assina —
+    // é a vantagem que nenhum outro app tem, e escondê-la seria não vendê-la.
+    if (!ehPro) { setFolhaDoPro(true); return; }
     if (temPermissaoDeFoco()) { setBloquear(true); return; }
     const concedida = await pedirPermissaoDeFoco();
     setBloquear(concedida);
@@ -442,14 +448,18 @@ export default function SessionSetupScreen() {
               <View style={styles.focoTexto}>
                 <Text style={{ ...t.bodyStrong, color: c.fg }}>{tr('setup.deepFocus')}</Text>
                 <Text style={{ ...t.caption, color: c.fgMuted, lineHeight: 17 }}>
-                  {tr('setup.deepFocusSubtitle')}
+                  {ehPro ? tr('setup.deepFocusSubtitle') : tr('setup.deepFocusPro')}
                 </Text>
               </View>
-              <Switch
-                value={bloquear}
-                onValueChange={alternarFoco}
-                trackColor={{ true: c.accent, false: c.border }}
-              />
+              {ehPro ? (
+                <Switch
+                  value={bloquear}
+                  onValueChange={alternarFoco}
+                  trackColor={{ true: c.accent, false: c.border }}
+                />
+              ) : (
+                <Crown size={20} color={c.fgMuted} />
+              )}
             </Press>
           )}
 
@@ -473,6 +483,7 @@ export default function SessionSetupScreen() {
           ) : null}
 
           <View style={{ height: 120 }} />
+          <FolhaDoPro visivel={folhaDoPro} motivo="focus" aoFechar={() => setFolhaDoPro(false)} />
         </ScrollView>
 
         <View style={[styles.ctaWrap, { backgroundColor: c.bg }]}>

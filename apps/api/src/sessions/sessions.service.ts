@@ -124,6 +124,27 @@ export class SessionsService {
    *
    * `de` e `ate` são meia-noite UTC, exclusivos: verifica só o miolo do intervalo.
    */
+  /**
+   * O escudo de ofensiva do Pro: dias vazios que a sequência aguenta.
+   *
+   * `streak_shield_days` é quantos dias **totalmente sem estudo** cabem entre
+   * o último dia ganho e hoje. No grátis é 0 e este método nunca é verdadeiro;
+   * no Pro é 1, então uma falha isolada não zera a corrente. Dois dias
+   * seguidos zeram, para todo mundo: um escudo que cobre qualquer buraco não
+   * é escudo, é sequência de mentira.
+   *
+   * Não gasta nada nem precisa de registro: o escudo é a regra, não um item.
+   * Cada buraco é julgado só contra a distância até o último dia ganho, então
+   * o Pro pode faltar uma segunda-feira em cada semana e continuar — que é o
+   * que "um dia de folga" quer dizer.
+   */
+  private async escudoCobre(plan: Plan | undefined, ultimoDiaGanho: Date, hoje: Date): Promise<boolean> {
+    const diasVazios = Math.round((hoje.getTime() - ultimoDiaGanho.getTime()) / 86_400_000) - 1;
+    if (diasVazios <= 0) return false;
+    const escudo = await this.entitlements.getLimit(plan ?? 'FREE', 'streak_shield_days');
+    return diasVazios <= escudo;
+  }
+
   private async diasSemFalha(userId: string, de: Date, ate: Date): Promise<boolean> {
     const faltam = Math.round((ate.getTime() - de.getTime()) / 86_400_000) - 1;
     if (faltam <= 0) return true;
@@ -223,7 +244,8 @@ export class SessionsService {
     const continua = Boolean(
       lastDate &&
         (lastDate.getTime() === yesterday.getTime() ||
-          (await this.diasSemFalha(userId, lastDate, today))),
+          (await this.diasSemFalha(userId, lastDate, today)) ||
+          (await this.escudoCobre(profile.plan, lastDate, today))),
     );
 
     if (continua) {

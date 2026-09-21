@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 function serializeProfile<T extends { verifiedHours: any }>(profile: T) {
   return { ...profile, verifiedHours: Number(profile.verifiedHours) };
@@ -94,6 +95,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     private readonly firebaseService: FirebaseService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async getProfile(userId: string) {
@@ -193,6 +195,108 @@ export class UsersService {
        * `max` pela mesma razão.
        */
       longestStreak: Math.max(profile.longestStreak, profile.currentStreak),
+    };
+  }
+
+  /**
+   * As estatísticas do Pro: o histórico lido de três jeitos.
+   *
+   * - `semanas`: minutos por semana, últimas 8, da mais antiga para a mais
+   *   nova. A semana começa na segunda, em UTC como todo o resto do módulo de
+   *   sessões.
+   * - `materias`: minutos por matéria nos últimos 30 dias, maior primeiro.
+   * - `melhorHora`: a hora do dia (0–23, UTC) em que mais minutos foram
+   *   estudados nos últimos 30 dias, com o total — `null` sem sessão.
+   *
+   * ## Por que 403 com `code`, e não uma versão pobre
+   *
+   * O grátis não recebe um resumo menor: recebe `PRO_REQUIRED`, e o app mostra
+   * a tela com o convite. Mandar dados "de amostra" cria uma segunda tela para
+   * manter e faz a vantagem parecer menor do que é.
+   *
+   * ## Por que `minutos` e não `horas`
+   *
+   * A mesma regra do app inteiro: minuto até fechar a hora, hora depois. Quem
+   * formata é a tela (`lib/study-time.ts`); o servidor entrega o número cru.
+   */
+  async getInsights(userId: string) {
+    const perfil = await this.prisma.profile.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    });
+    if (!perfil) throw new NotFoundException('User not found');
+
+    const liberado = await this.entitlements.getLimit(perfil.plan, 'insights');
+    if (liberado <= 0) {
+      throw new ForbiddenException({
+        code: 'PRO_REQUIRED',
+        message: 'Study insights are part of Quibly Pro.',
+      });
+    }
+
+    const agora = new Date();
+    const hojeUtc = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), agora.getUTCDate()));
+    // Segunda-feira da semana corrente: getUTCDay() dá 0 para domingo.
+    const inicioDaSemana = new Date(hojeUtc);
+    inicioDaSemana.setUTCDate(hojeUtc.getUTCDate() - ((hojeUtc.getUTCDay() + 6) % 7));
+    const inicioDasSemanas = new Date(inicioDaSemana);
+    inicioDasSemanas.setUTCDate(inicioDaSemana.getUTCDate() - 7 * 7);
+    const inicioDos30Dias = new Date(hojeUtc);
+    inicioDos30Dias.setUTCDate(hojeUtc.getUTCDate() - 29);
+
+    const desde = inicioDasSemanas < inicioDos30Dias ? inicioDasSemanas : inicioDos30Dias;
+
+    const sessoes = await this.prisma.studySession.findMany({
+      where: {
+        userId,
+        OR: [
+          { status: 'completed' },
+          { status: 'abandoned', endReason: 'abandoned_no_heartbeat' },
+        ],
+        endedAt: { gte: desde },
+      },
+      select: {
+        endedAt: true,
+        totalDurationMinutes: true,
+        subject: { select: { id: true, name: true } },
+      },
+    });
+
+    const semanas = Array.from({ length: 8 }, (_, i) => {
+      const inicio = new Date(inicioDasSemanas);
+      inicio.setUTCDate(inicioDasSemanas.getUTCDate() + 7 * i);
+      return { inicio: inicio.toISOString().slice(0, 10), minutos: 0 };
+    });
+    const porMateria = new Map<string, { id: string; nome: string; minutos: number }>();
+    const porHora = new Array<number>(24).fill(0);
+
+    for (const s of sessoes) {
+      if (!s.endedAt) continue;
+      const minutos = Number(s.totalDurationMinutes);
+      if (minutos <= 0) continue;
+
+      const indice = Math.floor((s.endedAt.getTime() - inicioDasSemanas.getTime()) / (7 * 86_400_000));
+      if (indice >= 0 && indice < 8) semanas[indice].minutos += minutos;
+
+      if (s.endedAt >= inicioDos30Dias) {
+        const m = porMateria.get(s.subject.id) ?? { id: s.subject.id, nome: s.subject.name, minutos: 0 };
+        m.minutos += minutos;
+        porMateria.set(s.subject.id, m);
+        porHora[s.endedAt.getUTCHours()] += minutos;
+      }
+    }
+
+    const materias = [...porMateria.values()]
+      .map((m) => ({ ...m, minutos: Math.round(m.minutos) }))
+      .sort((a, b) => b.minutos - a.minutos);
+    const maiorHora = porHora.reduce((melhor, v, h) => (v > porHora[melhor] ? h : melhor), 0);
+    const melhorHora = porHora[maiorHora] > 0 ? { hora: maiorHora, minutos: Math.round(porHora[maiorHora]) } : null;
+
+    return {
+      semanas: semanas.map((w) => ({ ...w, minutos: Math.round(w.minutos) })),
+      materias,
+      melhorHora,
+      total30Dias: Math.round(porHora.reduce((a, b) => a + b, 0)),
     };
   }
 

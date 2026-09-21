@@ -1,5 +1,8 @@
 import { ChallengesService } from './challenges.service';
 
+/** Entitlements que deixam tudo passar: estes testes não são do gate. */
+const entitlementsLiberado = { getLimit: jest.fn().mockResolvedValue(Infinity) };
+
 /**
  * O ranking conta **dias distintos** em que a pessoa apareceu.
  *
@@ -57,7 +60,7 @@ describe('ChallengesService — a contagem de dias', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
     return {
-      service: new ChallengesService(prisma as never),
+      service: new ChallengesService(prisma as never, entitlementsLiberado as never),
       prisma,
     };
   }

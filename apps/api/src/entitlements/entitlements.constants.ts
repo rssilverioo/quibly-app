@@ -14,7 +14,10 @@ export type EntitlementKey =
   | 'audio_sessions'
   | 'ai_daily_tokens'
   | 'daily_study_minutes_cap'
-  | 'rooms';
+  | 'rooms'
+  | 'create_challenges'
+  | 'streak_shield_days'
+  | 'insights';
 
 export const ENTITLEMENT_KEYS: EntitlementKey[] = [
   'flashcard_sets',
@@ -23,6 +26,9 @@ export const ENTITLEMENT_KEYS: EntitlementKey[] = [
   'ai_daily_tokens',
   'daily_study_minutes_cap',
   'rooms',
+  'create_challenges',
+  'streak_shield_days',
+  'insights',
 ];
 
 /**
@@ -61,14 +67,33 @@ export const ENTITLEMENT_KEYS: EntitlementKey[] = [
  */
 export const FREE_ROOMS = 3;
 
+/**
+ * O pacote do Pro, fechado em 21/09/2026 (ver `docs/LOJAS.md §Pro`).
+ *
+ * Três chaves são **interruptores** (0 = não tem, Infinity = tem):
+ * `create_challenges`, `insights`. Uma é **quantidade**: `streak_shield_days`
+ * é quantos dias seguidos sem estudar a sequência aguenta antes de zerar.
+ *
+ * O teto diário do grátis cai de 16h para 8h. Quem estuda mais de 8h por dia
+ * de verdade é raro, e é exatamente quem paga. As 16h do Pro continuam sendo
+ * o limite anti-fraude de `session-timing`, não uma promessa.
+ *
+ * Nenhuma dessas chaves trava o loop social: entrar em sala, participar de
+ * desafio dos outros e o cronômetro continuam iguais nos dois planos.
+ */
+export const FREE_DAILY_STUDY_MINUTES_CAP = 8 * 60;
+
 export const DEFAULT_ENTITLEMENTS: Record<Plan, Record<EntitlementKey, number>> = {
   FREE: {
     flashcard_sets: Infinity,
     quizzes: Infinity,
     audio_sessions: Infinity,
     ai_daily_tokens: Infinity,
-    daily_study_minutes_cap: DEFAULT_DAILY_STUDY_MINUTES_CAP,
+    daily_study_minutes_cap: FREE_DAILY_STUDY_MINUTES_CAP,
     rooms: FREE_ROOMS,
+    create_challenges: 0,
+    streak_shield_days: 0,
+    insights: 0,
   },
   PRO: {
     flashcard_sets: Infinity,
@@ -77,5 +102,8 @@ export const DEFAULT_ENTITLEMENTS: Record<Plan, Record<EntitlementKey, number>> 
     ai_daily_tokens: Infinity,
     daily_study_minutes_cap: DEFAULT_DAILY_STUDY_MINUTES_CAP,
     rooms: Infinity,
+    create_challenges: Infinity,
+    streak_shield_days: 1,
+    insights: Infinity,
   },
 };

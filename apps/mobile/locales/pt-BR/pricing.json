@@ -13,13 +13,16 @@
     "rooms": "3 salas de estudo suas",
     "joining": "Entrar em quantas salas quiser",
     "timer": "Cronômetro que roda com o app fechado",
-    "streaks": "Mapa de constância e desafios"
+    "streaks": "Mapa de constância e desafios dos outros",
+    "hours": "Até 8 horas de estudo por dia"
   },
   "proFeatures": {
     "rooms": "Salas suas ilimitadas",
-    "joining": "Entrar em quantas salas quiser",
-    "timer": "Cronômetro que roda com o app fechado",
-    "streaks": "Mapa de constância e desafios",
+    "focus": "Foco Profundo: bloqueie os outros apps (iPhone)",
+    "shield": "Escudo de ofensiva: um dia sem estudar não zera",
+    "insights": "Estatísticas do seu histórico",
+    "challenges": "Crie desafios para as suas salas",
+    "hours": "Até 16 horas de estudo por dia",
     "noAds": "Sem anúncios"
   },
   "subscribe": "Assinar",

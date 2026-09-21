@@ -50,7 +50,7 @@ describe('UsersService.deleteUser', () => {
     prisma = makePrismaMock();
     firebase = makeFirebaseMock();
     storage = makeStorage();
-    service = new UsersService(prisma as any, storage, firebase as any);
+    service = new UsersService(prisma as any, storage, firebase as any, { getLimit: jest.fn().mockResolvedValue(Infinity) } as any);
   });
 
   it('apaga o avatar na chave real, com extensão', async () => {

@@ -31,21 +31,29 @@ import { useTheme, type Palette, radius, space, text } from '../../theme';
  * pessoa chegou: ela encheu as três salas do plano grátis. A coroa diz isso
  * antes de qualquer texto.
  *
- * ## Por que a lista é curta, e por que ela é honesta
+ * ## Por que a lista é honesta
  *
- * Só o que existe hoje. "Sem anúncios" seria a segunda linha óbvia, e ficou de
- * fora porque **não há anúncios no app** — prometer a ausência de algo que não
- * existe é vender fumaça, e a primeira pessoa que assinar por isso vai
- * perceber. Quando o AdMob entrar, a linha entra com ele.
+ * Só o que existe: cada linha tem um gate no servidor ou no app. Prometer
+ * o que não está no ar é vender fumaça, e a primeira pessoa que assinar por
+ * isso vai perceber. A lista mudou em 21/09/2026 com o pacote do Pro.
+ *
+ * ## `motivo`
+ *
+ * A folha é uma só, mas a porta muda: limite de salas, criar desafio, Foco
+ * Profundo, estatísticas. Título e subtítulo dizem de onde a pessoa veio; a
+ * lista é sempre a mesma, porque o plano é um só.
  */
+export type MotivoDoPro = 'rooms' | 'challenges' | 'focus' | 'insights';
 export default function FolhaDoPro({
   visivel,
-  limite,
+  limite = 3,
+  motivo = 'rooms',
   aoFechar,
 }: {
   visivel: boolean;
   /** Quantas salas o plano grátis inclui. Vem do servidor, não daqui. */
-  limite: number;
+  limite?: number;
+  motivo?: MotivoDoPro;
   aoFechar: () => void;
 }) {
   const { t } = useTranslation('common');
@@ -54,8 +62,17 @@ export default function FolhaDoPro({
 
   const beneficios = [
     t('pro.benefitRooms'),
-    t('pro.benefitSupport'),
+    t('pro.benefitFocus'),
+    t('pro.benefitShield'),
+    t('pro.benefitInsights'),
+    t('pro.benefitChallenges'),
+    t('pro.benefitHours'),
+    t('pro.benefitNoAds'),
   ];
+
+  const titulo =
+    motivo === 'rooms' ? t('pro.limitTitle', { limit: limite }) : t(`pro.${motivo}Title`);
+  const subtitulo = motivo === 'rooms' ? t('pro.limitSubtitle') : t(`pro.${motivo}Subtitle`);
 
   return (
     <Modal visible={visivel} transparent animationType="slide" onRequestClose={aoFechar}>
@@ -72,8 +89,8 @@ export default function FolhaDoPro({
             <Mascot state="crowned" size={116} />
           </View>
 
-          <Text style={styles.titulo}>{t('pro.limitTitle', { limit: limite })}</Text>
-          <Text style={styles.subtitulo}>{t('pro.limitSubtitle')}</Text>
+          <Text style={styles.titulo}>{titulo}</Text>
+          <Text style={styles.subtitulo}>{subtitulo}</Text>
 
           <View style={styles.cartao}>
             <Text style={styles.cartaoTitulo}>{t('pro.name')}</Text>

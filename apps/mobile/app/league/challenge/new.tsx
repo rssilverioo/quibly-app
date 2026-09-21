@@ -9,6 +9,8 @@ import Press from '../../../components/ui/Press';
 import { createChallenge } from '../../../services/rooms';
 import { useTheme, type Palette, radius, space, text } from '../../../theme';
 import { voltar } from '../../../lib/navegacao';
+import { ApiError } from '../../../lib/http-errors';
+import FolhaDoPro from '../../../components/plano/FolhaDoPro';
 
 const isoAfterDays = (days: number) => {
   const date = new Date();
@@ -26,6 +28,7 @@ export default function NewChallengeScreen() {
   const [days, setDays] = useState(7);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [folhaDoPro, setFolhaDoPro] = useState(false);
 
   const save = async () => {
     if (!roomId || title.trim().length < 2 || saving) return;
@@ -39,6 +42,13 @@ export default function NewChallengeScreen() {
       });
       voltar();
     } catch (err) {
+      // Criar desafio é do Pro: este 403 é uma oferta, não um erro. O app
+      // olha o `code`, como faz com `ROOM_LIMIT_REACHED` na criação de sala.
+      if (err instanceof ApiError && err.body?.code === 'CHALLENGE_CREATION_PRO') {
+        setFolhaDoPro(true);
+        setSaving(false);
+        return;
+      }
       // §5.7: erro vira linha abaixo do formulário. Alerta é para ação
       // destrutiva, não para "não deu certo".
       setError((err as Error)?.message ?? t('rooms.createChallengeError'));
@@ -75,6 +85,7 @@ export default function NewChallengeScreen() {
       <Press disabled={title.trim().length < 2 || saving} onPress={save} style={[styles.save, (title.trim().length < 2 || saving) && styles.disabled]}>
         {saving ? <ActivityIndicator color={c.fgOnAccent} /> : <Text style={styles.saveText}>{t('rooms.createChallengeAction')}</Text>}
       </Press>
+      <FolhaDoPro visivel={folhaDoPro} motivo="challenges" aoFechar={() => setFolhaDoPro(false)} />
     </SafeAreaView>
   );
 }

@@ -41,9 +41,46 @@ resposta.
 Localização (nem aproximada), contatos, saúde, informações financeiras, dados
 sensíveis, histórico de navegação, histórico de busca, áudio, vídeo.
 
-Sobre financeiro: a compra acontece dentro da Apple. O app recebe do RevenueCat
-o **estado** da assinatura, nunca meio de pagamento — nenhum número de cartão
-passa por qualquer código nosso.
+Sobre financeiro: a compra acontece dentro da Apple ou do Google Play. O app
+recebe do RevenueCat o **estado** da assinatura, nunca meio de pagamento —
+nenhum número de cartão passa por qualquer código nosso.
+
+### Paywall (RevenueCat Paywalls)
+
+Desde 21/09/2026 a tela `/pricing` mostra, para quem não é Pro, o paywall
+desenhado no painel do RevenueCat (`react-native-purchases-ui`), anexado à
+offering atual. Textos, layout e preços vêm de lá e mudam sem build. O app
+continua dono do funil de analytics, do refresh do plano e do redirect quando
+compras estão desligadas ou o build subiu sem chave. Quem já é Pro vê a tela
+própria com "Gerenciar assinatura".
+
+Google Play: produtos `com.quibly.app.pro.monthly` e `.yearly`, um plano
+básico cada, ligados ao entitlement `pro` e aos pacotes `monthly`/`annual`.
+A chave `goog_` entra em `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` no
+`eas.json`; em `__DEV__` o app usa sempre a chave iOS.
+
+### Pro — o que o plano entrega (21/09/2026)
+
+Modelo do GymRats: o grátis nunca trava o loop social. Cada linha abaixo tem
+um gate de verdade no servidor ou no app; nada é anunciado antes de subir.
+
+| Vantagem | Onde está o gate |
+|---|---|
+| Salas próprias ilimitadas (grátis: 3) | `rooms.service` → `ROOM_LIMIT_REACHED` |
+| Foco Profundo, bloqueio de apps (só iOS) | `session/setup.tsx`, por `profile.plan` |
+| Escudo de ofensiva: 1 dia vazio não zera | `sessions.service.escudoCobre`, chave `streak_shield_days` |
+| Estatísticas do histórico | `GET /users/me/insights` → `PRO_REQUIRED` |
+| Criar desafios (participar é grátis) | `challenges.service` → `CHALLENGE_CREATION_PRO` |
+| 16h de estudo por dia (grátis: 8h) | chave `daily_study_minutes_cap` |
+| Sem anúncios | `FaixaDeAnuncio` |
+
+Os limites moram em `quibly_entitlements`; mudar em produção é escrita no
+banco, não deploy. Atenção: uma linha explícita na tabela **vence** o default
+do código — se `FREE/daily_study_minutes_cap` existir lá com 960, o grátis
+continua com 16h até a linha ser atualizada.
+
+Continua grátis para todo mundo: entrar em qualquer sala, cronômetro com o app
+fechado, mapa de constância e desafios dos outros.
 
 ### Rastreamento (App Tracking Transparency)
 

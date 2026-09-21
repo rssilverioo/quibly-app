@@ -72,5 +72,19 @@
   "terms": "Terms of Service",
   "privacy": "Privacy Policy",
   "version": "Quibly {{version}} ({{build}})",
-  "logOutError": "Could not sign out."
+  "logOutError": "Could not sign out.",
+  "insights": {
+    "title": "Insights",
+    "subtitle": "Your history in numbers",
+    "cta": "See",
+    "last30": "Last 30 days",
+    "bestHour": "Best time of day",
+    "bestHourValue": "{{hour}}h",
+    "noBestHour": "No sessions yet",
+    "weeks": "Per week",
+    "subjects": "Per subject",
+    "noSubjects": "No sessions in the last 30 days.",
+    "weekOf": "wk {{date}}",
+    "error": "Couldn't load your insights."
+  }
 }

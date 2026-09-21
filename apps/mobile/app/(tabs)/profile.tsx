@@ -26,6 +26,8 @@ import StreakCalendarModal from '../../components/StreakCalendarModal';
 import StudyHeatmap from '../../components/StudyHeatmap';
 import SeloVerificado from '../../components/ui/SeloVerificado';
 import MolduraPro from '../../components/plano/MolduraPro';
+import FolhaDoPro from '../../components/plano/FolhaDoPro';
+import { BarChart3 } from 'lucide-react-native';
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -51,6 +53,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [achievements, setAchievements] = useState<AchievementWithStatus[]>([]);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
+  const [folhaDoPro, setFolhaDoPro] = useState(false);
   /** A URL do avatar pode existir e não carregar — ver `avatarBroken` abaixo. */
   const [avatarBroken, setAvatarBroken] = useState(false);
 
@@ -268,6 +271,33 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        {/*
+          A porta das estatísticas do Pro, logo abaixo dos números.
+
+          Ela aparece para todo mundo: quem não assina vê a coroa e, ao tocar,
+          a folha do Pro com o motivo certo. Esconder a porta de quem não paga
+          seria esconder a vantagem de quem mais precisa vê-la.
+        */}
+        <Press
+          haptic="light"
+          scale={0.98}
+          onPress={() => (profile.plan === 'PRO' ? router.push('/profile/insights') : setFolhaDoPro(true))}
+          style={styles.insightsRow}
+        >
+          <View style={styles.insightsIcone}>
+            <BarChart3 size={18} color={c.accent} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.insightsTitulo}>{t('insights.title')}</Text>
+            <Text style={styles.insightsSub}>{t('insights.subtitle')}</Text>
+          </View>
+          {profile.plan === 'PRO' ? (
+            <ChevronRight size={18} color={c.fgMuted} />
+          ) : (
+            <Crown size={18} color={c.fgMuted} />
+          )}
+        </Press>
+
         {achievements.length > 0 && (
           <>
             <View style={styles.sectionHead}>
@@ -310,6 +340,7 @@ export default function ProfileScreen() {
 
       </ScrollView>
 
+      <FolhaDoPro visivel={folhaDoPro} motivo="insights" aoFechar={() => setFolhaDoPro(false)} />
       <StreakCalendarModal
         visible={showStreakCalendar}
         onClose={() => setShowStreakCalendar(false)}
@@ -372,6 +403,15 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   xpTrack: { height: 6, borderRadius: radius.full, backgroundColor: c.surfacePressed, overflow: 'hidden', marginTop: space.lg },
   xpFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.accent },
   xpText: { ...text.caption, color: c.fgMuted, marginTop: space.sm },
+
+  insightsRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: c.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: c.border,
+    paddingVertical: space.md, paddingHorizontal: space.lg, marginBottom: space.xl,
+  },
+  insightsIcone: { width: 36, height: 36, borderRadius: radius.full, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  insightsTitulo: { ...text.bodyStrong, color: c.fg },
+  insightsSub: { ...text.caption, color: c.fgMuted },
 
   sectionTitle: { ...text.bodyStrong, color: c.fg, marginBottom: space.md },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

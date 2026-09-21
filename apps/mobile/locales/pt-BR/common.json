@@ -216,12 +216,23 @@
     "name": "Quibly Pro",
     "limitTitle": "{{limit}} salas é o plano grátis",
     "limitSubtitle": "Você encheu todas as salas que o plano grátis dá — o que costuma significar que tem gente estudando com você.",
-    "benefitRooms": "Criar quantas salas quiser",
-    "benefitSupport": "Apoiar quem está construindo isso",
+    "benefitRooms": "Salas suas ilimitadas",
     "cta": "Conhecer o Quibly Pro",
     "comingSoon": "O plano chega em breve",
     "dismiss": "Agora não",
-    "joinIsFree": "Participar das salas dos outros é sempre ilimitado."
+    "joinIsFree": "Participar das salas dos outros é sempre ilimitado.",
+    "challengesTitle": "Criar desafios é do Pro",
+    "challengesSubtitle": "Participar dos desafios das suas salas continua grátis. Criar o seu, com nome e prazo, é parte do Quibly Pro.",
+    "focusTitle": "Foco Profundo é do Pro",
+    "focusSubtitle": "Bloquear os outros apps enquanto você estuda é a vantagem que nenhum outro app tem. Ela vem com o Quibly Pro.",
+    "insightsTitle": "Seu histórico em números",
+    "insightsSubtitle": "Horas por semana, por matéria e o seu melhor horário. Tudo que você já estudou, lido de três jeitos.",
+    "benefitFocus": "Foco Profundo: bloqueie os outros apps (iPhone)",
+    "benefitShield": "Escudo de ofensiva: um dia sem estudar não zera",
+    "benefitInsights": "Estatísticas do seu histórico",
+    "benefitChallenges": "Crie desafios para as suas salas",
+    "benefitHours": "Até 16 horas de estudo por dia",
+    "benefitNoAds": "Sem anúncios"
   },
   "close": "Fechar"
 }

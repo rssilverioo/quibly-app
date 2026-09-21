@@ -944,7 +944,8 @@ describe('updateUserStreak — o recorde nunca fica abaixo do atual', () => {
 
   const chamar = async (prisma: any) => {
     const service = new SessionsService(
-      prisma as any, {} as any, {} as any, { track: jest.fn() } as any, {} as any,
+      prisma as any, {} as any, {} as any, { track: jest.fn() } as any,
+      { getLimit: jest.fn().mockResolvedValue(0) } as any,
     );
     await (service as any).updateUserStreak('user-1', DIA);
     return prisma.profile.update.mock.calls[0][0].data;
@@ -1006,7 +1007,8 @@ describe('updateUserStreak — dia leve não quebra a sequência', () => {
 
   const chamar = async (p: any) => {
     const service = new SessionsService(
-      p as any, {} as any, {} as any, { track: jest.fn() } as any, {} as any,
+      p as any, {} as any, {} as any, { track: jest.fn() } as any,
+      { getLimit: jest.fn().mockResolvedValue(0) } as any,
     );
     await (service as any).updateUserStreak('user-1', DIA);
     return p.profile.update.mock.calls[0]?.[0]?.data;
@@ -1082,5 +1084,57 @@ describe('todayWindow — uma convenção de dia só', () => {
 
     expect(start.toISOString()).toBe('2026-08-06T00:00:00.000Z');
     expect(end.toISOString()).toBe('2026-08-07T00:00:00.000Z');
+  });
+});
+
+/**
+ * O escudo de ofensiva do Pro.
+ *
+ * `streak_shield_days` = 1 no Pro, 0 no grátis. Um dia totalmente vazio não
+ * zera a corrente de quem assina; dois seguidos zeram para todo mundo. O
+ * escudo é regra, não item: não se gasta, não se registra.
+ */
+describe('updateUserStreak — escudo de ofensiva', () => {
+  const DIA = new Date('2026-08-06T14:00:00.000Z');
+
+  function prisma(profile: any) {
+    return {
+      profile: {
+        findUnique: jest.fn().mockResolvedValue(profile),
+        update: jest.fn(),
+      },
+      studySession: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { totalDurationMinutes: 90 } }),
+        // Nenhum estudo no miolo: sem o escudo, isto quebra.
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+  }
+
+  const chamar = async (p: any, escudo: number) => {
+    const service = new SessionsService(
+      p as any, {} as any, {} as any, { track: jest.fn() } as any,
+      { getLimit: jest.fn().mockResolvedValue(escudo) } as any,
+    );
+    await (service as any).updateUserStreak('user-1', DIA);
+    return p.profile.update.mock.calls[0]?.[0]?.data;
+  };
+
+  const umDiaVazio = { lastStudyDate: new Date('2026-08-04T10:00:00.000Z'), currentStreak: 7, longestStreak: 7 };
+  const doisDiasVazios = { lastStudyDate: new Date('2026-08-03T10:00:00.000Z'), currentStreak: 7, longestStreak: 7 };
+
+  it('Pro: um dia vazio não zera', async () => {
+    const dados = await chamar(prisma({ plan: 'PRO', ...umDiaVazio }), 1);
+    expect(dados.currentStreak).toBe(8);
+  });
+
+  it('Pro: dois dias vazios seguidos zeram', async () => {
+    const dados = await chamar(prisma({ plan: 'PRO', ...doisDiasVazios }), 1);
+    expect(dados.currentStreak).toBe(1);
+  });
+
+  it('grátis: um dia vazio zera, como sempre', async () => {
+    const dados = await chamar(prisma({ plan: 'FREE', ...umDiaVazio }), 0);
+    expect(dados.currentStreak).toBe(1);
   });
 });

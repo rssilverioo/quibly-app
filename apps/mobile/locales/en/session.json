@@ -33,7 +33,8 @@
     "allowedAppsNone": "Nothing — everything gets blocked",
     "allowedAppsOne": "1 app stays open",
     "allowedAppsMany": "{{count}} apps stay open",
-    "allowedAppsHint": "Music keeps playing either way — the block hides the app, not the sound. Allow it to change tracks."
+    "allowedAppsHint": "Music keeps playing either way — the block hides the app, not the sound. Allow it to change tracks.",
+    "deepFocusPro": "Part of Quibly Pro"
   },
   "active": {
     "work": "WORK",

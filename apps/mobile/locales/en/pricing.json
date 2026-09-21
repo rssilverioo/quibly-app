@@ -13,13 +13,16 @@
     "rooms": "3 study rooms of your own",
     "joining": "Join unlimited rooms",
     "timer": "Timer that runs with the app closed",
-    "streaks": "Streak map and challenges"
+    "streaks": "Streak map and other people's challenges",
+    "hours": "Up to 8 hours of study a day"
   },
   "proFeatures": {
     "rooms": "Unlimited rooms of your own",
-    "joining": "Join unlimited rooms",
-    "timer": "Timer that runs with the app closed",
-    "streaks": "Streak map and challenges",
+    "focus": "Deep Focus: block other apps (iPhone)",
+    "shield": "Streak shield: one missed day doesn't reset",
+    "insights": "Your study history in numbers",
+    "challenges": "Create challenges for your rooms",
+    "hours": "Up to 16 hours of study a day",
     "noAds": "No ads"
   },
   "subscribe": "Subscribe",

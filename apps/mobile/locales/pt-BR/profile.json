@@ -72,5 +72,19 @@
   "terms": "Termos de uso",
   "privacy": "Política de privacidade",
   "version": "Quibly {{version}} ({{build}})",
-  "logOutError": "Não deu para sair."
+  "logOutError": "Não deu para sair.",
+  "insights": {
+    "title": "Estatísticas",
+    "subtitle": "Seu histórico em números",
+    "cta": "Ver",
+    "last30": "Últimos 30 dias",
+    "bestHour": "Melhor horário",
+    "bestHourValue": "{{hour}}h",
+    "noBestHour": "Ainda sem sessões",
+    "weeks": "Por semana",
+    "subjects": "Por matéria",
+    "noSubjects": "Nenhuma sessão nos últimos 30 dias.",
+    "weekOf": "sem. {{date}}",
+    "error": "Não deu para carregar as estatísticas."
+  }
 }
