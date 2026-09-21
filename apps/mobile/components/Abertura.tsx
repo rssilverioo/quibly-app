@@ -15,6 +15,9 @@ import { space } from '../theme';
 /** Quanto a saída demora. Longo o bastante para ler como corte suave. */
 const SAIDA_MS = 520;
 
+/** Onde o coelho termina dentro do PNG quadrado (linha 900 de 1284). */
+const PE_DO_COELHO = 900 / 1284;
+
 /** O wordmark, na proporção do PNG (152×61). */
 const MARCA = { largura: 132, altura: 53 };
 
@@ -89,10 +92,18 @@ export default function Abertura({
         style={{ width, height: width }}
         resizeMode="contain"
       />
-      {/* Abaixo do quadrado do coelho, que já ocupa o centro exato. */}
+      {/*
+        Logo abaixo dos pés do coelho, não do quadrado: o PNG tem muito ar em
+        volta, e o coelho termina a 70% da altura dele (`PE_DO_COELHO`). Medir
+        pelo quadrado deixava o wordmark perdido no terço de baixo da tela.
+      */}
       <Animated.Image
         source={require('../assets/quibly-text.png')}
-        style={[styles.marca, { top: '50%', marginTop: width / 2 - space.xl }, estiloDaMarca]}
+        style={[
+          styles.marca,
+          { top: '50%', marginTop: width * (PE_DO_COELHO - 0.5) + space.lg },
+          estiloDaMarca,
+        ]}
         resizeMode="contain"
       />
     </Animated.View>
