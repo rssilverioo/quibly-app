@@ -27,20 +27,19 @@ export type { PurchasesPackage, PurchasesOfferings };
  * `$rc_annual` — que é exatamente o que `useIAP` procura. A tela carrega preço
  * real, não vazio.
  *
- * **O Android continua sem chave.** `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID`
- * ainda é `goog_YOUR_REVENUECAT_ANDROID_KEY` em todos os perfis, e é por isso
- * que `revenueCatConfigError` abaixo não foi tocado: ele detecta o placeholder
- * e faz a tela dizer o que houve, em vez de mostrar o vazio que mente. Ligar
- * aqui não liga a compra no Android — só para de escondê-la no iOS, onde ela
- * funciona.
+ * ~~O Android continua sem chave.~~ Em 21/09/2026 entrou a chave `goog_` nos
+ * três perfis do `eas.json`, com os produtos criados no Play Console. A
+ * detecção de placeholder em `revenueCatConfigError` fica: um perfil novo sem
+ * chave ainda é possível, e a tela deve dizer o que houve em vez de mostrar o
+ * vazio que mente.
  */
 export const COMPRAS_NO_APP_ATIVAS = true;
 
 /**
  * Uma chave que não é chave — vazia ou o placeholder que veio do `eas.json`.
  *
- * `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` está literalmente como
- * `goog_YOUR_REVENUECAT_ANDROID_KEY` em todos os perfis de build. Configurar o
+ * Até 21/09/2026 `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` era literalmente
+ * `goog_YOUR_REVENUECAT_ANDROID_KEY` em todos os perfis. Configurar o
  * RevenueCat com isso não estoura: ele aceita, e só falha depois, no
  * `getOfferings` — que tem `catch` e devolve `null`. A tela de preços então
  * mostra o estado vazio, indistinguível de "ainda carregando" ou "sem produtos

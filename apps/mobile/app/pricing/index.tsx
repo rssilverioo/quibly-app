@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { COMPRAS_NO_APP_ATIVAS, revenueCatConfigError } from '../../services/iap';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -15,11 +15,20 @@ import { Mascot } from '../../components/mascot';
 import { track } from '../../lib/analytics';
 import { useUsage } from '../../hooks/useUsage';
 import { useIAP } from '../../hooks/useIAP';
+import RevenueCatUI from 'react-native-purchases-ui';
 import i18n from '../../lib/i18n';
 import { captureException } from '../../lib/sentry';
 import { voltar } from '../../lib/navegacao';
 
 type Billing = 'monthly' | 'yearly';
+
+/** Mesma leitura que o webhook faz: o ciclo está no nome do produto. */
+function cicloDoPacote(productId?: string): Billing | 'unknown' {
+  const id = (productId ?? '').toLowerCase();
+  if (id.includes('year') || id.includes('annual')) return 'yearly';
+  if (id.includes('month')) return 'monthly';
+  return 'unknown';
+}
 
 export default function PricingScreen() {
   const router = useRouter();
@@ -28,6 +37,8 @@ export default function PricingScreen() {
   const { monthlyPackage, yearlyPackage, purchasing, purchase, restore, getPrice, economiaAnual, getManageSubscriptionUrl } = useIAP();
   const [billing, setBilling] = useState<Billing>('monthly');
   const [restoring, setRestoring] = useState(false);
+  // O paywall não diz qual pacote falhou; lembra-se do último que começou.
+  const ultimoCiclo = useRef<Billing | 'unknown'>('unknown');
 
   const isPro = usage?.plan === 'PRO';
 
@@ -137,8 +148,54 @@ export default function PricingScreen() {
    * **não** são pagos. Numa tela de assinatura, dizer o que continua grátis
    * evita a suspeita de que o resto vai virar pago depois.
    */
-  const freeFeatures = ['rooms', 'joining', 'timer', 'streaks'] as const;
-  const proFeatures = ['rooms', 'joining', 'timer', 'streaks', 'noAds'] as const;
+  /**
+   * Quem ainda não é Pro vê o paywall desenhado no painel do RevenueCat.
+   *
+   * O layout, os textos e os preços vêm de lá (Paywalls v2, anexado à
+   * offering atual), então mudar a oferta não exige build novo. O que fica
+   * aqui é o que o painel não sabe: o funil de analytics, o refresh do plano
+   * que vive no nosso servidor, e a saída quando compras estão desligadas ou
+   * o build subiu sem chave — nesse caso o paywall nativo mostraria um
+   * template vazio, e a faixa de erro abaixo é mais honesta.
+   */
+  if (!isPro && COMPRAS_NO_APP_ATIVAS && !erroDeConfig) {
+    return (
+      <View style={styles.paywallWrap}>
+        <RevenueCatUI.Paywall
+          style={styles.paywallWrap}
+          options={{ displayCloseButton: true }}
+          onPurchaseStarted={({ packageBeingPurchased }) => {
+            ultimoCiclo.current = cicloDoPacote(packageBeingPurchased?.product?.identifier);
+            track('purchase_started', { selected_plan: ultimoCiclo.current });
+          }}
+          onPurchaseCompleted={() => {
+            // purchase_completed é do webhook — só o servidor confirma que o
+            // dinheiro andou. Aqui só se celebra e se recarrega o plano.
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            refreshUsage();
+          }}
+          onPurchaseError={({ error }) => {
+            captureException(new Error(error?.message ?? 'Purchase failed'), { where: 'purchase', via: 'paywall' });
+            track('purchase_failed', { selected_plan: ultimoCiclo.current, reason: error?.message ?? 'unknown' });
+          }}
+          onRestoreCompleted={({ customerInfo }) => {
+            const restored = !!customerInfo?.entitlements?.active?.pro;
+            if (restored) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              refreshUsage();
+            } else {
+              Alert.alert(t('restoreEmpty'));
+            }
+          }}
+          onDismiss={() => voltar()}
+        />
+      </View>
+    );
+  }
+
+  const freeFeatures = ['rooms', 'joining', 'timer', 'streaks', 'hours'] as const;
+  // O pacote de 21/09/2026. Só o que o servidor e o app aplicam de verdade.
+  const proFeatures = ['rooms', 'focus', 'shield', 'insights', 'challenges', 'hours', 'noAds'] as const;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -247,7 +304,7 @@ export default function PricingScreen() {
 
           <Text style={styles.subscriptionTerms}>{t('subscriptionTerms')}</Text>
           <View style={styles.legalLinksRow}>
-            <TouchableOpacity onPress={() => Linking.openURL('https://tryquibly.com/terms')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://quibly.com.br/terms')}>
               <Text style={styles.legalLinkText}>{t('termsOfUse')}</Text>
             </TouchableOpacity>
             <Text style={styles.legalSeparator}>  |  </Text>
@@ -257,7 +314,7 @@ export default function PricingScreen() {
               <Text style={styles.avisoConfig}>{erroDeConfig}</Text>
             ) : null}
 
-            <TouchableOpacity onPress={() => Linking.openURL('https://tryquibly.com/privacy')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://quibly.com.br/privacy')}>
               <Text style={styles.legalLinkText}>{t('privacyPolicy')}</Text>
             </TouchableOpacity>
           </View>
@@ -309,6 +366,7 @@ export default function PricingScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
+  paywallWrap: { flex: 1, backgroundColor: COLORS.background },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 },

@@ -209,13 +209,13 @@ export interface AnalyticsEventProps {
   };
   plan_selected: { selected_plan: 'monthly' | 'yearly' };
   /** The user tapped "subscribe" — before the store sheet resolves. */
-  purchase_started: { selected_plan: 'monthly' | 'yearly' };
+  purchase_started: { selected_plan: 'monthly' | 'yearly' | 'unknown' };
   /** [SERVER] Fired from the RevenueCat webhook (`INITIAL_PURCHASE`), which
    *  is the only authoritative signal that money actually moved. */
   purchase_completed: { selected_plan: 'monthly' | 'yearly' | 'unknown'; store: 'apple' | 'google' | 'unknown' };
   /** Client-only: the store can reject/cancel a purchase without ever
    *  telling the API, so there is no server-side signal to pair with this. */
-  purchase_failed: { selected_plan: 'monthly' | 'yearly'; reason: string };
+  purchase_failed: { selected_plan: 'monthly' | 'yearly' | 'unknown'; reason: string };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventProps;
