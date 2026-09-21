@@ -40,8 +40,17 @@ export class NotificationsController {
     @Headers('x-api-key') apiKey: string,
     @Body() body: { title: string; body: string; segment?: 'all' | 'pro' | 'free' },
   ) {
-    const expectedKey = this.configService.get<string>('NOTIFICATION_API_KEY', 'quibly-notify-secret');
-    if (!apiKey || apiKey !== expectedKey) {
+    /**
+     * Sem chave configurada, ninguém entra — nem com a chave "padrão".
+     *
+     * Havia aqui um fallback `'quibly-notify-secret'`. O repositório é
+     * público, então esse padrão era uma senha publicada: bastava a env não
+     * existir no Railway para qualquer pessoa mandar um push para todos os
+     * usuários. Endpoint que dispara efeito em terceiros não tem padrão
+     * gentil — ou a chave está no ambiente, ou a rota não existe na prática.
+     */
+    const expectedKey = this.configService.get<string>('NOTIFICATION_API_KEY', '').trim();
+    if (!expectedKey || !apiKey || apiKey !== expectedKey) {
       throw new ForbiddenException('Invalid API key');
     }
     return this.notificationsService.broadcastToSegment(
