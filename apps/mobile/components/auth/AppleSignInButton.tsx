@@ -34,7 +34,9 @@ export default function AppleSignInButton({ onError }: Props) {
     <View style={styles.wrapper}>
       <AppleAuthentication.AppleAuthenticationButton
         buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+        // Preto porque o painel em volta é branco: o `WHITE` que servia ao vidro
+        // escuro sumiria aqui. É o par que o guia da Apple pede para fundo claro.
+        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
         cornerRadius={12}
         style={styles.button}
         onPress={handlePress}

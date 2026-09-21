@@ -85,13 +85,16 @@ describe('o login', () => {
 
   /**
    * O botão da Apple é uma view do sistema e o do Google segue medidas e cores
-   * prescritas. Nenhum dos dois é estilizado pelo painel em volta.
+   * prescritas — na variante **clara**, porque o painel em volta é branco. As
+   * variantes escuras (Apple WHITE, Google #131314) serviam ao vidro e aqui
+   * sumiriam ou destoariam.
    */
-  it('não altera os botões de entrada', () => {
+  it('os botões de entrada estão na variante clara dos guias', () => {
     const apple = ler('../components/auth/AppleSignInButton.tsx');
     const google = ler('../components/auth/GoogleSignInButton.tsx');
-    expect(apple).not.toContain('Glass');
-    expect(google).not.toContain('Glass');
-    expect(google).toContain('#131314');
+    expect(apple).toContain('AppleAuthenticationButtonStyle.BLACK');
+    expect(google).toContain("surface: '#FFFFFF'");
+    expect(google).toContain("border: '#747775'");
+    expect(google).not.toContain('#131314');
   });
 });

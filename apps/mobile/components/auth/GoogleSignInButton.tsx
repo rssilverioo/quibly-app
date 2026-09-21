@@ -56,7 +56,7 @@ export default function GoogleSignInButton({ onError }: Props) {
     <View style={styles.wrapper}>
       <TouchableOpacity style={styles.button} onPress={handlePress} activeOpacity={0.85} disabled={loading}>
         {loading ? (
-          <ActivityIndicator color={GOOGLE_DARK.text} />
+          <ActivityIndicator color={GOOGLE_LIGHT.text} />
         ) : (
           <>
             <GoogleLogo />
@@ -73,10 +73,16 @@ export default function GoogleSignInButton({ onError }: Props) {
  * branding guidelines, so they stay literal rather than going through the
  * palette — same reason the "G" keeps its four brand colours.
  */
-const GOOGLE_DARK = {
-  surface: '#131314',
-  text: '#E3E3E3',
-  border: '#8E918F',
+/**
+ * A variante clara do guia do Google ("Sign in with Google" branding, tema
+ * light): superfície branca, texto #1F1F1F, borda #747775. A variante
+ * escura servia ao painel de vidro; sobre o painel branco do login o par
+ * certo é este. Medidas e o "G" colorido não mudam entre os dois temas.
+ */
+const GOOGLE_LIGHT = {
+  surface: '#FFFFFF',
+  text: '#1F1F1F',
+  border: '#747775',
 };
 
 const styles = StyleSheet.create({
@@ -84,14 +90,14 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: GOOGLE_DARK.surface,
+    backgroundColor: GOOGLE_LIGHT.surface,
     borderWidth: 1,
-    borderColor: GOOGLE_DARK.border,
+    borderColor: GOOGLE_LIGHT.border,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
   },
-  label: { color: GOOGLE_DARK.text, fontSize: 16, fontWeight: '600' },
+  label: { color: GOOGLE_LIGHT.text, fontSize: 16, fontWeight: '600' },
 });
