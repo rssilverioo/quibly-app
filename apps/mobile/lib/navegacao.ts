@@ -18,7 +18,7 @@ import { router, type Href } from 'expo-router';
  * Não é caso de laboratório. Acontece toda vez que a tela é a **primeira** da
  * sessão:
  *
- * - um convite `tryquibly.com/join/ABC` aberto por quem ainda não abriu o app;
+ * - um convite `quibly.com.br/join/ABC` aberto por quem ainda não abriu o app;
  * - a notificação de mensagem nova, que abre o chat direto;
  * - os botões da Live Activity, que abrem `quibly://session/...`;
  * - e qualquer deep link.

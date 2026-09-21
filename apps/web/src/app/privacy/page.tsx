@@ -157,8 +157,8 @@ export default function PrivacyPolicyPage() {
               <li>Delete your account and associated data through the App settings.</li>
               <li>
                 Request a copy of your data by contacting us at{' '}
-                <a href="mailto:support@tryquibly.com" className="text-blue-400 underline">
-                  support@tryquibly.com
+                <a href="mailto:support@quibly.com.br" className="text-blue-400 underline">
+                  support@quibly.com.br
                 </a>
                 .
               </li>
@@ -187,8 +187,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-lg font-semibold text-white mb-2">10. Contact Us</h2>
             <p>
               If you have questions about this Privacy Policy or your data, contact us at{' '}
-              <a href="mailto:support@tryquibly.com" className="text-blue-400 underline">
-                support@tryquibly.com
+              <a href="mailto:support@quibly.com.br" className="text-blue-400 underline">
+                support@quibly.com.br
               </a>
               .
             </p>

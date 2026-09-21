@@ -156,7 +156,7 @@ export const LEAGUE_DEFAULTS = {
 
 export const APP_URLS = {
   /** Base URL for invite links (update after deploying web app) */
-  WEB_BASE: "https://tryquibly.com",
+  WEB_BASE: "https://quibly.com.br",
   /** Deep link scheme */
   DEEP_LINK_SCHEME: "quibly",
 } as const;

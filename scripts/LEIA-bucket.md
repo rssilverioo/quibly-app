@@ -32,10 +32,10 @@ Tigris funciona **por virtual-host** (`<bucket>.t3.storage.dev`), e o endereço
 path-style (`t3.storage.dev/<bucket>/`) recusa leitura anônima **sempre**,
 independente do bucket ser público.
 
-E `cdn.tryquibly.com` é esse mesmo bucket, por CNAME:
+E `cdn.quibly.com.br` é esse mesmo bucket, por CNAME:
 
 ```sh
-dig +short cdn.tryquibly.com   # → quibly.t3.storage.dev.
+dig +short cdn.quibly.com.br   # → quibly.t3.storage.dev.
 ```
 
 > **Por que duas investigações inteiras pararam no lugar errado.** Toda sonda
@@ -131,8 +131,8 @@ casos):
   gravado como `t3.storage.dev/<bucket>/<chave>`. Se só a forma nova fosse
   reconhecida, apagar um avatar antigo devolveria `null`, o registro sumiria do
   banco e o objeto ficaria órfão no storage, em silêncio.
-- **`S3_PUBLIC_BASE_URL` sem esquema recusa o boot.** `cdn.tryquibly.com` em vez
-  de `https://cdn.tryquibly.com` é o erro de digitação natural num painel, e ele
+- **`S3_PUBLIC_BASE_URL` sem esquema recusa o boot.** `cdn.quibly.com.br` em vez
+  de `https://cdn.quibly.com.br` é o erro de digitação natural num painel, e ele
   não levanta exceção em lugar nenhum: o upload passa e o `<Image>` fica vazio.
   Como essa URL é *gravada* no banco, o estrago seria permanente, uma linha por
   foto. Um deploy vermelho no Railway é a única janela em que o erro é barato.
@@ -147,7 +147,7 @@ Não há bucket para criar e não há objeto para migrar. É configuração no R
 no serviço da API:
 
 ```
-S3_PUBLIC_BASE_URL=https://cdn.tryquibly.com
+S3_PUBLIC_BASE_URL=https://cdn.quibly.com.br
 S3_BUCKET_PUBLIC=quibly
 ```
 
@@ -157,7 +157,7 @@ lá e não mudam — **e não estão nesta máquina, de propósito.**
 > **O único ponto em aberto: quanto vale `S3_BUCKET_PUBLIC` hoje.** O
 > levantamento de 03/08 encontrou `S3_BUCKET=nomads-uploads`, mas
 > `S3_BUCKET_PUBLIC` pode ter sido setada depois — e um objeto real respondeu
-> `200` por `cdn.tryquibly.com` em 06/08, o que só acontece se ele estiver em
+> `200` por `cdn.quibly.com.br` em 06/08, o que só acontece se ele estiver em
 > `quibly`. Isso se resolve olhando a variável no painel do Railway. Se ela já
 > for `quibly`, **falta só a `S3_PUBLIC_BASE_URL`** e as fotos existentes voltam
 > a aparecer sozinhas. Se for `nomads-uploads`, as duas linhas acima são
@@ -180,7 +180,7 @@ done
 | `nomads-uploads` | `403 AccessDenied` |
 
 2. Poste uma foto pelo app e confira que o `photo_url` do
-   `GET /rooms/:id/feed` começa com `https://cdn.tryquibly.com/` — e não com
+   `GET /rooms/:id/feed` começa com `https://cdn.quibly.com.br/` — e não com
    `t3.storage.dev`. Se ainda vier o endpoint, a variável não chegou ao processo.
 3. Abra essa URL no navegador. `200` fecha a Etapa 2.
 
@@ -193,7 +193,7 @@ bucket certo e sempre estiveram; só a URL guardada no banco nomeia o host errad
 Note que isso **não** conserta as fotos antigas sozinho — a URL gravada continua
 apontando para `t3.storage.dev`. Fotos novas aparecem; as antigas precisam de uma
 reescrita de `profile.avatarUrl` e `feedPost.photoUrl`, trocando o prefixo
-`https://t3.storage.dev/<bucket>/` por `https://cdn.tryquibly.com/`. É um
+`https://t3.storage.dev/<bucket>/` por `https://cdn.quibly.com.br/`. É um
 `UPDATE` com `replace()`, sem copiar objeto nenhum.
 
 **Se era `nomads-uploads`:** os objetos públicos estão num bucket privado, e são

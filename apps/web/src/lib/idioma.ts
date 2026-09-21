@@ -8,7 +8,7 @@ import type { Lang } from '../components/landing/content';
  * A landing resolve isso com duas rotas — `/` em inglês e `/pt` em português —
  * e funciona porque quem chega vem de um link que **nós** escolhemos.
  *
- * O convite não: `tryquibly.com/join/CODE` é **um link só**, gerado pelo app de
+ * O convite não: `quibly.com.br/join/CODE` é **um link só**, gerado pelo app de
  * quem convida e colado num grupo onde pode ter gente de qualquer lugar. Quem
  * escolhe o idioma tem que ser o navegador de quem abre, não o telefone de quem
  * mandou.

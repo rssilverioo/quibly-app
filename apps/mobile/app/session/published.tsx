@@ -58,7 +58,7 @@ import { useTheme, type Palette, radius, space, text } from '../../theme';
  *
  * ## O que o backend ainda não tem — e como esta tela se comporta enquanto isso
  *
- * Probado contra `https://api.tryquibly.com` em 02/08 (401 = a rota existe e
+ * Probado contra `https://api.quibly.com.br` em 02/08 (401 = a rota existe e
  * pede auth; 404 = a rota não existe), e conferido contra os controllers:
  *
  * | O que falta | Estado |

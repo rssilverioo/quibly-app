@@ -139,7 +139,7 @@ export default function RoomDetailsScreen() {
                 <Text style={styles.inviteCode}>{details.room.invite_code}</Text>
               </View>
               <Press
-                onPress={() => Share.share({ message: `https://tryquibly.com/join/${details.room.invite_code}` })}
+                onPress={() => Share.share({ message: `https://quibly.com.br/join/${details.room.invite_code}` })}
                 style={styles.stateAction}
               >
                 <Text style={styles.link}>{t('rooms.invite')}</Text>

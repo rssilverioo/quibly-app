@@ -22,7 +22,7 @@
       "appleTeamId": "3HWKHD9KF8",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
-        "applinks:tryquibly.com"
+        "applinks:quibly.com.br"
       ],
       "infoPlist": {
         "NSCameraUsageDescription": "Quibly uses the camera to photograph your notes and turn them into study material.",
@@ -98,7 +98,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "tryquibly.com",
+              "host": "quibly.com.br",
               "pathPrefix": "/join/"
             }
           ],

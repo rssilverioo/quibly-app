@@ -7,7 +7,7 @@ import { idiomaAceito } from '../../lib/idioma';
 import { plataformaDe } from '../../lib/plataforma';
 
 /**
- * `tryquibly.com/download` — o link único da bio do Instagram.
+ * `quibly.com.br/download` — o link único da bio do Instagram.
  *
  * ## O que ela resolve
  *

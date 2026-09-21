@@ -160,12 +160,12 @@ describe('StorageService', () => {
    *
    * No Tigris o bucket público é servido por um domínio próprio, e o endpoint
    * da API responde 403 **mesmo para objeto público**. Medido em 06/08/2026 com
-   * um objeto real: 200 por `cdn.tryquibly.com`, 403 por `t3.storage.dev`, o
+   * um objeto real: 200 por `cdn.quibly.com.br`, 403 por `t3.storage.dev`, o
    * mesmo arquivo. O sintoma é idêntico ao de um bucket privado, e foi por isso
    * que a investigação anterior parou no bucket.
    */
   describe('S3_PUBLIC_BASE_URL — de onde o app baixa', () => {
-    const COM_CDN = { ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: 'https://cdn.tryquibly.com' };
+    const COM_CDN = { ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: 'https://cdn.quibly.com.br' };
 
     it('monta a URL pública no domínio, e não no endpoint do S3', async () => {
       const { service, send } = makeService(COM_CDN);
@@ -179,16 +179,16 @@ describe('StorageService', () => {
       // O arquivo continua indo para o mesmo bucket: o que muda é só o endereço
       // pelo qual o app o busca.
       expect(bucketDoUltimoComando(send)).toBe('nomads-public');
-      expect(url).toBe('https://cdn.tryquibly.com/room-posts/sala/usuario/post.jpg');
+      expect(url).toBe('https://cdn.quibly.com.br/room-posts/sala/usuario/post.jpg');
     });
 
     it('ignora barra sobrando no fim da variável', async () => {
-      const { service } = makeService({ ...COM_CDN, S3_PUBLIC_BASE_URL: 'https://cdn.tryquibly.com/' });
+      const { service } = makeService({ ...COM_CDN, S3_PUBLIC_BASE_URL: 'https://cdn.quibly.com.br/' });
 
       const url = await service.uploadPublic('avatars/u/a.png', Buffer.from('x'), 'image/png');
 
       // `//avatars` daria 404 num CDN, e ninguém suspeitaria da variável.
-      expect(url).toBe('https://cdn.tryquibly.com/avatars/u/a.png');
+      expect(url).toBe('https://cdn.quibly.com.br/avatars/u/a.png');
     });
 
     /**
@@ -201,7 +201,7 @@ describe('StorageService', () => {
      * desta variável existir, e o resto do produto fica de pé.
      */
     it.each([
-      ['sem esquema', 'cdn.tryquibly.com'],
+      ['sem esquema', 'cdn.quibly.com.br'],
       ['caminho relativo', '/uploads'],
       ['só o esquema', 'https://'],
     ])('ignora S3_PUBLIC_BASE_URL %s sem derrubar o serviço', async (_caso, valor) => {
@@ -220,14 +220,14 @@ describe('StorageService', () => {
      * e recusá-lo por causa da roupa custaria a foto do feed.
      */
     it.each([
-      ['aspas duplas', '"https://cdn.tryquibly.com"'],
-      ['aspas simples', "'https://cdn.tryquibly.com'"],
+      ['aspas duplas', '"https://cdn.quibly.com.br"'],
+      ['aspas simples', "'https://cdn.quibly.com.br'"],
     ])('aceita a base embrulhada em %s', async (_caso, valor) => {
       const { service } = makeService({ ...DOIS_BUCKETS, S3_PUBLIC_BASE_URL: valor });
 
       const url = await service.uploadPublic('avatars/u/a.png', Buffer.from('x'), 'image/png');
 
-      expect(url).toBe('https://cdn.tryquibly.com/avatars/u/a.png');
+      expect(url).toBe('https://cdn.quibly.com.br/avatars/u/a.png');
     });
 
     it('não estorva quem não setou a variável', () => {
@@ -244,7 +244,7 @@ describe('StorageService', () => {
       ).toBe('avatars/usuario/avatar.png');
 
       expect(
-        service.chaveDaUrl('https://cdn.tryquibly.com/avatars/usuario/avatar.png'),
+        service.chaveDaUrl('https://cdn.quibly.com.br/avatars/usuario/avatar.png'),
       ).toBe('avatars/usuario/avatar.png');
     });
   });

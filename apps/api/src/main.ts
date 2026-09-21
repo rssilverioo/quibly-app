@@ -28,7 +28,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // CORS_ORIGINS is a comma-separated allowlist, e.g.
-  // "https://tryquibly.com,https://app.tryquibly.com". Falls back to no
+  // "https://quibly.com.br,https://app.quibly.com.br". Falls back to no
   // cross-origin access at all if unset, rather than opening the API up —
   // the mobile app doesn't send an Origin header, so this only gates browser
   // clients (the web app, and anyone else trying to call the API from a page).
@@ -38,9 +38,9 @@ async function bootstrap() {
     /*
      Normalizar antes de comparar.
 
-     O navegador manda `Origin: https://tryquibly.com` — sem barra final e sem
-     aspas. Um valor colado com barra (`https://tryquibly.com/`) ou com aspas
-     (`"https://tryquibly.com"`) nunca casa, e o sintoma é o pior possível:
+     O navegador manda `Origin: https://quibly.com.br` — sem barra final e sem
+     aspas. Um valor colado com barra (`https://quibly.com.br/`) ou com aspas
+     (`"https://quibly.com.br"`) nunca casa, e o sintoma é o pior possível:
      a variável **está** configurada, o serviço **reiniciou**, e mesmo assim
      toda origem é recusada — sem nada em lugar nenhum dizendo por quê.
      Aconteceu em 10/08 e custou uma rodada inteira de investigação.

@@ -30,7 +30,7 @@ export class StorageService implements OnModuleInit {
    * De onde o app baixa um arquivo público. **Não é o endpoint do S3.**
    *
    * No Tigris, o bucket público é servido por um domínio próprio
-   * (`cdn.tryquibly.com`), e o endpoint da API — `t3.storage.dev` — responde
+   * (`cdn.quibly.com.br`), e o endpoint da API — `t3.storage.dev` — responde
    * **403 mesmo para objeto público**. Medido em 06/08/2026 com um objeto real:
    * 200 pelo domínio, 403 pelo endpoint, o mesmo arquivo.
    *
@@ -74,7 +74,7 @@ export class StorageService implements OnModuleInit {
      *
      * As aspas em volta são retiradas porque painéis de ambiente as adicionam:
      * o mesmo editor que entregou o JSON do Firebase escapado entrega
-     * `"https://cdn.tryquibly.com"` aqui. O valor está certo, só chegou vestido.
+     * `"https://cdn.quibly.com.br"` aqui. O valor está certo, só chegou vestido.
      */
     const baseConfigurada = this.configService
       .get<string>('S3_PUBLIC_BASE_URL', '')

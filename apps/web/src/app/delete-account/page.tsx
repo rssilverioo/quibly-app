@@ -26,8 +26,8 @@ export default function DeleteAccountPage() {
             </ol>
             <p className="mt-3 text-sm text-gray-400">
               Você também pode solicitar a exclusão enviando um e-mail para{' '}
-              <a href="mailto:support@tryquibly.com" className="text-blue-400 underline">
-                support@tryquibly.com
+              <a href="mailto:support@quibly.com.br" className="text-blue-400 underline">
+                support@quibly.com.br
               </a>{' '}
               com o assunto &quot;Excluir minha conta&quot;.
             </p>

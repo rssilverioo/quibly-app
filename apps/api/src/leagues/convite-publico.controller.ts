@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
  * ## Por que existe
  *
  * Quem recebe um convite é, por definição, quem ainda não tem conta. A página
- * `tryquibly.com/join/CODE` precisa dizer **qual sala** e **de quem** antes de
+ * `quibly.com.br/join/CODE` precisa dizer **qual sala** e **de quem** antes de
  * pedir qualquer coisa — sem isso o convite chega como um código solto, e a
  * pessoa decide baixar um app sobre o qual não sabe nada.
  *

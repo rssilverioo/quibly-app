@@ -57,10 +57,10 @@ initSentry();
 function extractJoinPath(url: string | null): string | null {
   if (!url) return null;
 
-  // Universal Links / App Links: https://tryquibly.com/join/{code}
+  // Universal Links / App Links: https://quibly.com.br/join/{code}
   try {
     const parsed = new URL(url);
-    if (parsed.hostname === 'tryquibly.com' && parsed.pathname.startsWith('/join/')) {
+    if (parsed.hostname === 'quibly.com.br' && parsed.pathname.startsWith('/join/')) {
       const code = parsed.pathname.replace('/join/', '');
       if (code) return `/league/join/${code}`;
     }

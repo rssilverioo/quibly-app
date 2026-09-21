@@ -97,7 +97,7 @@ ACCOUNT
 Sign in with Apple, Google, or email. A test account is provided below.
 Account deletion is available in Settings, as the last item on the screen
 ("Delete Account"), and also on the web at
-https://tryquibly.com/delete-account without needing the app.
+https://quibly.com.br/delete-account without needing the app.
 ```
 
 ### O que mais preencher ali
@@ -119,5 +119,5 @@ https://tryquibly.com/delete-account without needing the app.
       saía em R$; a telemetria do build 65 traz o país da vitrine para
       diagnosticar. Isto é o único item aberto que **bloqueia** de verdade: um
       revisor abre a tela de planos.
-- [ ] `app-ads.txt` no ar em `tryquibly.com/app-ads.txt` (está)
+- [ ] `app-ads.txt` no ar em `quibly.com.br/app-ads.txt` (está)
 - [ ] Anúncio servindo com o identificador real, não o de teste (build 65 leva)

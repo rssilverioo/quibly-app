@@ -218,7 +218,7 @@ export default function ChallengeLeaderboardScreen() {
             <Mascot state="reading" size={120} animate={false} />
             <Text style={styles.emptyTitle}>{t('rooms.leaderboardEmpty')}</Text>
             {invite ? (
-              <Press onPress={() => Share.share({ message: `https://tryquibly.com/join/${invite}` })} style={styles.stateAction}>
+              <Press onPress={() => Share.share({ message: `https://quibly.com.br/join/${invite}` })} style={styles.stateAction}>
                 <Text style={styles.link}>{t('rooms.invite')}</Text>
               </Press>
             ) : null}

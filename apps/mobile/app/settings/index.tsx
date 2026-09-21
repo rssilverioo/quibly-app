@@ -179,7 +179,7 @@ export default function SettingsScreen() {
           <Linha
             Icon={ShieldCheck}
             rotulo={t('terms')}
-            aoTocar={() => router.push('https://tryquibly.com/terms' as never)}
+            aoTocar={() => router.push('https://quibly.com.br/terms' as never)}
             divisor
             c={c}
             styles={styles}
@@ -187,7 +187,7 @@ export default function SettingsScreen() {
           <Linha
             Icon={Lock}
             rotulo={t('privacy')}
-            aoTocar={() => router.push('https://tryquibly.com/privacy' as never)}
+            aoTocar={() => router.push('https://quibly.com.br/privacy' as never)}
             c={c}
             styles={styles}
           />

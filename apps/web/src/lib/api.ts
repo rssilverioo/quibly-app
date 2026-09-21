@@ -11,7 +11,7 @@ import { converterChaves } from './camel';
  * produção deixa o painel funcionando; quem desenvolve local define a variável,
  * e sabe que definiu.
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rabbit.tryquibly.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://rabbit.quibly.com.br';
 
 async function getToken(): Promise<string | null> {
   const user = auth.currentUser;

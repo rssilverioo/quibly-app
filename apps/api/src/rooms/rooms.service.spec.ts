@@ -345,8 +345,8 @@ describe('RoomsService — só o dono edita a sala', () => {
   const DONO = 'user-dono';
 
   const storage = () => ({
-    uploadPublic: jest.fn().mockResolvedValue('https://cdn.tryquibly.com/room-covers/sala-1/1.jpg'),
-    chaveDaUrl: jest.fn((url: string) => (url.includes('cdn.tryquibly.com') ? 'room-covers/antiga.jpg' : null)),
+    uploadPublic: jest.fn().mockResolvedValue('https://cdn.quibly.com.br/room-covers/sala-1/1.jpg'),
+    chaveDaUrl: jest.fn((url: string) => (url.includes('cdn.quibly.com.br') ? 'room-covers/antiga.jpg' : null)),
     deleteObject: jest.fn().mockResolvedValue(undefined),
   });
 
@@ -400,7 +400,7 @@ describe('RoomsService — só o dono edita a sala', () => {
   it('grava a capa nova antes de apagar a antiga', async () => {
     const st = storage();
     const prisma = prismaCom({
-      id: SALA, ownerId: DONO, coverUrl: 'https://cdn.tryquibly.com/room-covers/antiga.jpg',
+      id: SALA, ownerId: DONO, coverUrl: 'https://cdn.quibly.com.br/room-covers/antiga.jpg',
     });
 
     await service(prisma, st).updateCover(DONO, SALA, arquivo);
@@ -435,7 +435,7 @@ describe('RoomsService — só o dono edita a sala', () => {
   it('apagar a sala leva a capa junto', async () => {
     const st = storage();
     const prisma = prismaCom({
-      id: SALA, ownerId: DONO, coverUrl: 'https://cdn.tryquibly.com/room-covers/antiga.jpg',
+      id: SALA, ownerId: DONO, coverUrl: 'https://cdn.quibly.com.br/room-covers/antiga.jpg',
     });
 
     await service(prisma, st).remove(DONO, SALA);

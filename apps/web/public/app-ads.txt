@@ -3,7 +3,7 @@
 # ## Para que serve
 #
 # É o arquivo que a IAB definiu para o app provar quem revende o seu espaço
-# publicitário. Os compradores de mídia leem `tryquibly.com/app-ads.txt` — o
+# publicitário. Os compradores de mídia leem `quibly.com.br/app-ads.txt` — o
 # domínio que está na ficha da App Store — e só compram de quem estiver listado
 # aqui.
 #
