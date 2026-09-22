@@ -157,6 +157,18 @@
         {
           "userTrackingPermission": "Usamos isto para mostrar anúncios mais relevantes para você. Assine o Pro para não ver anúncio nenhum."
         }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "META_APP_ID",
+          "clientToken": "META_CLIENT_TOKEN",
+          "displayName": "Quibly",
+          "scheme": "fbMETA_APP_ID",
+          "isAutoInitEnabled": false,
+          "autoLogAppEventsEnabled": true,
+          "advertiserIDCollectionEnabled": true
+        }
       ]
     ],
     "experiments": {

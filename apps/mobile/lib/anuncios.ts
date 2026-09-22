@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { ligarMeta } from './meta';
+
 /**
  * Ligar os anúncios — na ordem que a Apple exige.
  *
@@ -40,7 +42,11 @@ export function ligarAnuncios(): Promise<void> {
         // AdMob passa a servir anúncio não personalizado sozinho. Bloquear o
         // anúncio por causa da recusa punia quem recusou — e a recusa é
         // legítima.
-        await requestTrackingPermissionsAsync();
+        const { status } = await requestTrackingPermissionsAsync();
+        // A Meta precisa saber a resposta; o AdMob descobre sozinho.
+        await ligarMeta(status === 'granted');
+      } else {
+        await ligarMeta(true);
       }
       const { default: mobileAds } = await import('react-native-google-mobile-ads');
       await mobileAds().initialize();

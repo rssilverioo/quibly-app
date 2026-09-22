@@ -84,9 +84,20 @@ fechado, mapa de constância e desafios dos outros.
 
 ### Rastreamento (App Tracking Transparency)
 
-**Hoje: NÃO.** Nenhum dado sai para publicidade nem é cruzado com dados de
-outras empresas. PostHog e Sentry são nossos, para o produto funcionar e para
-achar defeito.
+**Hoje: SIM** (desde 22/09/2026). Dois SDKs de terceiros usam o identificador
+de publicidade, os dois atrás da mesma folha de ATT (`lib/anuncios.ts`):
+
+- **AdMob** — anúncio na versão grátis (`react-native-google-mobile-ads`).
+- **SDK da Meta** — atribuição de campanhas de instalação
+  (`react-native-fbsdk-next`, `lib/meta.ts`). Só instalação e abertura; a
+  compra vai pela integração Meta Ads do RevenueCat, servidor a servidor.
+
+Na ficha de privacidade das duas lojas: *Identificadores do dispositivo* e
+*Dados de uso* → **usados para rastreamento** e **publicidade de terceiros**.
+PostHog e Sentry seguem sendo nossos, para o produto funcionar e achar defeito.
+
+> Histórico: até 21/09 a resposta era NÃO, e o texto abaixo explicava por que
+> o anúncio ficou fora da estreia.
 
 > **O dia em que o AdMob entrar, esta resposta vira SIM** — e junto com ela vem
 > o prompt de ATT, o `NSUserTrackingUsageDescription`, e uma nova submissão da
