@@ -7,7 +7,7 @@ import { enviarEventosCapi } from '../../lib/capi';
 
 import { conteudo } from '../../components/landing/content';
 import { plataformaDe } from '../../lib/plataforma';
-import { APP_STORE, PLAY_STORE } from '../../components/landing/BotoesDeLoja';
+import { APP_STORE, PLAY_STORE } from '../../lib/lojas';
 import PaginaDownload from '../../components/download/PaginaDownload';
 
 /**

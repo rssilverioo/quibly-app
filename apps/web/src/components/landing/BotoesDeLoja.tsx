@@ -15,8 +15,7 @@ import { rastrearCliqueDeLoja } from '../../lib/pixel';
  * lojas pedem nos guias de "badge". Não são os badges oficiais (que exigem
  * a arte deles sem alteração); são botões do site, com o logo como ícone.
  */
-export const APP_STORE = 'https://apps.apple.com/us/app/quibly-study-together/id6760320166';
-export const PLAY_STORE = 'https://play.google.com/store/apps/details?id=com.quibly.app';
+import { APP_STORE, PLAY_STORE } from '../../lib/lojas';
 
 function LogoApple() {
   return (

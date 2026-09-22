@@ -5,7 +5,8 @@ import { Camera, Download, Link2, Lock, Server, Timer, WifiOff } from 'lucide-re
 
 import IconeApp from './IconeApp';
 import CoelhoImagem from './CoelhoImagem';
-import BotoesDeLoja, { APP_STORE } from './BotoesDeLoja';
+import BotoesDeLoja from './BotoesDeLoja';
+import { APP_STORE } from '../../lib/lojas';
 import MapaDeConstancia from './MapaDeConstancia';
 import MockDoApp from './MockDoApp';
 import { Aparece, Desce, Escalonado, Flutua, Item } from './Movimento';

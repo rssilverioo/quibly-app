@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 
 import { conteudo } from '../../../components/landing/content';
 import { idiomaAceito } from '../../../lib/idioma';
-import { APP_STORE } from '../../../components/landing/BotoesDeLoja';
+import { APP_STORE } from '../../../lib/lojas';
 
 /**
  * A página que o convite abre.
