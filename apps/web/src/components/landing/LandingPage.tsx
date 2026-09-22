@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ArrowDown, Camera, Download, Link2, Lock, Server, Timer, WifiOff } from 'lucide-react';
+import { Camera, Download, Link2, Lock, Server, Timer, WifiOff } from 'lucide-react';
 
 import IconeApp from './IconeApp';
 import CoelhoImagem from './CoelhoImagem';
@@ -77,12 +77,6 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           </Item>
           <Item como="div"><p className="lead">{hero.texto}</p></Item>
           <Item><BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} /></Item>
-          <Item className="hero-acoes">
-            <a className="btn btn-fantasma" href="#cronometro">
-              {hero.ctaSegundo}
-              <ArrowDown size={16} aria-hidden="true" />
-            </a>
-          </Item>
         </Escalonado>
 
         {/*

@@ -162,7 +162,7 @@
         "react-native-fbsdk-next",
         {
           "appID": "2102178107053785",
-          "clientToken": "META_CLIENT_TOKEN",
+          "clientToken": "d5022521fdf6e3c83cdbd5b689300a25",
           "displayName": "Quibly",
           "scheme": "fb2102178107053785",
           "isAutoInitEnabled": false,
