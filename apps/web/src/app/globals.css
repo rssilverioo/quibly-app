@@ -378,6 +378,20 @@ body {
   border-radius: 18px;
   padding: 1.8rem;
 }
+.passo-topo { display: flex; align-items: center; justify-content: space-between; }
+.passo-icone {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(0, 67, 186, 0.08);
+  color: var(--marca);
+}
+.lista-icone { display: inline-flex; flex-shrink: 0; margin-right: 0.7rem; color: var(--marca); opacity: 0.9; }
+.secao-escura .lista-icone { color: #fff; opacity: 0.8; }
+.btn svg { flex-shrink: 0; }
 .passo-numero {
   font-size: 0.8rem;
   color: var(--marca);

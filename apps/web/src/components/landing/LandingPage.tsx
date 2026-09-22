@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { ArrowDown, Camera, Download, Link2, Lock, Server, Timer, WifiOff } from 'lucide-react';
 
 import Coelho from './Coelho';
 import CoelhoImagem from './CoelhoImagem';
@@ -55,7 +56,10 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           <a href="#dias">{nav.porque}</a>
           <a href="#plano">{nav.plano}</a>
         </nav>
-        <a className="btn btn-primario btn-pequeno" href={APP_STORE}>{nav.baixar}</a>
+        <a className="btn btn-primario btn-pequeno" href={APP_STORE}>
+          <Download size={16} aria-hidden="true" />
+          {nav.baixar}
+        </a>
       </header>
 
       {/* ── herói ─────────────────────────────────────────────────────────── */}
@@ -70,7 +74,10 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           <p className="lead">{hero.texto}</p>
           <BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} />
           <div className="hero-acoes">
-            <a className="btn btn-fantasma" href="#cronometro">{hero.ctaSegundo}</a>
+            <a className="btn btn-fantasma" href="#cronometro">
+              {hero.ctaSegundo}
+              <ArrowDown size={16} aria-hidden="true" />
+            </a>
           </div>
         </div>
 
@@ -102,12 +109,15 @@ export default function LandingPage({ lang }: { lang: Lang }) {
             <h2 className="display display-medio">{cron.titulo}</h2>
             <p className="lead lead-claro">{cron.texto}</p>
             <ul className="lista">
-              {cron.pontos.map((p) => (
-                <li key={p}>
-                  <span className="marca-dia" aria-hidden="true" />
-                  {p}
-                </li>
-              ))}
+              {cron.pontos.map((p, i) => {
+                const Icone = ICONES_CRONOMETRO[i];
+                return (
+                  <li key={p}>
+                    <span className="lista-icone" aria-hidden="true"><Icone size={18} /></span>
+                    {p}
+                  </li>
+                );
+              })}
             </ul>
           </div>
           <div className="secao-arte">
@@ -142,13 +152,19 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           informação — não dá para mandar o link de uma sala que não existe.
         */}
         <ol className="passos">
-          {passos.itens.map((item, i) => (
+          {passos.itens.map((item, i) => {
+            const Icone = ICONES_PASSOS[i];
+            return (
             <li key={item.titulo}>
-              <span className="passo-numero mono">{String(i + 1).padStart(2, '0')}</span>
+              <span className="passo-topo">
+                <span className="passo-icone" aria-hidden="true"><Icone size={20} /></span>
+                <span className="passo-numero mono">{String(i + 1).padStart(2, '0')}</span>
+              </span>
               <h3>{item.titulo}</h3>
               <p>{item.texto}</p>
             </li>
-          ))}
+            );
+          })}
         </ol>
       </section>
 
@@ -213,6 +229,16 @@ export default function LandingPage({ lang }: { lang: Lang }) {
     </div>
   );
 }
+
+/**
+ * Ícones do Lucide, na ordem dos textos em `content.ts`.
+ *
+ * Os três pontos do cronômetro: servidor, tela de bloqueio, conexão caída.
+ * Os três passos: criar a sala, mandar o link, estudar (cronômetro + foto).
+ * Se um texto mudar de ordem lá, a ordem aqui muda junto.
+ */
+const ICONES_CRONOMETRO = [Server, Lock, WifiOff];
+const ICONES_PASSOS = [Timer, Link2, Camera];
 
 /**
  * O separador: sete células, uma semana.
