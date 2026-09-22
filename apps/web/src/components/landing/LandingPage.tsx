@@ -7,6 +7,7 @@ import Coelho from './Coelho';
 import CoelhoImagem from './CoelhoImagem';
 import BotoesDeLoja, { APP_STORE } from './BotoesDeLoja';
 import MapaDeConstancia from './MapaDeConstancia';
+import { Aparece, Desce, Escalonado, Flutua, Item } from './Movimento';
 import { conteudo, type Lang } from './content';
 
 /**
@@ -46,7 +47,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
 
   return (
     <div className="pagina">
-      <header className="nav">
+      <Desce className="nav">
         <a className="nav-marca" href="#topo">
           <Coelho size={34} />
           <span>Quibly</span>
@@ -60,26 +61,28 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           <Download size={16} aria-hidden="true" />
           {nav.baixar}
         </a>
-      </header>
+      </Desce>
 
       {/* ── herói ─────────────────────────────────────────────────────────── */}
       <section className="hero" id="topo">
-        <div className="hero-texto">
-          <span className="etiqueta">{hero.etiqueta}</span>
-          <h1 className="display">
-            {hero.titulo}
-            <br />
-            <em>{hero.tituloDestaque}</em>
-          </h1>
-          <p className="lead">{hero.texto}</p>
-          <BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} />
-          <div className="hero-acoes">
+        <Escalonado className="hero-texto" intervalo={0.11}>
+          <Item como="span" className="etiqueta">{hero.etiqueta}</Item>
+          <Item>
+            <h1 className="display">
+              {hero.titulo}
+              <br />
+              <em>{hero.tituloDestaque}</em>
+            </h1>
+          </Item>
+          <Item como="div"><p className="lead">{hero.texto}</p></Item>
+          <Item><BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} /></Item>
+          <Item className="hero-acoes">
             <a className="btn btn-fantasma" href="#cronometro">
               {hero.ctaSegundo}
               <ArrowDown size={16} aria-hidden="true" />
             </a>
-          </div>
-        </div>
+          </Item>
+        </Escalonado>
 
         {/*
           O coelho mostrando o celular, e não uma captura de tela.
@@ -89,14 +92,14 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           um app claro não pode abrir com um telefone preto escrito "Your
           rooms". Quando as capturas do app novo chegarem, o `Fone` volta aqui.
         */}
-        <div className="hero-arte">
+        <Flutua className="hero-arte">
           <CoelhoImagem nome="celular-quibly" alt="O coelho do Quibly mostrando o app no celular" size={360} prioridade />
-        </div>
+        </Flutua>
 
-        <figure className="hero-mapa">
+        <Aparece como="figure" className="hero-mapa" atraso={0.2}>
           <MapaDeConstancia />
           <figcaption>{hero.legenda}</figcaption>
-        </figure>
+        </Aparece>
       </section>
 
       <Semana />
@@ -104,7 +107,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
       {/* ── o cronômetro ──────────────────────────────────────────────────── */}
       <section className="secao secao-escura" id="cronometro">
         <div className="secao-par">
-          <div>
+          <Aparece>
             <span className="etiqueta etiqueta-clara">{cron.etiqueta}</span>
             <h2 className="display display-medio">{cron.titulo}</h2>
             <p className="lead lead-claro">{cron.texto}</p>
@@ -119,25 +122,24 @@ export default function LandingPage({ lang }: { lang: Lang }) {
                 );
               })}
             </ul>
-          </div>
-          <div className="secao-arte">
+          </Aparece>
+          <Aparece className="secao-arte" atraso={0.15} escala={0.9}>
             <CoelhoImagem nome="focused" alt="O coelho estudando concentrado, de fones" size={260} />
-          </div>
+          </Aparece>
         </div>
       </section>
 
       {/* ── por que dias ──────────────────────────────────────────────────── */}
       <section className="secao" id="dias">
         <div className="secao-par">
-          <div className="secao-arte">
+          <Aparece className="secao-arte" escala={0.9}>
             <CoelhoImagem nome="correndo-faixa" alt="O coelho correndo, de faixa na cabeça" size={300} />
-          </div>
-          <div>
+          </Aparece>
+          <Aparece atraso={0.15}>
             <span className="etiqueta">{dias.etiqueta}</span>
             <h2 className="display display-medio">{dias.titulo}</h2>
             <p className="lead">{dias.texto}</p>
-
-          </div>
+          </Aparece>
         </div>
       </section>
 
@@ -145,43 +147,49 @@ export default function LandingPage({ lang }: { lang: Lang }) {
 
       {/* ── como começa ───────────────────────────────────────────────────── */}
       <section className="secao">
-        <span className="etiqueta">{passos.etiqueta}</span>
-        <h2 className="display display-medio centro">{passos.titulo}</h2>
+        <Aparece>
+          <span className="etiqueta">{passos.etiqueta}</span>
+          <h2 className="display display-medio centro">{passos.titulo}</h2>
+        </Aparece>
         {/*
           Numeração aqui é honesta: são passos numa ordem, e a ordem é
           informação — não dá para mandar o link de uma sala que não existe.
         */}
-        <ol className="passos">
+        <Escalonado como="ol" className="passos" intervalo={0.14}>
           {passos.itens.map((item, i) => {
             const Icone = ICONES_PASSOS[i];
             return (
-            <li key={item.titulo}>
+            <Item como="li" key={item.titulo} levanta>
               <span className="passo-topo">
                 <span className="passo-icone" aria-hidden="true"><Icone size={20} /></span>
                 <span className="passo-numero mono">{String(i + 1).padStart(2, '0')}</span>
               </span>
               <h3>{item.titulo}</h3>
               <p>{item.texto}</p>
-            </li>
+            </Item>
             );
           })}
-        </ol>
+        </Escalonado>
       </section>
 
       {/* ── plano ─────────────────────────────────────────────────────────── */}
       <section className="secao secao-plano" id="plano">
-        <CoelhoImagem nome="celebrate" alt="O coelho comemorando" size={150} />
-        <span className="etiqueta">{plano.etiqueta}</span>
-        <h2 className="display display-medio centro">{plano.titulo}</h2>
-        <p className="lead centro">{plano.texto}</p>
+        <Aparece escala={0.85}>
+          <CoelhoImagem nome="celebrate" alt="O coelho comemorando" size={150} />
+        </Aparece>
+        <Aparece className="secao-plano-texto" atraso={0.1}>
+          <span className="etiqueta">{plano.etiqueta}</span>
+          <h2 className="display display-medio centro">{plano.titulo}</h2>
+          <p className="lead centro">{plano.texto}</p>
+        </Aparece>
         {/*
           Dois cartões, e só o que o app aplica de verdade: cada linha do Pro
           tem um gate no servidor ou no app (`docs/LOJAS.md §Pro`). O preço é o
           da loja brasileira; a compra acontece no app, então aqui não há botão
           de assinar — há o de baixar.
         */}
-        <div className="planos">
-          <div className="plano-cartao">
+        <Escalonado className="planos" intervalo={0.16}>
+          <Item className="plano-cartao" levanta>
             <span className="plano-nome">{plano.gratis.nome}</span>
             <span className="plano-preco">{plano.gratis.preco}</span>
             <ul className="lista lista-plano">
@@ -189,8 +197,8 @@ export default function LandingPage({ lang }: { lang: Lang }) {
                 <li key={item}><span className="marca-dia" aria-hidden="true" />{item}</li>
               ))}
             </ul>
-          </div>
-          <div className="plano-cartao plano-cartao-pro">
+          </Item>
+          <Item className="plano-cartao plano-cartao-pro" levanta>
             <span className="plano-nome">{plano.pro.nome}</span>
             <span className="plano-preco">{plano.pro.preco}<small>{plano.pro.periodo}</small></span>
             <span className="plano-anual">{plano.pro.anual}</span>
@@ -200,19 +208,21 @@ export default function LandingPage({ lang }: { lang: Lang }) {
               ))}
             </ul>
             <a className="btn btn-primario" href={APP_STORE}>{hero.cta}</a>
-          </div>
-        </div>
-        <p className="nota">{plano.nota}</p>
+          </Item>
+        </Escalonado>
+        <Aparece como="p" className="nota">{plano.nota}</Aparece>
       </section>
 
       <Semana />
 
       {/* ── fim ───────────────────────────────────────────────────────────── */}
       <section className="secao secao-fim">
-        <h2 className="display centro">{fim.titulo}</h2>
-        <p className="lead centro">{fim.texto}</p>
-        <BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} centro />
-        <p className="nota">{fim.loja}</p>
+        <Escalonado className="secao-fim-miolo" intervalo={0.12}>
+          <Item><h2 className="display centro">{fim.titulo}</h2></Item>
+          <Item><p className="lead centro">{fim.texto}</p></Item>
+          <Item><BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} centro /></Item>
+          <Item><p className="nota">{fim.loja}</p></Item>
+        </Escalonado>
       </section>
 
       <footer className="rodape">

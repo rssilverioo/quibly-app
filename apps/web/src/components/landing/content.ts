@@ -229,6 +229,14 @@ export const conteudo = {
       androidTexto:
         "Quibly isn't on Google Play yet. It's coming — for now, the app is on iPhone.",
       levando: 'Taking you to the App Store…',
+      etiqueta: 'Free on iPhone and Android',
+      tituloDestaque: 'and count your days.',
+      pontos: [
+        { titulo: 'A timer that keeps going', texto: 'Close the app, lock the phone. The session survives.' },
+        { titulo: 'Rooms with your people', texto: 'One link and everyone is in. No accounts to hand out.' },
+        { titulo: 'Days, not all-nighters', texto: 'The ranking rewards showing up again tomorrow.' },
+      ],
+      site: 'See how it works',
     },
     pt: {
       titulo: 'Baixar o Quibly',
@@ -240,6 +248,14 @@ export const conteudo = {
       androidTexto:
         'O Quibly ainda não está na Google Play. Está chegando — por enquanto, o app é no iPhone.',
       levando: 'Levando você para a App Store…',
+      etiqueta: 'Grátis no iPhone e no Android',
+      tituloDestaque: 'e conte os seus dias.',
+      pontos: [
+        { titulo: 'Cronômetro que não para', texto: 'Feche o app, bloqueie a tela. A sessão sobrevive.' },
+        { titulo: 'Salas com a sua turma', texto: 'Um link e todo mundo entra. Sem distribuir conta.' },
+        { titulo: 'Dias, não noites viradas', texto: 'O ranking premia quem volta amanhã.' },
+      ],
+      site: 'Veja como funciona',
     },
   },
 } as const;

@@ -3,9 +3,9 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { conteudo } from '../../components/landing/content';
-import { idiomaAceito } from '../../lib/idioma';
 import { plataformaDe } from '../../lib/plataforma';
-import BotoesDeLoja, { APP_STORE, PLAY_STORE } from '../../components/landing/BotoesDeLoja';
+import { APP_STORE, PLAY_STORE } from '../../components/landing/BotoesDeLoja';
+import PaginaDownload from '../../components/download/PaginaDownload';
 
 /**
  * `quibly.com.br/download` — o link único da bio do Instagram.
@@ -32,10 +32,16 @@ import BotoesDeLoja, { APP_STORE, PLAY_STORE } from '../../components/landing/Bo
  * As duas lojas estão publicadas (22/09/2026); os links moram em
  * `BotoesDeLoja`, junto com os do resto do site, para não haver duas URLs
  * da mesma listagem.
+ *
+ * ## Por que em português, fixo
+ *
+ * Diferente do convite, este link é **nosso**: vai na bio do Instagram, que é
+ * em português, para um público brasileiro. Segue a raiz do site, que também
+ * é pt-BR sem olhar o navegador. Quem fala inglês tem `/en`.
  */
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = conteudo.download[idiomaAceito((await headers()).get('accept-language'))];
+export function generateMetadata(): Metadata {
+  const t = conteudo.download.pt;
   return {
     title: `📲 ${t.titulo}`,
     description: t.descricao,
@@ -46,25 +52,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function DownloadPage() {
   const cabecalhos = await headers();
   const plataforma = plataformaDe(cabecalhos.get('user-agent'));
-  const t = conteudo.download[idiomaAceito(cabecalhos.get('accept-language'))];
 
   if (plataforma === 'ios') redirect(APP_STORE);
   if (plataforma === 'android') redirect(PLAY_STORE);
 
-  return (
-    <main className="pagina convite">
-      <div className="convite-cartao">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="convite-capa" src="/coelho-convite.jpg" alt="" />
-
-        <div className="convite-corpo">
-          <h1 className="display convite-nome">{t.titulo}</h1>
-
-          <p className="convite-descricao">{t.subtitulo}</p>
-
-          <BotoesDeLoja apple={t.appStore} google={t.playStore} centro />
-        </div>
-      </div>
-    </main>
-  );
+  return <PaginaDownload lang="pt" />;
 }

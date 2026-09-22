@@ -51,6 +51,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body className={`${display.variable} ${corpo.variable} ${mono.variable} ${corpo.className}`}>
+        {/*
+          Sem JS, o Framer Motion nunca tira o `opacity: 0` inicial dos blocos
+          que entram ao rolar — e a página ficaria em branco. Este estilo só
+          existe quando não há script, e devolve tudo ao lugar.
+        */}
+        <noscript>
+          <style>{`[style*="opacity"]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
         {children}
       </body>
     </html>
