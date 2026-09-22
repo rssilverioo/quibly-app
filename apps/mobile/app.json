@@ -161,10 +161,10 @@
       [
         "react-native-fbsdk-next",
         {
-          "appID": "META_APP_ID",
+          "appID": "2102178107053785",
           "clientToken": "META_CLIENT_TOKEN",
           "displayName": "Quibly",
-          "scheme": "fbMETA_APP_ID",
+          "scheme": "fb2102178107053785",
           "isAutoInitEnabled": false,
           "autoLogAppEventsEnabled": true,
           "advertiserIDCollectionEnabled": true
