@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
+
+import { enviarEventosCapi } from '../../lib/capi';
 
 import { conteudo } from '../../components/landing/content';
 import { plataformaDe } from '../../lib/plataforma';
@@ -53,8 +56,24 @@ export default async function DownloadPage() {
   const cabecalhos = await headers();
   const plataforma = plataformaDe(cabecalhos.get('user-agent'));
 
-  if (plataforma === 'ios') redirect(APP_STORE);
-  if (plataforma === 'android') redirect(PLAY_STORE);
+  if (plataforma === 'ios' || plataforma === 'android') {
+    // O pixel da página nunca roda aqui — a resposta já é o redirecionamento.
+    // Então o servidor conta a visita e o clique implícito na loja, depois de
+    // responder (`after`), para não atrasar quem está indo baixar.
+    const comum = {
+      url: 'https://quibly.com.br/download',
+      ip: cabecalhos.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+      userAgent: cabecalhos.get('user-agent'),
+      cookies: cabecalhos.get('cookie'),
+    };
+    const loja = plataforma === 'ios' ? 'DownloadClick_iOS' : 'DownloadClick_Android';
+    after(enviarEventosCapi([
+      { ...comum, nome: 'PageView' },
+      { ...comum, nome: 'DownloadClick', parametros: { loja: plataforma } },
+      { ...comum, nome: loja },
+    ]));
+    redirect(plataforma === 'ios' ? APP_STORE : PLAY_STORE);
+  }
 
   return <PaginaDownload lang="pt" />;
 }
