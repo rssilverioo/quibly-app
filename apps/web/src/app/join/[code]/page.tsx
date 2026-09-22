@@ -29,7 +29,7 @@ import { idiomaAceito } from '../../../lib/idioma';
  *
  * ## Por que o idioma vem do cabeçalho
  *
- * O resto do site escolhe idioma pela rota — `/` e `/pt`. Aqui não dá: o
+ * O resto do site escolhe idioma pela rota — `/` e `/en`. Aqui não dá: o
  * convite é **um link só**, gerado pelo app de quem convida e colado num grupo
  * onde pode ter gente de qualquer lugar. Quem escolhe tem que ser o navegador
  * de quem abre. Ver `lib/idioma`.

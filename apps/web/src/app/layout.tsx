@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body className={`${display.variable} ${corpo.variable} ${mono.variable} ${corpo.className}`}>
         {children}
       </body>

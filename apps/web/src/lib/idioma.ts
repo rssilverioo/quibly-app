@@ -5,7 +5,7 @@ import type { Lang } from '../components/landing/content';
  *
  * ## Por que aqui não dá para escolher pela rota
  *
- * A landing resolve isso com duas rotas — `/` em inglês e `/pt` em português —
+ * A landing resolve isso com duas rotas — `/` em português e `/en` em inglês —
  * e funciona porque quem chega vem de um link que **nós** escolhemos.
  *
  * O convite não: `quibly.com.br/join/CODE` é **um link só**, gerado pelo app de
