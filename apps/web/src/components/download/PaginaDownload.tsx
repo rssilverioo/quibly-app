@@ -3,7 +3,7 @@
 import { ArrowRight, Timer, Users, Flame } from 'lucide-react';
 
 import BotoesDeLoja from '../landing/BotoesDeLoja';
-import Coelho from '../landing/Coelho';
+import IconeApp from '../landing/IconeApp';
 import MockDoApp from '../landing/MockDoApp';
 import { Escalonado, Flutua, Item } from '../landing/Movimento';
 import { conteudo, type Lang } from '../landing/content';
@@ -25,7 +25,7 @@ export default function PaginaDownload({ lang }: { lang: Lang }) {
   return (
     <main className="pagina baixar">
       <a className="baixar-marca" href="/">
-        <Coelho size={30} />
+        <IconeApp size={30} />
         <span>Quibly</span>
       </a>
 

@@ -727,3 +727,9 @@ body {
   .baixar-texto .lojas { justify-content: center; }
   .baixar-pontos { grid-template-columns: 1fr; }
 }
+
+/* Ícone do app ao lado do wordmark: o fundo azul é quadrado, o canto arredondado o faz parecer ícone de app. */
+.icone-app {
+  border-radius: 26%;
+  display: block;
+}

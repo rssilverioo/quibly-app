@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { ArrowDown, Camera, Download, Link2, Lock, Server, Timer, WifiOff } from 'lucide-react';
 
-import Coelho from './Coelho';
+import IconeApp from './IconeApp';
 import CoelhoImagem from './CoelhoImagem';
 import BotoesDeLoja, { APP_STORE } from './BotoesDeLoja';
 import MapaDeConstancia from './MapaDeConstancia';
@@ -50,7 +50,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
     <div className="pagina">
       <Desce className="nav">
         <a className="nav-marca" href="#topo">
-          <Coelho size={34} />
+          <IconeApp size={34} />
           <span>Quibly</span>
         </a>
         <nav className="nav-links">
@@ -228,7 +228,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
 
       <footer className="rodape">
         <div className="rodape-marca">
-          <Coelho size={28} />
+          <IconeApp size={28} />
           <span>{rodape.direitos} © {new Date().getFullYear()}</span>
         </div>
         <nav>
