@@ -47,6 +47,19 @@ module.exports = {
   frameworks: ['SwiftUI', 'WidgetKit', 'ActivityKit', 'AppIntents'],
 
   /**
+   * O coelho da Live Activity, em PNG (22/09/2026).
+   *
+   * Vira `Assets.xcassets` da extensão. São cópias de 384px das artes de
+   * `assets/coelhos` — a extensão tem 16MB de memória, e um PNG de 1254px
+   * decodificado ocupa 6MB sozinho; 384px cobre 46pt em 3x (138px) com folga
+   * e ocupa menos de 1MB.
+   */
+  images: {
+    coelhoAtivo: './coelho-ativo.png',
+    coelhoPausa: './coelho-pausa.png',
+  },
+
+  /**
    * O App Group é o **único** canal entre o app e a extensão.
    *
    * A extensão não enxerga o `UserDefaults.standard` do app nem o chaveiro

@@ -121,9 +121,19 @@ struct CoelhoMark: View {
       let s = min(geo.size.width, geo.size.height) / 1024
 
       ZStack(alignment: .topLeading) {
-        orelhas(s)
-        cabeca(s)
-        rosto(s)
+        // O coelho é a arte de 22/09 (`expo-target.config.js` → `images`):
+        // correndo quando a sessão roda, dormindo na pausa. As peças
+        // desenhadas abaixo ficam como reserva se o catálogo não vier.
+        if let arte = UIImage(named: mood.eyesOpen ? "coelhoAtivo" : "coelhoPausa") {
+          Image(uiImage: arte)
+            .resizable()
+            .scaledToFit()
+            .frame(width: geo.size.width, height: geo.size.height)
+        } else {
+          orelhas(s)
+          cabeca(s)
+          rosto(s)
+        }
         badge(s)
       }
       .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
@@ -236,18 +246,14 @@ struct CoelhoMark: View {
   @ViewBuilder
   private func badge(_ s: CGFloat) -> some View {
     if let badge = mood.badge {
-      if badge == .shades {
-        RoundedRectangle(cornerRadius: 14 * s)
-          .fill(contorno)
-          .overlay(RoundedRectangle(cornerRadius: 14 * s).stroke(accent, lineWidth: 7 * s))
-          .frame(width: 250 * s, height: 74 * s)
-          .offset(x: 387 * s, y: (434 + dy) * s)
-      } else {
-        Image(systemName: symbolName(badge))
-          .font(.system(size: 130 * s, weight: .semibold))
-          .foregroundStyle(accent)
-          .offset(x: 700 * s, y: (200 + dy) * s)
-      }
+      // Todos os marcos vão ao canto superior direito, como símbolo do
+      // sistema. Os óculos escuros desenhados sobre os olhos faziam sentido
+      // com a cabeça desenhada; sobre a arte em PNG não há olho fixo para
+      // alinhar, então eles viram símbolo como os outros.
+      Image(systemName: symbolName(badge))
+        .font(.system(size: 130 * s, weight: .semibold))
+        .foregroundStyle(accent)
+        .offset(x: 700 * s, y: (200 + dy) * s)
     }
   }
 
@@ -257,7 +263,7 @@ struct CoelhoMark: View {
     case .star:   return "star.fill"
     case .medal:  return "medal.fill"
     case .crown:  return "crown.fill"
-    case .shades: return "eyeglasses"
+    case .shades: return "sunglasses.fill"
     }
   }
 }
