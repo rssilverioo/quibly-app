@@ -26,7 +26,7 @@
  * alguém esquece de configurar na hospedagem — e, vazio, o pixel simplesmente
  * não carrega.
  */
-export const PIXEL_ID = '';
+export const PIXEL_ID = '28708176528818428';
 
 type Fbq = (...args: unknown[]) => void;
 
