@@ -37,6 +37,8 @@ const mono = Azeret_Mono({
 });
 
 export const metadata: Metadata = {
+  // Base para as imagens de Open Graph relativas (`/og-convite.jpg`).
+  metadataBase: new URL('https://quibly.com.br'),
   title: 'Quibly — Study rooms that count the days you show up',
   description:
     'Create a room, bring the people you study with, and start a challenge. The timer keeps running with the app closed, and the ranking counts days you turned up — not the one night you crammed.',

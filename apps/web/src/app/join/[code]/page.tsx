@@ -92,7 +92,11 @@ export async function generateMetadata({
     openGraph: {
       title: titulo,
       description: convite.description ?? t.previaTexto,
-      images: convite.cover_url ? [convite.cover_url] : undefined,
+      // O cartão de convite da marca, e não a capa da sala: a capa é foto de
+      // quem criou a sala, em qualquer proporção, e no WhatsApp vira um
+      // recorte que não diz o que é isto. O cartão diz "você foi convidado"
+      // antes do toque. 1200×630, a proporção que todas as redes aceitam.
+      images: [{ url: '/og-convite.jpg', width: 1200, height: 630, alt: 'Você foi convidado para estudar junto no Quibly' }],
     },
   };
 }
