@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 
 import { conteudo } from '../../../components/landing/content';
 import { idiomaAceito } from '../../../lib/idioma';
+import { APP_STORE } from '../../../components/landing/BotoesDeLoja';
 
 /**
  * A página que o convite abre.
@@ -51,7 +52,6 @@ interface Convite {
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://rabbit.quibly.com.br';
-const APP_STORE = 'https://apps.apple.com/app/id6760320166';
 
 async function buscarConvite(code: string): Promise<Convite | null> {
   try {

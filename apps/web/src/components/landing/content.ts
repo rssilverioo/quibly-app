@@ -160,13 +160,13 @@ export const conteudo = {
       titulo: 'Tomorrow is the one that counts.',
       texto: 'Free to start. Nothing to set up.',
       cta: 'Get the app',
-      loja: 'Also coming to Android',
+      loja: 'On iPhone and Android.',
     },
     pt: {
       titulo: 'Amanhã é o que conta.',
       texto: 'Comece de graça. Nada para configurar.',
       cta: 'Baixar o app',
-      loja: 'Em breve no Android',
+      loja: 'No iPhone e no Android.',
     },
   },
 

@@ -4,6 +4,7 @@ import Image from 'next/image';
 
 import Coelho from './Coelho';
 import CoelhoImagem from './CoelhoImagem';
+import BotoesDeLoja, { APP_STORE } from './BotoesDeLoja';
 import MapaDeConstancia from './MapaDeConstancia';
 import { conteudo, type Lang } from './content';
 
@@ -40,7 +41,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
   const fim = t('fim');
   const rodape = t('rodape');
 
-  const APP_STORE = 'https://apps.apple.com/app/id6760320166';
+  const lojas = conteudo.download[lang];
 
   return (
     <div className="pagina">
@@ -67,8 +68,8 @@ export default function LandingPage({ lang }: { lang: Lang }) {
             <em>{hero.tituloDestaque}</em>
           </h1>
           <p className="lead">{hero.texto}</p>
+          <BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} />
           <div className="hero-acoes">
-            <a className="btn btn-primario" href={APP_STORE}>{hero.cta}</a>
             <a className="btn btn-fantasma" href="#cronometro">{hero.ctaSegundo}</a>
           </div>
         </div>
@@ -194,9 +195,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
       <section className="secao secao-fim">
         <h2 className="display centro">{fim.titulo}</h2>
         <p className="lead centro">{fim.texto}</p>
-        <a className="btn btn-primario btn-grande" href={APP_STORE}>{fim.cta}</a>
-        {/* "Em breve no Android" como texto, e não como botão morto: um botão
-            que não leva a lugar nenhum é a promessa mais barata que existe. */}
+        <BotoesDeLoja apple={lojas.appStore} google={lojas.playStore} centro />
         <p className="nota">{fim.loja}</p>
       </section>
 

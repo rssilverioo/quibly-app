@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { conteudo } from '../../components/landing/content';
 import { idiomaAceito } from '../../lib/idioma';
 import { plataformaDe } from '../../lib/plataforma';
+import BotoesDeLoja, { APP_STORE, PLAY_STORE } from '../../components/landing/BotoesDeLoja';
 
 /**
  * `quibly.com.br/download` — o link único da bio do Instagram.
@@ -28,19 +29,10 @@ import { plataformaDe } from '../../lib/plataforma';
  * título e a descrição do cartão. Ele não se declara iPhone nem Android, então
  * cai na página de escolha — que é exatamente o que se quer mostrar num cartão.
  *
- * ## O estado "sem loja" continua no código
- *
- * `PLAY_STORE` é anulável e a página trata o caso de ele faltar, embora hoje
- * esteja preenchido. Não é adorno: mandar alguém para uma listagem que responde
- * "não encontrado" é pior que não ter botão — quem chega assim conclui que o app
- * não existe. Se a listagem sair do ar, o caminho degradado já está escrito.
+ * As duas lojas estão publicadas (22/09/2026); os links moram em
+ * `BotoesDeLoja`, junto com os do resto do site, para não haver duas URLs
+ * da mesma listagem.
  */
-
-const APP_STORE = 'https://apps.apple.com/app/id6760320166';
-
-/** A listagem do Android. Publicada — a versão de lá é que está atrasada. */
-const PLAY_STORE: string | null =
-  'https://play.google.com/store/apps/details?id=com.quibly.app';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = conteudo.download[idiomaAceito((await headers()).get('accept-language'))];
@@ -57,9 +49,7 @@ export default async function DownloadPage() {
   const t = conteudo.download[idiomaAceito(cabecalhos.get('accept-language'))];
 
   if (plataforma === 'ios') redirect(APP_STORE);
-  if (plataforma === 'android' && PLAY_STORE) redirect(PLAY_STORE);
-
-  const androidSemLoja = plataforma === 'android';
+  if (plataforma === 'android') redirect(PLAY_STORE);
 
   return (
     <main className="pagina convite">
@@ -70,28 +60,9 @@ export default async function DownloadPage() {
         <div className="convite-corpo">
           <h1 className="display convite-nome">{t.titulo}</h1>
 
-          {androidSemLoja ? (
-            <>
-              <p className="convite-linha">
-                <strong>{t.androidEmBreve}</strong>
-              </p>
-              <p className="convite-descricao">{t.androidTexto}</p>
-            </>
-          ) : (
-            <p className="convite-descricao">{t.subtitulo}</p>
-          )}
+          <p className="convite-descricao">{t.subtitulo}</p>
 
-          <a className="btn btn-primario btn-grande convite-botao" href={APP_STORE}>
-            {t.appStore}
-          </a>
-
-          {/* O botão da Play só aparece quando há para onde ir. Um botão
-              desabilitado ocuparia o mesmo espaço para não fazer nada. */}
-          {PLAY_STORE ? (
-            <a className="btn btn-fantasma convite-botao" href={PLAY_STORE}>
-              {t.playStore}
-            </a>
-          ) : null}
+          <BotoesDeLoja apple={t.appStore} google={t.playStore} centro />
         </div>
       </div>
     </main>
