@@ -119,15 +119,39 @@ export const conteudo = {
       etiqueta: 'Pricing',
       titulo: 'Free for three rooms of your own.',
       texto:
-        'Joining other people’s rooms is always unlimited — an invitation should never depend on someone’s plan. The paid plan lifts the limit on rooms you create.',
-      nota: 'Quibly Pro is coming soon.',
+        'Joining other people’s rooms is always unlimited — an invitation should never depend on someone’s plan. Pro is for whoever wants more of their own.',
+      gratis: {
+        nome: 'Free',
+        preco: 'R$ 0',
+        itens: ['3 study rooms of your own', 'Join unlimited rooms', 'Timer that runs with the app closed', 'Streak map and other people’s challenges', 'Up to 8 hours of study a day'],
+      },
+      pro: {
+        nome: 'Quibly Pro',
+        preco: 'R$ 19.99',
+        periodo: '/month',
+        anual: 'or R$ 99.99 a year',
+        itens: ['Unlimited rooms of your own', 'Deep Focus: block other apps while you study (iPhone)', 'Streak shield: one missed day doesn’t reset', 'Your history in numbers', 'Create challenges for your rooms', 'Up to 16 hours of study a day', 'No ads'],
+      },
+      nota: 'Subscribe inside the app. Cancel anytime.',
     },
     pt: {
       etiqueta: 'Planos',
       titulo: 'Grátis para três salas suas.',
       texto:
-        'Participar das salas dos outros é sempre ilimitado — um convite nunca deveria depender do plano de ninguém. O plano pago tira o limite das salas que você cria.',
-      nota: 'O Quibly Pro chega em breve.',
+        'Participar das salas dos outros é sempre ilimitado — um convite nunca deveria depender do plano de ninguém. O Pro é para quem quer mais salas suas, e mais do que salas.',
+      gratis: {
+        nome: 'Grátis',
+        preco: 'R$ 0',
+        itens: ['3 salas de estudo suas', 'Entrar em quantas salas quiser', 'Cronômetro que roda com o app fechado', 'Mapa de constância e desafios dos outros', 'Até 8 horas de estudo por dia'],
+      },
+      pro: {
+        nome: 'Quibly Pro',
+        preco: 'R$ 19,99',
+        periodo: '/mês',
+        anual: 'ou R$ 99,99 por ano',
+        itens: ['Salas suas ilimitadas', 'Foco Profundo: bloqueie os outros apps enquanto estuda (iPhone)', 'Escudo de ofensiva: um dia sem estudar não zera', 'Seu histórico em números', 'Crie desafios para as suas salas', 'Até 16 horas de estudo por dia', 'Sem anúncios'],
+      },
+      nota: 'A assinatura é feita dentro do app. Cancele quando quiser.',
     },
   },
 

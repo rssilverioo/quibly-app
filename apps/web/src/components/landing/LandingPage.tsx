@@ -3,6 +3,7 @@
 import Image from 'next/image';
 
 import Coelho from './Coelho';
+import CoelhoImagem from './CoelhoImagem';
 import MapaDeConstancia from './MapaDeConstancia';
 import { conteudo, type Lang } from './content';
 
@@ -72,8 +73,16 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           </div>
         </div>
 
-        <div className="hero-fone">
-          <Fone src="/app/salas.png" alt="Lista de salas no Quibly" prioridade />
+        {/*
+          O coelho mostrando o celular, e não uma captura de tela.
+
+          As capturas em `public/app/` são do app **antigo**: tema escuro, em
+          inglês, com telas que não existem mais. Uma landing em português com
+          um app claro não pode abrir com um telefone preto escrito "Your
+          rooms". Quando as capturas do app novo chegarem, o `Fone` volta aqui.
+        */}
+        <div className="hero-arte">
+          <CoelhoImagem nome="celular-quibly" alt="O coelho do Quibly mostrando o app no celular" size={360} prioridade />
         </div>
 
         <figure className="hero-mapa">
@@ -101,7 +110,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
             </ul>
           </div>
           <div className="secao-arte">
-            <Coelho estado="foco" size={190} />
+            <CoelhoImagem nome="focused" alt="O coelho estudando concentrado, de fones" size={260} />
           </div>
         </div>
       </section>
@@ -110,17 +119,13 @@ export default function LandingPage({ lang }: { lang: Lang }) {
       <section className="secao" id="dias">
         <div className="secao-par">
           <div className="secao-arte">
-            <Fone src="/app/perfil.png" alt="Perfil com o mapa de constância" />
+            <CoelhoImagem nome="correndo-faixa" alt="O coelho correndo, de faixa na cabeça" size={300} />
           </div>
           <div>
             <span className="etiqueta">{dias.etiqueta}</span>
             <h2 className="display display-medio">{dias.titulo}</h2>
             <p className="lead">{dias.texto}</p>
-            <div className="coelho-linha">
-              <Coelho estado="trofeu" size={96} />
-              <Coelho estado="lendo" size={78} />
-              <Coelho estado="idle" size={66} />
-            </div>
+
           </div>
         </div>
       </section>
@@ -148,11 +153,39 @@ export default function LandingPage({ lang }: { lang: Lang }) {
 
       {/* ── plano ─────────────────────────────────────────────────────────── */}
       <section className="secao secao-plano" id="plano">
-        <Coelho estado="coroado" size={130} />
+        <CoelhoImagem nome="celebrate" alt="O coelho comemorando" size={150} />
         <span className="etiqueta">{plano.etiqueta}</span>
         <h2 className="display display-medio centro">{plano.titulo}</h2>
         <p className="lead centro">{plano.texto}</p>
-        <p className="nota mono">{plano.nota}</p>
+        {/*
+          Dois cartões, e só o que o app aplica de verdade: cada linha do Pro
+          tem um gate no servidor ou no app (`docs/LOJAS.md §Pro`). O preço é o
+          da loja brasileira; a compra acontece no app, então aqui não há botão
+          de assinar — há o de baixar.
+        */}
+        <div className="planos">
+          <div className="plano-cartao">
+            <span className="plano-nome">{plano.gratis.nome}</span>
+            <span className="plano-preco">{plano.gratis.preco}</span>
+            <ul className="lista lista-plano">
+              {plano.gratis.itens.map((item) => (
+                <li key={item}><span className="marca-dia" aria-hidden="true" />{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="plano-cartao plano-cartao-pro">
+            <span className="plano-nome">{plano.pro.nome}</span>
+            <span className="plano-preco">{plano.pro.preco}<small>{plano.pro.periodo}</small></span>
+            <span className="plano-anual">{plano.pro.anual}</span>
+            <ul className="lista lista-plano">
+              {plano.pro.itens.map((item) => (
+                <li key={item}><span className="marca-dia" aria-hidden="true" />{item}</li>
+              ))}
+            </ul>
+            <a className="btn btn-primario" href={APP_STORE}>{hero.cta}</a>
+          </div>
+        </div>
+        <p className="nota">{plano.nota}</p>
       </section>
 
       <Semana />
