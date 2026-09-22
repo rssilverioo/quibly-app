@@ -272,6 +272,29 @@ export default function ProfileScreen() {
         </View>
 
         {/*
+          O Pro à vista, para quem não assina.
+
+          Até 22/09 o plano só aparecia atrás de uma porta: o limite de salas,
+          a linha "Meu plano" nos ajustes, a coroa das estatísticas. Quem nunca
+          batia num limite nunca ficava sabendo que existia um plano — e um
+          plano que ninguém vê não vende. Isto é um cartão, não um pop-up:
+          fica no perfil, no lugar do dono do perfil, e não interrompe nada.
+          Quem assina não vê, porque já é.
+        */}
+        {profile.plan !== 'PRO' && (
+          <Press haptic="light" scale={0.98} onPress={() => router.push('/pricing')} style={styles.proCartao}>
+            <View style={styles.proIcone}>
+              <Crown size={18} color={c.fgOnAccent} strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proTitulo}>{t('pricing:promo.title')}</Text>
+              <Text style={styles.proSub}>{t('pricing:promo.subtitle')}</Text>
+            </View>
+            <ChevronRight size={18} color={c.accent} />
+          </Press>
+        )}
+
+        {/*
           A porta das estatísticas do Pro, logo abaixo dos números.
 
           Ela aparece para todo mundo: quem não assina vê a coroa e, ao tocar,
@@ -404,6 +427,14 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   xpFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.accent },
   xpText: { ...text.caption, color: c.fgMuted, marginTop: space.sm },
 
+  proCartao: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: c.accentSoft, borderRadius: radius.sm,
+    paddingVertical: space.md, paddingHorizontal: space.lg, marginBottom: space.md,
+  },
+  proIcone: { width: 36, height: 36, borderRadius: radius.full, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  proTitulo: { ...text.bodyStrong, color: c.fg },
+  proSub: { ...text.caption, color: c.fgMuted, marginTop: 2 },
   insightsRow: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     backgroundColor: c.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: c.border,

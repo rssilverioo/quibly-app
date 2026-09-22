@@ -40,30 +40,64 @@ struct StudyTimerLiveActivity: Widget {
         .activitySystemActionForegroundColor(Color.quiblyAccent)
     } dynamicIsland: { context in
       DynamicIsland {
+        /*
+         A expandida, refeita em 22/09.
+
+         Antes: o coelho de corpo inteiro espremido em 46pt colado no recorte
+         do sensor, com o marco (estrela, coroa) flutuando como símbolo sobre a
+         cabeça dele; a matéria em cinza 13pt no meio; o cronômetro à direita.
+         O fundador viu no aparelho e disse "muito feia".
+
+         O que mudou, e por quê:
+
+         - O coelho ganhou um **palco**: um círculo branco translúcido atrás
+           dele. Sobre o preto puro da Ilha, um PNG de contorno azul e pelo
+           branco não tem borda nem chão — parece um adesivo colado. O círculo
+           dá a ele o mesmo tratamento que o iOS dá a um avatar.
+         - O marco saiu de cima do coelho e virou **texto**: "★ 90 min" na
+           linha da fase. Um símbolo sobre a cabeça do bicho lia como defeito
+           de renderização, não como conquista.
+         - A matéria subiu para 15pt branco e a fase ficou embaixo, em 12pt
+           cinza — duas linhas com hierarquia, no lugar de um cinza só.
+         - O cronômetro ficou em 28pt e no azul da marca, que é a cor que a
+           Ilha compacta já usava — a expandida era a única branca.
+         */
         DynamicIslandExpandedRegion(.leading) {
-          CoelhoMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning))
-            .frame(width: 46, height: 46)
-            .padding(.leading, 4)
+          CoelhoMark(mood: .forMinutes(context.state.totalMinutes, isRunning: context.state.isRunning), mostrarMarco: false)
+            .padding(6)
+            .frame(width: 52, height: 52)
+            .background(Circle().fill(Color.white.opacity(0.14)))
+            .padding(.leading, 2)
         }
 
         DynamicIslandExpandedRegion(.trailing) {
           TimerText(state: context.state)
-            .font(.system(size: 30, weight: .semibold, design: .rounded))
+            .font(.system(size: 28, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .foregroundStyle(Color.quiblyAccent)
+            .frame(maxHeight: .infinity, alignment: .center)
             .padding(.trailing, 4)
         }
 
         DynamicIslandExpandedRegion(.center) {
-          Text(context.attributes.subjectName)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(.white.opacity(0.65))
-            .lineLimit(1)
+          VStack(alignment: .leading, spacing: 2) {
+            Text(context.attributes.subjectName.isEmpty ? context.state.phaseLabel : context.attributes.subjectName)
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundStyle(.white)
+              .lineLimit(1)
+            LinhaDaFase(state: context.state, materia: context.attributes.subjectName)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.leading, 6)
         }
 
         DynamicIslandExpandedRegion(.bottom) {
           if context.state.temFase {
             BarraDaFase(state: context.state)
+              .padding(.top, 6)
+              .padding(.horizontal, 2)
           }
         }
       } compactLeading: {
@@ -209,6 +243,37 @@ private struct BarraDaFase: View {
 }
 
 // MARK: - peças
+
+/**
+ A segunda linha da Ilha expandida: a fase ("Foco", "Pausa") e, quando há, o
+ marco da sessão como símbolo pequeno **em linha** — "★ 90 min" — e não
+ flutuando sobre o coelho. Quando não há matéria, a fase já foi para a primeira
+ linha e aqui fica só o marco.
+ */
+@available(iOS 16.1, *)
+private struct LinhaDaFase: View {
+  let state: StudyTimerAttributes.ContentState
+  let materia: String
+
+  var body: some View {
+    let mood = CoelhoMark.Mood.forMinutes(state.totalMinutes, isRunning: state.isRunning)
+    HStack(spacing: 4) {
+      if let simbolo = mood.badgeSymbol {
+        Image(systemName: simbolo)
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundStyle(Color.quiblyAccent)
+      }
+      if !materia.isEmpty && !state.phaseLabel.isEmpty {
+        Text(state.phaseLabel)
+      } else if mood.badgeSymbol != nil {
+        Text("\(state.totalMinutes) min")
+      }
+    }
+    .font(.system(size: 12, weight: .medium))
+    .foregroundStyle(.white.opacity(0.6))
+    .lineLimit(1)
+  }
+}
 
 /**
  O cronômetro. Um `Text(timerInterval:)` quando corre, um valor congelado

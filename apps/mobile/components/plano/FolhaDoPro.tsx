@@ -27,12 +27,13 @@ import { useTheme, type Palette, radius, space, text } from '../../theme';
  * (`DESIGN-GYMRATS §4.4`), e ele não sabe mostrar nem o mascote nem a lista do
  * que o plano dá.
  *
- * ## Por que o coelho está coroado
+ * ## Por que o coelho segura uma estrela
  *
- * É o estado `crowned`, o mesmo que marca três horas de estudo numa sessão. O
- * mascote já é a linguagem do produto para "você chegou longe", e aqui a
- * pessoa chegou: ela encheu as três salas do plano grátis. A coroa diz isso
- * antes de qualquer texto.
+ * Era o `crowned`, três horas de sessão. Mas `crowned` não tem arte em PNG
+ * (ver `mascot/ilustracoes.ts`) e caía no vetor, que ao lado das artes novas
+ * parecia outro personagem — o fundador chamou de "coelho feio" (22/09). O
+ * `star` tem PNG e diz a mesma coisa: "você chegou longe", agora com a
+ * estrela na mão em vez da coroa na cabeça.
  *
  * ## Por que a lista é honesta
  *
@@ -123,7 +124,7 @@ export default function FolhaDoPro({
 
         <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
           <View style={styles.mascote}>
-            <Mascot state="crowned" size={116} />
+            <Mascot state="star" size={132} />
           </View>
 
           <Text style={styles.titulo}>{titulo}</Text>

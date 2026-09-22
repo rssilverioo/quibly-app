@@ -44,5 +44,9 @@
   "termsOfUse": "Termos de Uso",
   "privacyPolicy": "Política de Privacidade",
   "andText": "e",
-  "roomsUsed": "{{used}} / {{limit}} salas suas"
+  "roomsUsed": "{{used}} / {{limit}} salas suas",
+  "promo": {
+    "title": "Quibly Pro",
+    "subtitle": "Salas ilimitadas, Foco Profundo, escudo de ofensiva e sem anúncios."
+  }
 }

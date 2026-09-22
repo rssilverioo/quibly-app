@@ -44,5 +44,9 @@
   "termsOfUse": "Terms of Use",
   "privacyPolicy": "Privacy Policy",
   "andText": "and",
-  "roomsUsed": "{{used}} / {{limit}} rooms of your own"
+  "roomsUsed": "{{used}} / {{limit}} rooms of your own",
+  "promo": {
+    "title": "Quibly Pro",
+    "subtitle": "Unlimited rooms, Deep Focus, streak shield and no ads."
+  }
 }

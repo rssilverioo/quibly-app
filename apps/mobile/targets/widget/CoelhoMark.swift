@@ -99,11 +99,27 @@ struct CoelhoMark: View {
       default:       return nil
       }
     }
+
+    /// O SF Symbol do marco, para quem o mostra fora do desenho (a Ilha
+    /// expandida põe em linha com a fase). Mesma tabela de `symbolName`.
+    var badgeSymbol: String? {
+      switch badge {
+      case .flame?:  return "flame.fill"
+      case .star?:   return "star.fill"
+      case .medal?:  return "medal.fill"
+      case .crown?:  return "crown.fill"
+      case .shades?: return "sunglasses.fill"
+      case nil:      return nil
+      }
+    }
   }
 
   enum Badge { case shades, flame, star, medal, crown }
 
   var mood: Mood = .focused
+  /// A Ilha expandida mostra o marco em texto, ao lado da fase, e desliga o
+  /// símbolo sobre o desenho. Compacta e tela de bloqueio seguem com ele.
+  var mostrarMarco: Bool = true
   /// Cor dos adereços de marco. Azul da marca, não mais o lima do castelo.
   var accent: Color = Color(red: 0.298, green: 0.604, blue: 1.0) // #4C9AFF
 
@@ -245,7 +261,7 @@ struct CoelhoMark: View {
    */
   @ViewBuilder
   private func badge(_ s: CGFloat) -> some View {
-    if let badge = mood.badge {
+    if mostrarMarco, let badge = mood.badge {
       // Todos os marcos vão ao canto superior direito, como símbolo do
       // sistema. Os óculos escuros desenhados sobre os olhos faziam sentido
       // com a cabeça desenhada; sobre a arte em PNG não há olho fixo para
