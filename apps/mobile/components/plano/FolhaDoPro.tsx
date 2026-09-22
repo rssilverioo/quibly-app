@@ -6,7 +6,10 @@ import { Check } from 'lucide-react-native';
 
 import { Mascot } from '../mascot';
 import Press from '../ui/Press';
-import { COMPRAS_NO_APP_ATIVAS } from '../../services/iap';
+import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import { COMPRAS_NO_APP_ATIVAS, revenueCatConfigError } from '../../services/iap';
+import { useAuth } from '../../contexts/AuthContext';
+import { captureException } from '../../lib/sentry';
 import { useTheme, type Palette, radius, space, text } from '../../theme';
 
 /**
@@ -58,6 +61,40 @@ export default function FolhaDoPro({
 }) {
   const { t } = useTranslation('common');
   const { c } = useTheme();
+  const { refreshProfile } = useAuth();
+
+  /**
+   * O botão abre o paywall do RevenueCat **por cima desta folha**, sem passar
+   * pela tela `/pricing`. A folha é o "por quê" (você bateu no limite de
+   * salas, quis criar um desafio); o paywall é o "quanto" e o "como". Duas
+   * telas de venda em sequência, com os mesmos sete benefícios, era ler a
+   * mesma coisa duas vezes antes de ver um preço.
+   *
+   * Comprou ou restaurou: recarrega o perfil, porque `plan` vem do servidor
+   * e é ele que abre as portas (salas, desafios, estatísticas, foco). Sem o
+   * refresh a pessoa pagaria e continuaria vendo a coroa até reabrir o app.
+   *
+   * Sem chave de verdade no build, cai na `/pricing`, que é quem sabe dizer
+   * o motivo em vez de mostrar um paywall vazio.
+   */
+  const abrirPaywall = async () => {
+    if (revenueCatConfigError()) {
+      aoFechar();
+      router.push('/pricing?trigger=quota');
+      return;
+    }
+    try {
+      const resultado = await RevenueCatUI.presentPaywall({ displayCloseButton: true });
+      if (resultado === PAYWALL_RESULT.PURCHASED || resultado === PAYWALL_RESULT.RESTORED) {
+        await refreshProfile();
+        aoFechar();
+      }
+    } catch (err) {
+      captureException(err, { where: 'FolhaDoPro.presentPaywall', motivo });
+      aoFechar();
+      router.push('/pricing?trigger=quota');
+    }
+  };
   const styles = useMemo(() => makeStyles(c), [c]);
 
   const beneficios = [
@@ -114,10 +151,7 @@ export default function FolhaDoPro({
             está no ar, a folha diz a verdade e oferece a saída que existe.
           */}
           {COMPRAS_NO_APP_ATIVAS ? (
-            <Press
-              onPress={() => { aoFechar(); router.push('/pricing?trigger=quota'); }}
-              style={styles.botao}
-            >
+            <Press onPress={abrirPaywall} style={styles.botao}>
               <Text style={styles.botaoTexto}>{t('pro.cta')}</Text>
             </Press>
           ) : (
