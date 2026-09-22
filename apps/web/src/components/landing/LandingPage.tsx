@@ -7,6 +7,7 @@ import Coelho from './Coelho';
 import CoelhoImagem from './CoelhoImagem';
 import BotoesDeLoja, { APP_STORE } from './BotoesDeLoja';
 import MapaDeConstancia from './MapaDeConstancia';
+import MockDoApp from './MockDoApp';
 import { Aparece, Desce, Escalonado, Flutua, Item } from './Movimento';
 import { conteudo, type Lang } from './content';
 
@@ -93,7 +94,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           rooms". Quando as capturas do app novo chegarem, o `Fone` volta aqui.
         */}
         <Flutua className="hero-arte">
-          <CoelhoImagem nome="celular-quibly" alt="O coelho do Quibly mostrando o app no celular" size={360} prioridade />
+          <MockDoApp size={560} prioridade />
         </Flutua>
 
         <Aparece como="figure" className="hero-mapa" atraso={0.2}>

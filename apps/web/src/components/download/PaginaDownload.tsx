@@ -4,7 +4,7 @@ import { ArrowRight, Timer, Users, Flame } from 'lucide-react';
 
 import BotoesDeLoja from '../landing/BotoesDeLoja';
 import Coelho from '../landing/Coelho';
-import CoelhoImagem from '../landing/CoelhoImagem';
+import MockDoApp from '../landing/MockDoApp';
 import { Escalonado, Flutua, Item } from '../landing/Movimento';
 import { conteudo, type Lang } from '../landing/content';
 
@@ -31,7 +31,7 @@ export default function PaginaDownload({ lang }: { lang: Lang }) {
 
       <section className="baixar-heroi">
         <Flutua className="baixar-arte">
-          <CoelhoImagem nome="celular-quibly" alt="O coelho do Quibly mostrando o app no celular" size={320} prioridade />
+          <MockDoApp size={480} prioridade />
         </Flutua>
 
         <Escalonado className="baixar-texto" intervalo={0.11}>
