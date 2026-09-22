@@ -73,7 +73,12 @@
           }
         ],
         "NSPrivacyCollectedDataTypes": [],
-        "NSPrivacyTracking": false
+        "NSPrivacyTracking": true,
+        "NSPrivacyTrackingDomains": [
+          "graph.facebook.com",
+          "ep1.facebook.com",
+          "ep2.facebook.com"
+        ]
       }
     },
     "android": {
