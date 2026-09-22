@@ -42,6 +42,12 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>exp+quibly</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
           <string>fb2102178107053785</string>
         </array>
       </dict>
