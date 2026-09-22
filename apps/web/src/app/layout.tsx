@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Nunito, Azeret_Mono } from 'next/font/google';
 import './globals.css';
+import MetaPixel from '../components/MetaPixel';
 
 /**
  * Três faces, três papéis.
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <noscript>
           <style>{`[style*="opacity"]{opacity:1!important;transform:none!important}`}</style>
         </noscript>
+        <MetaPixel />
         {children}
       </body>
     </html>

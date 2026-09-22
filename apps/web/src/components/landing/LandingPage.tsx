@@ -10,6 +10,7 @@ import MapaDeConstancia from './MapaDeConstancia';
 import MockDoApp from './MockDoApp';
 import { Aparece, Desce, Escalonado, Flutua, Item } from './Movimento';
 import { conteudo, type Lang } from './content';
+import { rastrearCliqueDeLoja } from '../../lib/pixel';
 
 /**
  * A landing page.
@@ -58,7 +59,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
           <a href="#dias">{nav.porque}</a>
           <a href="#plano">{nav.plano}</a>
         </nav>
-        <a className="btn btn-primario btn-pequeno" href={APP_STORE}>
+        <a className="btn btn-primario btn-pequeno" href={APP_STORE} onClick={() => rastrearCliqueDeLoja('ios')}>
           <Download size={16} aria-hidden="true" />
           {nav.baixar}
         </a>
@@ -202,7 +203,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
                 <li key={item}><span className="marca-dia" aria-hidden="true" />{item}</li>
               ))}
             </ul>
-            <a className="btn btn-primario" href={APP_STORE}>{hero.cta}</a>
+            <a className="btn btn-primario" href={APP_STORE} onClick={() => rastrearCliqueDeLoja('ios')}>{hero.cta}</a>
           </Item>
         </Escalonado>
         <Aparece como="p" className="nota">{plano.nota}</Aparece>

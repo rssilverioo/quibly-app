@@ -1,3 +1,7 @@
+'use client';
+
+import { rastrearCliqueDeLoja } from '../../lib/pixel';
+
 /**
  * Os dois botões de loja, com os logos.
  *
@@ -44,11 +48,11 @@ export default function BotoesDeLoja({
 }) {
   return (
     <div className={centro ? 'lojas lojas-centro' : 'lojas'}>
-      <a className="btn btn-loja btn-loja-apple" href={APP_STORE}>
+      <a className="btn btn-loja btn-loja-apple" href={APP_STORE} onClick={() => rastrearCliqueDeLoja('ios')}>
         <LogoApple />
         <span>{apple}</span>
       </a>
-      <a className="btn btn-loja btn-loja-google" href={PLAY_STORE}>
+      <a className="btn btn-loja btn-loja-google" href={PLAY_STORE} onClick={() => rastrearCliqueDeLoja('android')}>
         <LogoPlay />
         <span>{google}</span>
       </a>
