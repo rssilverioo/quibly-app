@@ -1,57 +1,60 @@
 /**
- * Os coelhos ilustrados, recortados da folha de 10/08/2026.
+ * Os coelhos ilustrados — a arte de 22/09/2026, em PNG com alfa, 1254x1254.
  *
- * São PNG com alfa, todos **512x512**, e isso é deliberado nas duas coisas.
+ * Duas famílias no mesmo personagem: as poses de contorno forte (love,
+ * celebrate, wave, focused, sleepy, checklist, correndo_*) e as de traço
+ * suave (reading, working, thinking, listening, searching, graduate, idle,
+ * happy, star, break). As chaves são **estados do mascote** sempre que a pose
+ * é fiel ao estado — é assim que `components/mascot/ilustracoes.ts` as
+ * encontra. As que não são estado (celular_quibly, checklist, correndo_*)
+ * servem a telas específicas: login, splash.
  *
- * Quadrados porque o recorte original ia de 192x322 a 396x265 — proporções de
- * 0,60 a 1,49. Num quadro quadrado, com `contain`, cada um renderizava num
- * tamanho visual diferente: o largo ficava baixinho, o estreito ficava magro.
- * Era isso o "ficou tudo feio", e não o formato.
- *
- * 512 porque a maior chamada pede 150pt, o que num aparelho 3x são 450px.
- * Menos que isso amolece.
- *
- * Dentro do quadro, cada pose foi escalada para ter a **mesma área opaca** —
- * peso visual igual, que é o que o olho compara. Igualar pela altura faria o
- * coelho deitado virar um bicho gigante deitado.
+ * Resolução: 1254px cobre 150pt em aparelho 3x (450px) com folga. Foi a
+ * falta disso, em 10/08, que deixou a tabela de ilustrações vazia.
  *
  * O `require` precisa ser literal: o empacotador do Metro resolve os caminhos
  * em tempo de build, e um `require(variável)` não existe no bundle. Por isso
  * este arquivo é gerado a partir da pasta, e não montado com um laço.
  */
 export const COELHOS = {
-  abracando_coracao: require('./coelho-abracando-coracao.png'),
+  break: require('./coelho-break.png'),
+  celebrate: require('./coelho-celebrate.png'),
   celular_quibly: require('./coelho-celular-quibly.png'),
   checklist: require('./coelho-checklist.png'),
-  comemorando: require('./coelho-comemorando.png'),
   correndo_cafe: require('./coelho-correndo-cafe.png'),
   correndo_faixa: require('./coelho-correndo-faixa.png'),
-  dormindo: require('./coelho-dormindo.png'),
-  espiando: require('./coelho-espiando.png'),
-  estudando_fones: require('./coelho-estudando-fones.png'),
-  joinha: require('./coelho-joinha.png'),
-  lendo_livro: require('./coelho-lendo-livro.png'),
-  mochila_coracao: require('./coelho-mochila-coracao.png'),
-  notebook: require('./coelho-notebook.png'),
-  oculos_puff: require('./coelho-oculos-puff.png'),
-  panico: require('./coelho-panico.png'),
-  trofeu: require('./coelho-trofeu.png'),
+  focused: require('./coelho-focused.png'),
+  graduate: require('./coelho-graduate.png'),
+  happy: require('./coelho-happy.png'),
+  idle: require('./coelho-idle.png'),
+  listening: require('./coelho-listening.png'),
+  love: require('./coelho-love.png'),
+  reading: require('./coelho-reading.png'),
+  searching: require('./coelho-searching.png'),
+  sleepy: require('./coelho-sleepy.png'),
+  star: require('./coelho-star.png'),
+  thinking: require('./coelho-thinking.png'),
+  wave: require('./coelho-wave.png'),
+  working: require('./coelho-working.png'),
 } as const;
 
 export type Coelho =
-  | 'abracando_coracao'
+  | 'break'
+  | 'celebrate'
   | 'celular_quibly'
   | 'checklist'
-  | 'comemorando'
   | 'correndo_cafe'
   | 'correndo_faixa'
-  | 'dormindo'
-  | 'espiando'
-  | 'estudando_fones'
-  | 'joinha'
-  | 'lendo_livro'
-  | 'mochila_coracao'
-  | 'notebook'
-  | 'oculos_puff'
-  | 'panico'
-  | 'trofeu';
+  | 'focused'
+  | 'graduate'
+  | 'happy'
+  | 'idle'
+  | 'listening'
+  | 'love'
+  | 'reading'
+  | 'searching'
+  | 'sleepy'
+  | 'star'
+  | 'thinking'
+  | 'wave'
+  | 'working';

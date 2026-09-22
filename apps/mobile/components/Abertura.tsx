@@ -15,8 +15,8 @@ import { space } from '../theme';
 /** Quanto a saída demora. Longo o bastante para ler como corte suave. */
 const SAIDA_MS = 520;
 
-/** Onde o coelho termina dentro do PNG quadrado (linha 900 de 1284). */
-const PE_DO_COELHO = 900 / 1284;
+/** Onde o coelho termina dentro do PNG quadrado (medido na arte de 22/09). */
+const PE_DO_COELHO = 0.687;
 
 /** O wordmark, na proporção do PNG (152×61). */
 const MARCA = { largura: 132, altura: 53 };

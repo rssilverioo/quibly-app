@@ -1,5 +1,4 @@
-// `COELHOS` (assets/coelhos) sai do import enquanto a tabela está vazia — os
-// arquivos continuam lá, e voltam junto com a primeira linha preenchida.
+import { COELHOS } from '../../assets/coelhos';
 import type { MascotState } from './Mascot';
 
 /**
@@ -35,25 +34,32 @@ import type { MascotState } from './Mascot';
  * As poses que faltam desenhar, em ordem de uso real: `worried` (9), `wave`
  * (2), `idle` (2). Quando existirem, é aqui que entram.
  *
- * ## Por que a tabela está vazia agora
+ * ## Por que a tabela esteve vazia de 10/08 a 22/09
  *
- * Decisão do dono do produto em 10/08, e é de resolução, não de gosto.
- *
- * A folha de origem tem 1536x1024 para 16 coelhos — cerca de 300px cada. As
- * ilustrações foram normalizadas para 512x512, o que já é ampliação. A home
- * pede 150pt, e num aparelho 3x isso são 450px de fonte: ali amolece.
- *
- * Foram três tentativas de conseguir a arte melhor. Um SVG traçado pelo
- * `imagetracer.js` (duas cores, um borrão) e dez SVG que embrulhavam a **mesma
- * folha** em base64, com o raster idêntico pixel a pixel ao PNG original —
- * conferido por hash. Não havia resolução escondida em lugar nenhum.
- *
- * Então o vetor volta a atender tudo: ele é nítido em qualquer tamanho,
- * acompanha o tema e cobre os 30 estados. Os arquivos ficam em `assets/`, e a
- * arquitetura fica de pé — esta tabela funciona igual com PNG ou com SVG. No
- * dia em que a arte vier em resolução maior, volta a ser preencher linhas.
+ * A folha de origem tinha 1536x1024 para 16 coelhos — cerca de 300px cada,
+ * normalizados para 512. A home pede 150pt, que num aparelho 3x são 450px:
+ * ali amolecia. Três tentativas de achar resolução escondida (traçado por
+ * `imagetracer.js`, SVG embrulhando o mesmo raster) não acharam nada, e o
+ * vetor voltou a atender tudo. Em 22/09 a arte chegou em 1254px, e preencher
+ * as linhas abaixo foi o suficiente para ela voltar a todas as telas.
  */
 export const ILUSTRACAO: Partial<Record<MascotState, number>> = {
-  // Vazio de propósito. Ver acima. Preencher aqui é o suficiente para a
-  // ilustração voltar a todas as telas que usam aquele estado.
+  // 22/09/2026: a arte veio em 1254px, e a tabela voltou a ser preenchida.
+  // Só pares fiéis. O que não está aqui continua no vetor — em especial
+  // `worried`, o estado mais usado, que ainda não tem pose desenhada.
+  idle: COELHOS.idle,
+  wave: COELHOS.wave,
+  happy: COELHOS.happy,
+  celebrate: COELHOS.celebrate,
+  star: COELHOS.star,
+  listening: COELHOS.listening,
+  thinking: COELHOS.thinking,
+  working: COELHOS.working,
+  searching: COELHOS.searching,
+  reading: COELHOS.reading,
+  graduate: COELHOS.graduate,
+  focused: COELHOS.focused,
+  sleepy: COELHOS.sleepy,
+  break: COELHOS.break,
+  love: COELHOS.love,
 };
